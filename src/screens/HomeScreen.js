@@ -111,7 +111,9 @@ export default function HomeScreen() {
           accessibilityRole="button"
           style={styles.quickAction}
           onPress={() =>
-            navigation.navigate(isEmployer ? "FindHelpTab" : "MyWorkTab")
+            isEmployer
+              ? navigation.navigate("MaidsTab")
+              : navigation.navigate("ProfileTab", { screen: "Skills" })
           }
         >
           <View style={styles.quickActionTextWrap}>

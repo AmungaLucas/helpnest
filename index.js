@@ -1,3 +1,5 @@
+// Required at the very top before any other imports (react-native-gesture-handler).
+import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

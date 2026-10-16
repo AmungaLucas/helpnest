@@ -3,92 +3,94 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import { useAuth } from "../context/AuthContext";
 import HomeScreen from "../screens/HomeScreen";
+import FindJobsScreen from "../screens/tabs/FindJobsScreen";
+import ApplicationsScreen from "../screens/tabs/ApplicationsScreen";
+import MyJobsScreen from "../screens/tabs/MyJobsScreen";
 import FindHelpScreen from "../screens/tabs/FindHelpScreen";
-import MyWorkScreen from "../screens/tabs/MyWorkScreen";
-import MessagesScreen from "../screens/tabs/MessagesScreen";
-import AccountScreen from "../screens/tabs/AccountScreen";
+import ChatsNavigator from "../screens/chats/ChatsNavigator";
+import ProfileDrawer from "../screens/profile/ProfileDrawer";
 import TabBarIcon from "../components/ui/TabBarIcon";
 import { colors } from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
 
-// Logged-in area. The second tab is role-aware: employers browse
-// workers, maids manage their work profile (PRD §5/§6).
+const TAB_BAR_OPTIONS = {
+  headerShown: false,
+  tabBarActiveTintColor: colors.brand,
+  tabBarInactiveTintColor: colors.textMuted,
+  tabBarStyle: {
+    backgroundColor: colors.white,
+    borderTopColor: colors.mist,
+  },
+  tabBarLabelStyle: {
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+};
+
+// Shared icon helpers — kept small so each tab set below reads clearly.
+const icon = (name) => ({ focused, color }) => (
+  <TabBarIcon name={name} focused={focused} color={color} />
+);
+
+// Logged-in area with role-specific bottom tabs (PRD §5/§12):
+//
+//   Maid:     Home | Find Jobs | Applications | Chats | Profile
+//   Employer: Home | My Jobs   | Maids        | Chats | Profile
+//
+// Chats is a Material Top Tabs navigator (Conversations / Requests) and
+// Profile is a drawer navigator (per-role items) — see ChatsNavigator and
+// ProfileDrawer.
 export default function MainTabs() {
   const { user } = useAuth();
   const isEmployer = user?.role !== "maid";
 
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.brand,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopColor: colors.mist,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10.5,
-          fontWeight: "700",
-        },
-      }}
-    >
+    <Tab.Navigator screenOptions={TAB_BAR_OPTIONS}>
       <Tab.Screen
         name="HomeTab"
         component={HomeScreen}
-        options={{
-          title: "Home",
-          tabBarIcon: ({ focused, color }) => (
-            <TabBarIcon name="home" focused={focused} color={color} />
-          ),
-        }}
+        options={{ title: "Home", tabBarIcon: icon("home") }}
       />
 
       {isEmployer ? (
-        <Tab.Screen
-          name="FindHelpTab"
-          component={FindHelpScreen}
-          options={{
-            title: "Find Help",
-            tabBarIcon: ({ focused, color }) => (
-              <TabBarIcon name="search" focused={focused} color={color} />
-            ),
-          }}
-        />
+        <>
+          <Tab.Screen
+            name="MyJobsTab"
+            component={MyJobsScreen}
+            options={{ title: "My Jobs", tabBarIcon: icon("work") }}
+          />
+          <Tab.Screen
+            name="MaidsTab"
+            component={FindHelpScreen}
+            options={{ title: "Maids", tabBarIcon: icon("users") }}
+          />
+        </>
       ) : (
-        <Tab.Screen
-          name="MyWorkTab"
-          component={MyWorkScreen}
-          options={{
-            title: "My Work",
-            tabBarIcon: ({ focused, color }) => (
-              <TabBarIcon name="work" focused={focused} color={color} />
-            ),
-          }}
-        />
+        <>
+          <Tab.Screen
+            name="FindJobsTab"
+            component={FindJobsScreen}
+            options={{ title: "Find Jobs", tabBarIcon: icon("search") }}
+          />
+          <Tab.Screen
+            name="ApplicationsTab"
+            component={ApplicationsScreen}
+            options={{ title: "Applications", tabBarIcon: icon("file-text") }}
+          />
+        </>
       )}
 
       <Tab.Screen
-        name="MessagesTab"
-        component={MessagesScreen}
-        options={{
-          title: "Messages",
-          tabBarIcon: ({ focused, color }) => (
-            <TabBarIcon name="chat" focused={focused} color={color} />
-          ),
-        }}
+        name="ChatsTab"
+        component={ChatsNavigator}
+        options={{ title: "Chats", tabBarIcon: icon("message-circle") }}
       />
 
       <Tab.Screen
-        name="AccountTab"
-        component={AccountScreen}
-        options={{
-          title: "Account",
-          tabBarIcon: ({ focused, color }) => (
-            <TabBarIcon name="user" focused={focused} color={color} />
-          ),
-        }}
+        name="ProfileTab"
+        component={ProfileDrawer}
+        options={{ title: "Profile", tabBarIcon: icon("user") }}
       />
     </Tab.Navigator>
   );

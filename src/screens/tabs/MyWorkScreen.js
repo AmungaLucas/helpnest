@@ -17,6 +17,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
 import Chip from "../../components/ui/Chip";
+import HamburgerButton from "../../components/ui/HamburgerButton";
 import { getMyWorkerProfile } from "../../services/workersService";
 import { updateMe } from "../../services/usersService";
 import {
@@ -154,6 +155,10 @@ export default function MyWorkScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.menuRow}>
+            <HamburgerButton />
+          </View>
+
           <Text style={styles.title}>My work profile</Text>
           <Text style={styles.subtitle}>
             This is what employers see in Find Help. Keep it honest and
@@ -288,6 +293,9 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 22,
     paddingBottom: 60,
+  },
+  menuRow: {
+    marginBottom: 12,
   },
   title: {
     color: colors.ink,

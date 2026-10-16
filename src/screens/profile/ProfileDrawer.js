@@ -1,0 +1,330 @@
+import React from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  createDrawerNavigator,
+  DrawerContentScrollView,
+} from "@react-navigation/drawer";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+import { useAuth } from "../../context/AuthContext";
+import AccountScreen from "../tabs/AccountScreen";
+import MyWorkScreen from "../tabs/MyWorkScreen";
+import PaymentHubScreen from "./PaymentHubScreen";
+import ComingSoonScreen from "../../components/ui/ComingSoonScreen";
+import TabBarIcon from "../../components/ui/TabBarIcon";
+import { colors, withAlpha } from "../../theme/colors";
+
+const Drawer = createDrawerNavigator();
+
+const ROLE_LABELS = {
+  maid: "Domestic Worker",
+  employer: "Employer",
+  admin: "Admin",
+};
+
+function DrawerItem({ icon, label, active, onPress }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.item, active && styles.itemActive]}
+    >
+      {/* `icon` is the rendered element from the screen's drawerIcon option */}
+      {icon}
+      <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// Branded drawer: profile header, route list, version footer.
+function DrawerContent({ state, descriptors, navigation }) {
+  const { user } = useAuth();
+  const firstName = (user?.name || "").split(" ")[0] || "?";
+
+  return (
+    <DrawerContentScrollView
+      contentContainerStyle={styles.drawerScroll}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.drawerHeader}>
+        <View style={styles.drawerAvatar}>
+          <Text style={styles.drawerAvatarText}>{firstName.charAt(0)}</Text>
+        </View>
+        <View style={styles.drawerHeaderMain}>
+          <Text style={styles.drawerName} numberOfLines={1}>
+            {user?.name || "HelpNest member"}
+          </Text>
+          <Text style={styles.drawerRole}>
+            {ROLE_LABELS[user?.role] || user?.role || "Member"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.itemsWrap}>
+        {state.routes.map((route, index) => {
+          const { title, drawerIcon } = descriptors[route.key].options;
+          const focused = state.index === index;
+
+          return (
+            <DrawerItem
+              key={route.key}
+              icon={drawerIcon ? drawerIcon({ color: focused ? colors.brand : colors.textMuted }) : null}
+              label={title || route.name}
+              active={focused}
+              onPress={() => {
+                navigation.navigate(route.name);
+                navigation.closeDrawer();
+              }}
+            />
+          );
+        })}
+      </View>
+
+      <Text style={styles.drawerVersion}>HelpNest v1.0.0</Text>
+    </DrawerContentScrollView>
+  );
+}
+
+// --- Maid: Overview / Skills & experience / ID verification / Reviews ---
+function MaidProfileNavigator() {
+  return (
+    <Drawer.Navigator
+      drawerContent={DrawerContent}
+      screenOptions={{
+        headerShown: false,
+        drawerType: "front",
+        drawerStyle: { backgroundColor: colors.white, width: 300 },
+        overlayColor: "rgba(23, 20, 16, 0.45)",
+        swipeEdgeWidth: 48,
+      }}
+    >
+      <Drawer.Screen
+        name="Overview"
+        component={AccountScreen}
+        options={{
+          title: "Overview",
+          drawerIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Skills"
+        component={MyWorkScreen}
+        options={{
+          title: "Skills & experience",
+          drawerIcon: ({ color }) => <TabBarIcon name="work" color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Kyc"
+        component={KycPlaceholder}
+        options={{
+          title: "ID verification",
+          drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Reviews"
+        component={ReviewsPlaceholder}
+        options={{
+          title: "My reviews",
+          drawerIcon: ({ color }) => <TabBarIcon name="star" color={color} />,
+        }}
+      />
+    </Drawer.Navigator>
+  );
+}
+
+// --- Employer: Overview / Verification / Subscription & payments / History ---
+function EmployerProfileNavigator() {
+  return (
+    <Drawer.Navigator
+      drawerContent={DrawerContent}
+      screenOptions={{
+        headerShown: false,
+        drawerType: "front",
+        drawerStyle: { backgroundColor: colors.white, width: 300 },
+        overlayColor: "rgba(23, 20, 16, 0.45)",
+        swipeEdgeWidth: 48,
+      }}
+    >
+      <Drawer.Screen
+        name="Overview"
+        component={AccountScreen}
+        options={{
+          title: "Overview",
+          drawerIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Verification"
+        component={VerificationPlaceholder}
+        options={{
+          title: "Account verification",
+          drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Billing"
+        component={PaymentHubScreen}
+        options={{
+          title: "Subscription & payments",
+          drawerIcon: ({ color }) => (
+            <TabBarIcon name="credit-card" color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="History"
+        component={HistoryPlaceholder}
+        options={{
+          title: "Payment history",
+          drawerIcon: ({ color }) => (
+            <TabBarIcon name="file-text" color={color} />
+          ),
+        }}
+      />
+    </Drawer.Navigator>
+  );
+}
+
+function KycPlaceholder() {
+  return (
+    <ComingSoonScreen
+      withMenu
+      icon="shield"
+      title="ID verification is coming soon"
+      blurb="Upload your national ID and get a verified badge that makes employers trust your profile instantly. KYC checks land in the next release."
+    />
+  );
+}
+
+function ReviewsPlaceholder() {
+  return (
+    <ComingSoonScreen
+      withMenu
+      icon="star"
+      title="Reviews are coming soon"
+      blurb="After every completed job, households rate your work. Great reviews push you higher in employer search results."
+    />
+  );
+}
+
+function VerificationPlaceholder() {
+  return (
+    <ComingSoonScreen
+      withMenu
+      icon="shield"
+      title="Verification is coming soon"
+      blurb="Verify your identity to unlock the verified-employer badge — workers respond faster to verified households."
+    />
+  );
+}
+
+function HistoryPlaceholder() {
+  return (
+    <ComingSoonScreen
+      withMenu
+      icon="file-text"
+      title="Payment history is coming soon"
+      blurb="Every M-Pesa transaction — contact unlocks and future subscriptions — will be listed here with receipts you can tap into."
+    />
+  );
+}
+
+// The Profile tab: role-aware drawer navigation (PRD §5/§12).
+export default function ProfileDrawer() {
+  const { user } = useAuth();
+  const isEmployer = user?.role !== "maid";
+
+  return (
+    <GestureHandlerRootView style={styles.flex}>
+      {isEmployer ? <EmployerProfileNavigator /> : <MaidProfileNavigator />}
+    </GestureHandlerRootView>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+    backgroundColor: colors.cream,
+  },
+  drawerScroll: {
+    flexGrow: 1,
+    paddingTop: 8,
+  },
+  drawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mist,
+    marginBottom: 10,
+  },
+  drawerAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: withAlpha(colors.brand, 0.14),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 13,
+  },
+  drawerAvatarText: {
+    color: colors.brand,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  drawerHeaderMain: {
+    flex: 1,
+  },
+  drawerName: {
+    color: colors.ink,
+    fontSize: 16.5,
+    fontWeight: "800",
+  },
+  drawerRole: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  itemsWrap: {
+    flex: 1,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  itemActive: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
+  itemLabel: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: "700",
+    marginLeft: 13,
+  },
+  itemLabelActive: {
+    color: colors.brand,
+  },
+  drawerVersion: {
+    color: colors.textFaint,
+    fontSize: 11.5,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingVertical: 16,
+  },
+});

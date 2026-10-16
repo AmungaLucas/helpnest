@@ -1,15 +1,15 @@
 import React from "react";
 import { StatusBar, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HelpNestLogoMark } from "../../components/Logo";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Placeholder for PRD §8 (safe in-app messaging with anti-contact-sharing).
+// Sits inside the Chats Material Top Tabs, which owns the top safe area.
 export default function MessagesScreen() {
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+    <View style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <View style={styles.center}>
         <View style={styles.badge}>
@@ -23,7 +23,7 @@ export default function MessagesScreen() {
           so nobody can be scammed mid-conversation.
         </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

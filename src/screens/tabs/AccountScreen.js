@@ -19,6 +19,7 @@ import {
   openAppSettings,
   requestAndFetchLocation,
 } from "../../utils/location";
+import HamburgerButton from "../../components/ui/HamburgerButton";
 import { colors, withAlpha } from "../../theme/colors";
 
 const ROLE_LABELS = {
@@ -100,6 +101,10 @@ export default function AccountScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.menuRow}>
+          <HamburgerButton />
+        </View>
+
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{firstName.charAt(0)}</Text>
@@ -227,6 +232,9 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 22,
     paddingBottom: 60,
+  },
+  menuRow: {
+    marginBottom: 12,
   },
   profileRow: {
     flexDirection: "row",
