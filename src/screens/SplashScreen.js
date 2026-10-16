@@ -8,7 +8,8 @@ import {
   Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import { HelpNestLogoMark } from "../components/Logo";
+import { colors, withAlpha } from "../theme/colors";
 
 export default function SplashScreen({ navigation }) {
   // entry animations
@@ -104,7 +105,9 @@ export default function SplashScreen({ navigation }) {
     ]).start();
 
     // -------- Idle: gentle breathing on the logo --------
-    Animated.loop(
+    // Keep a reference so the loop can be stopped on unmount; otherwise it
+    // keeps running on the native driver forever after navigation.replace().
+    const breatheLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(breathe, {
           toValue: 1.04,
@@ -119,19 +122,23 @@ export default function SplashScreen({ navigation }) {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    breatheLoop.start();
 
     // -------- Navigate after the intro finishes --------
     const timer = setTimeout(() => {
       navigation.replace("RoleSelector");
     }, 2600);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      breatheLoop.stop();
+    };
   }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#214E3B" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
 
       <View style={styles.content}>
         {/* ---- Logo stage ---- */}
@@ -159,31 +166,7 @@ export default function SplashScreen({ navigation }) {
               },
             ]}
           >
-            <Svg viewBox="0 0 100 100" width={66} height={66}>
-              {/* Roof */}
-              <Path
-                d="M 16 50 L 50 20 L 84 50"
-                stroke="#214E3B"
-                strokeWidth={7}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              {/* Body / walls */}
-              <Path
-                d="M 26 50 L 26 84 L 74 84 L 74 50"
-                stroke="#214E3B"
-                strokeWidth={7}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              {/* Heart */}
-              <Path
-                d="M 50 74 C 41 66 34 60 34 53 C 34 47 39 43 44 43 C 47 43 49 45 50 48 C 51 45 53 43 56 43 C 61 43 66 47 66 53 C 66 60 59 66 50 74 Z"
-                fill="#D6A64F"
-              />
-            </Svg>
+            <HelpNestLogoMark size={66} />
           </Animated.View>
         </View>
 
@@ -225,7 +208,7 @@ export default function SplashScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#214E3B",
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -249,33 +232,33 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: 44,
     borderWidth: 2,
-    borderColor: "rgba(214,166,79,0.55)",
+    borderColor: withAlpha(colors.gold, 0.55),
   },
   logoBadge: {
     width: 88,
     height: 88,
     borderRadius: 27,
-    backgroundColor: "#F7F3E9",
+    backgroundColor: colors.cream,
     alignItems: "center",
     justifyContent: "center",
   },
 
   /* ---- Text ---- */
   brand: {
-    color: "#FFFFFF",
+    color: colors.white,
     fontSize: 36,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   tagline: {
-    color: "#E5EBE5",
+    color: colors.mist,
     fontSize: 14,
     marginTop: 9,
   },
   footer: {
     position: "absolute",
     bottom: 32,
-    color: "#D6A64F",
+    color: colors.gold,
     fontSize: 12,
     letterSpacing: 0.5,
   },

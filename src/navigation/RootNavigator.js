@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import SplashScreen from "../screens/SplashScreen";
 import RoleSelectorScreen from "../screens/RoleSelectorScreen";
+import { colors } from "../theme/colors";
 
 const Stack = createNativeStackNavigator();
 
@@ -13,7 +14,7 @@ export default function RootNavigator() {
       screenOptions={{
         headerShown: false,
         animation: "fade",
-        contentStyle: { backgroundColor: "#F7F3E9" },
+        contentStyle: { backgroundColor: colors.cream },
       }}
     >
       <Stack.Screen

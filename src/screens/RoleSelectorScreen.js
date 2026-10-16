@@ -8,9 +8,20 @@ import {
   Alert,
   ScrollView,
   LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import HelpNestLogo, { HelpNestLogoMark } from "../components/Logo";
+import { colors, withAlpha } from "../theme/colors";
+
+// LayoutAnimation is a silent no-op on Android unless explicitly enabled.
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const ROLES = [
   {
@@ -33,48 +44,7 @@ const ROLES = [
   },
 ];
 
-/* ---------- Reusable logo mark (same as splash) ---------- */
-function HelpNestLogo({ size = 52 }) {
-  const badgeRadius = size * 0.31; // ~matches splash 88 → 27
-  const iconSize = size * 0.75;
-
-  return (
-    <View
-      style={[
-        styles.heroLogo,
-        { width: size, height: size, borderRadius: badgeRadius },
-      ]}
-    >
-      <Svg viewBox="0 0 100 100" width={iconSize} height={iconSize}>
-        {/* Roof */}
-        <Path
-          d="M 16 50 L 50 20 L 84 50"
-          stroke="#214E3B"
-          strokeWidth={7}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-        {/* Walls */}
-        <Path
-          d="M 26 50 L 26 84 L 74 84 L 74 50"
-          stroke="#214E3B"
-          strokeWidth={7}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-        {/* Heart */}
-        <Path
-          d="M 50 74 C 41 66 34 60 34 53 C 34 47 39 43 44 43 C 47 43 49 45 50 48 C 51 45 53 43 56 43 C 61 43 66 47 66 53 C 66 60 59 66 50 74 Z"
-          fill="#D6A64F"
-        />
-      </Svg>
-    </View>
-  );
-}
-
-export default function RoleSelectorSplashHero() {
+export default function RoleSelectorScreen() {
   const [selectedRole, setSelectedRole] = useState(null);
   const selected = ROLES.find((role) => role.id === selectedRole);
 
@@ -98,13 +68,13 @@ export default function RoleSelectorSplashHero() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#214E3B" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
 
       {/* ================= HERO ================= */}
       <View style={styles.hero}>
         <SafeAreaView edges={["top"]} style={styles.heroSafe}>
           <View style={styles.heroRow}>
-            <HelpNestLogo size={52} />
+            <HelpNestLogo size={52} style={styles.heroLogo} />
 
             <View style={styles.heroText}>
               <Text style={styles.heroTagline}>
@@ -262,28 +232,7 @@ function Message({ from, children }) {
     <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
       {!isUser ? (
         <View style={styles.avatar}>
-          <Svg viewBox="0 0 100 100" width={16} height={16}>
-            <Path
-              d="M 16 50 L 50 20 L 84 50"
-              stroke="#214E3B"
-              strokeWidth={9}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            <Path
-              d="M 26 50 L 26 84 L 74 84 L 74 50"
-              stroke="#214E3B"
-              strokeWidth={9}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            <Path
-              d="M 50 74 C 41 66 34 60 34 53 C 34 47 39 43 44 43 C 47 43 49 45 50 48 C 51 45 53 43 56 43 C 61 43 66 47 66 53 C 66 60 59 66 50 74 Z"
-              fill="#D6A64F"
-            />
-          </Svg>
+          <HelpNestLogoMark size={16} strokeWidth={9} />
         </View>
       ) : null}
 
@@ -302,12 +251,12 @@ function Message({ from, children }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#214E3B",
+    backgroundColor: colors.brand,
   },
 
   /* ---------- HERO ---------- */
   hero: {
-    backgroundColor: "#214E3B",
+    backgroundColor: colors.brand,
     paddingBottom: 34,
     overflow: "hidden",
   },
@@ -321,16 +270,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   heroLogo: {
-    backgroundColor: "#F7F3E9",
-    alignItems: "center",
-    justifyContent: "center",
     marginRight: 14,
   },
   heroText: {
     flex: 1,
   },
   heroTagline: {
-    color: "rgba(247,243,233,0.85)",
+    color: withAlpha(colors.cream, 0.85),
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "600",
@@ -344,17 +290,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(247,243,233,0.12)",
+    backgroundColor: withAlpha(colors.cream, 0.12),
   },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#7BC08B",
+    backgroundColor: colors.brandSoft,
     marginRight: 6,
   },
   statusText: {
-    color: "rgba(247,243,233,0.9)",
+    color: withAlpha(colors.cream, 0.9),
     fontSize: 10.5,
     fontWeight: "700",
     letterSpacing: 0.3,
@@ -364,7 +310,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: "rgba(214,166,79,0.14)",
+    backgroundColor: withAlpha(colors.gold, 0.14),
     left: -80,
     bottom: -90,
   },
@@ -373,7 +319,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "rgba(247,243,233,0.06)",
+    backgroundColor: withAlpha(colors.cream, 0.06),
     right: -20,
     top: 10,
   },
@@ -381,7 +327,7 @@ const styles = StyleSheet.create({
   /* ---------- SHEET ---------- */
   sheet: {
     flex: 1,
-    backgroundColor: "#F7F3E9",
+    backgroundColor: colors.cream,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     marginTop: -20,
@@ -392,7 +338,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#D6DCD6",
+    backgroundColor: colors.cloud,
     marginBottom: 4,
   },
   scroll: {
@@ -401,14 +347,14 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   eyebrow: {
-    color: "#9A742D",
+    color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 1.4,
     marginBottom: 10,
   },
   title: {
-    color: "#26312B",
+    color: colors.ink,
     fontSize: 25,
     lineHeight: 31,
     fontWeight: "800",
@@ -431,7 +377,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#E5EBE5",
+    backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
@@ -442,23 +388,23 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   bubbleAssistant: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.white,
     borderTopLeftRadius: 4,
     borderTopRightRadius: 18,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
     borderWidth: 1,
-    borderColor: "#ECE6D8",
+    borderColor: colors.linen,
   },
   bubbleUser: {
-    backgroundColor: "#214E3B",
+    backgroundColor: colors.brand,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 4,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
   },
   bubbleText: {
-    color: "#26312B",
+    color: colors.ink,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 4,
@@ -467,7 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   bubbleTextLight: {
-    color: "#F7F3E9",
+    color: colors.cream,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
@@ -479,7 +425,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5EBE5",
+    backgroundColor: colors.mist,
   },
   row: {
     flexDirection: "row",
@@ -495,11 +441,11 @@ const styles = StyleSheet.create({
     lineHeight: 40,
     fontWeight: "300",
     letterSpacing: -1,
-    color: "#D6DCD6",
+    color: colors.cloud,
     marginRight: 10,
   },
   numberSelected: {
-    color: "#214E3B",
+    color: colors.brand,
     fontWeight: "400",
   },
   rowBody: {
@@ -507,13 +453,13 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   rowTitle: {
-    color: "#26312B",
+    color: colors.ink,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 5,
   },
   rowDescription: {
-    color: "#69746C",
+    color: colors.textMuted,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -527,10 +473,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "#E5EBE5",
+    backgroundColor: colors.mist,
   },
   tagText: {
-    color: "#214E3B",
+    color: colors.brand,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -539,18 +485,18 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#C9D2CA",
+    borderColor: colors.mistDark,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 10,
     marginTop: 6,
   },
   markerSelected: {
-    backgroundColor: "#214E3B",
-    borderColor: "#214E3B",
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
   markerCheck: {
-    color: "#F7F3E9",
+    color: colors.cream,
     fontSize: 13,
     fontWeight: "900",
   },
@@ -568,15 +514,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 56,
     borderRadius: 16,
-    backgroundColor: "#214E3B",
+    backgroundColor: colors.brand,
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: colors.white,
     fontSize: 16,
     fontWeight: "700",
   },
   buttonArrow: {
-    color: "#FFFFFF",
+    color: colors.white,
     fontSize: 20,
     marginLeft: 10,
     fontWeight: "700",
@@ -586,14 +532,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   changeText: {
-    color: "#9A742D",
+    color: colors.goldDark,
     fontSize: 12.5,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
 
   footnote: {
-    color: "#8C968E",
+    color: colors.textFaint,
     fontSize: 11,
     lineHeight: 17,
     textAlign: "center",
