@@ -68,8 +68,8 @@ export default function LoginScreen() {
       }
 
       if (data.success && data.tokens) {
+        // RootNavigator remounts onto Home as soon as the session lands.
         applySession({ tokens: data.tokens, userData: data.user });
-        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
         return;
       }
 

@@ -33,6 +33,22 @@ export function setAuthToken(token) {
   authToken = token;
 }
 
+// Set by AuthContext: called when a request comes back 401 so the context
+// can rotate the refresh token. Returning true makes the original request
+// retry once with the fresh access token.
+let authEventHandler = null;
+
+export function setAuthEventHandler(handler) {
+  authEventHandler = typeof handler === "function" ? handler : null;
+}
+
+function apiError(message, { status, isNetwork } = {}) {
+  const error = new Error(message);
+  if (status !== undefined) error.status = status;
+  if (isNetwork) error.isNetwork = true;
+  return error;
+}
+
 export async function apiRequest(path, options = {}) {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
   const url = `${API_BASE_URL}${path}`;
@@ -66,10 +82,11 @@ export async function apiRequest(path, options = {}) {
         timedOut ? "request timed out" : error.message
       );
     }
-    throw new Error(
+    throw apiError(
       timedOut
         ? "The request timed out. Check your connection and try again."
-        : `Network error: ${error.message}`
+        : `Network error: ${error.message}`,
+      { isNetwork: true }
     );
   } finally {
     clearTimeout(timeoutId);
@@ -86,13 +103,15 @@ export async function apiRequest(path, options = {}) {
 
   if (!contentType.toLowerCase().includes("application/json")) {
     if (/lsrecaptcha|bot verification/i.test(rawBody)) {
-      throw new Error(
-        "The API gateway is temporarily bot-verifying requests. Please try again later."
+      throw apiError(
+        "The API gateway is temporarily bot-verifying requests. Please try again later.",
+        { isNetwork: true }
       );
     }
 
-    throw new Error(
-      `Expected JSON but received ${contentType || "unknown content type"}.`
+    throw apiError(
+      `Expected JSON but received ${contentType || "unknown content type"}.`,
+      { isNetwork: true }
     );
   }
 
@@ -101,12 +120,27 @@ export async function apiRequest(path, options = {}) {
   try {
     data = JSON.parse(rawBody);
   } catch {
-    throw new Error("The API returned invalid JSON.");
+    throw apiError("The API returned invalid JSON.", { isNetwork: true });
   }
 
   if (!response.ok) {
-    throw new Error(
-      data.message || `Request failed: HTTP ${response.status}`
+    // Access token expired (12h) — rotate the refresh token once and retry
+    // the original request transparently. skipAuthRetry breaks any loop.
+    if (
+      response.status === 401 &&
+      !options.skipAuthRetry &&
+      authEventHandler
+    ) {
+      const recovered = await authEventHandler();
+
+      if (recovered) {
+        return apiRequest(path, { ...options, skipAuthRetry: true });
+      }
+    }
+
+    throw apiError(
+      data.message || `Request failed: HTTP ${response.status}`,
+      { status: response.status }
     );
   }
 

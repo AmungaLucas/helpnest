@@ -36,6 +36,9 @@ export function refreshSession(refreshToken) {
   return apiRequest("/api/auth/refresh", {
     method: "POST",
     body: JSON.stringify({ refreshToken }),
+    // Never auto-retry the refresh call itself — a failed rotation must
+    // surface to AuthContext so it can end the session cleanly.
+    skipAuthRetry: true,
   });
 }
 
@@ -45,5 +48,10 @@ export async function fetchMe() {
 }
 
 export function logout() {
-  return apiRequest("/api/auth/logout", { method: "POST" });
+  return apiRequest("/api/auth/logout", {
+    method: "POST",
+    // Best-effort revocation — the local session is cleared regardless,
+    // so there is nothing useful to refresh-and-retry here.
+    skipAuthRetry: true,
+  });
 }

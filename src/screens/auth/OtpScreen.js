@@ -62,8 +62,8 @@ export default function OtpScreen() {
       const data = await verifyOtp(phone, code);
 
       if (data.success && data.tokens) {
+        // RootNavigator remounts onto Home as soon as the session lands.
         applySession({ tokens: data.tokens, userData: data.user });
-        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
         return;
       }
 

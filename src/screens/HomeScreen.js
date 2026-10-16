@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "../context/AuthContext";
@@ -16,16 +16,41 @@ const ROLE_LABELS = {
 // Placeholder dashboard — the role-specific home (PRD §5) is the next build.
 export default function HomeScreen() {
   const { user, clearSession } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
 
   const firstName = (user?.name || "").split(" ")[0];
 
+  function confirmSignOut() {
+    Alert.alert(
+      "Sign out",
+      "You'll need to log in again to access your HelpNest account.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: handleSignOut,
+        },
+      ]
+    );
+  }
+
   async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+
     try {
+      // Revokes every refresh token server-side. Best-effort: the local
+      // session is cleared even if the network call fails.
       await logout();
     } catch (error) {
-      // Clear locally even if the server call fails.
+      // Clear locally regardless.
     }
+
+    // Clears the context + SecureStore; RootNavigator remounts the stack
+    // and walks the user back through Splash -> RoleSelector.
     clearSession();
+    setSigningOut(false);
   }
 
   return (
@@ -39,8 +64,15 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.brandText}>HelpNest</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={handleSignOut}>
-          <Text style={styles.signOut}>Sign out</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          onPress={confirmSignOut}
+          disabled={signingOut}
+        >
+          <Text style={[styles.signOut, signingOut && styles.signOutBusy]}>
+            {signingOut ? "Signing out…" : "Sign out"}
+          </Text>
         </Pressable>
       </View>
 
@@ -123,6 +155,9 @@ const styles = StyleSheet.create({
     color: withAlpha(colors.cream, 0.75),
     fontSize: 13,
     fontWeight: "700",
+  },
+  signOutBusy: {
+    opacity: 0.6,
   },
   body: {
     flex: 1,

@@ -20,6 +20,12 @@ export default function RootNavigator() {
     <Stack.Navigator
       // Logged-in users open straight into Home; everyone else
       // walks the Splash -> RoleSelector -> auth flow.
+      //
+      // The key remounts the whole stack whenever the auth state flips
+      // (login, sign out, silent logout) — `initialRouteName` alone is
+      // only read at mount time, so without the key a signed-out user
+      // would stay stranded on the Home screen.
+      key={user ? "authed" : "guest"}
       initialRouteName={user ? "Home" : "Splash"}
       screenOptions={{
         headerShown: false,
