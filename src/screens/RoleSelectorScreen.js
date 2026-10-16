@@ -1,11 +1,11 @@
 import React, { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   StatusBar,
-  Alert,
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -34,6 +34,7 @@ const ROLES = [
 ];
 
 export default function RoleSelectorScreen() {
+  const navigation = useNavigation();
   const [selectedRole, setSelectedRole] = useState(null);
   const selected = ROLES.find((role) => role.id === selectedRole);
 
@@ -45,10 +46,8 @@ export default function RoleSelectorScreen() {
   }
 
   function handleContinue() {
-    Alert.alert(
-      "Welcome to HelpNest",
-      `You selected ${selected.short}. We'll set up your account next.`
-    );
+    // PRD §5.1/§5.2: role selection flows straight into basic signup.
+    navigation.navigate("SignUp", { role: selected.id });
   }
 
   return (
@@ -194,6 +193,16 @@ export default function RoleSelectorScreen() {
                   style={styles.changeWrap}
                 >
                   <Text style={styles.changeText}>Change my answer</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate("Login")}
+                  style={styles.changeWrap}
+                >
+                  <Text style={styles.changeText}>
+                    Already have an account? Log in
+                  </Text>
                 </Pressable>
               </View>
             </View>

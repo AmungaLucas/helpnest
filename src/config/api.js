@@ -25,6 +25,14 @@ const BROWSER_USER_AGENT =
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL;
 
+// Set by AuthContext after login / OTP verification. Attached to every
+// request as a Bearer header until the user signs out.
+let authToken = null;
+
+export function setAuthToken(token) {
+  authToken = token;
+}
+
 export async function apiRequest(path, options = {}) {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
   const url = `${API_BASE_URL}${path}`;
@@ -45,6 +53,7 @@ export async function apiRequest(path, options = {}) {
       headers: {
         Accept: "application/json",
         "User-Agent": BROWSER_USER_AGENT,
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         ...(fetchOptions.body ? { "Content-Type": "application/json" } : {}),
         ...fetchOptions.headers,
       },
