@@ -1,9 +1,24 @@
 import React, { useState } from "react";
-import { Alert, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../context/AuthContext";
 import { logout } from "../services/authService";
+import { updateMe } from "../services/usersService";
+import {
+  openAppSettings,
+  requestAndFetchLocation,
+} from "../utils/location";
 import { HelpNestLogoMark } from "../components/Logo";
 import { colors, withAlpha } from "../theme/colors";
 
@@ -15,9 +30,11 @@ const ROLE_LABELS = {
 
 // Placeholder dashboard — the role-specific home (PRD §5) is the next build.
 export default function HomeScreen() {
-  const { user, clearSession } = useAuth();
+  const navigation = useNavigation();
+  const { user, clearSession, updateUser } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
+  const isEmployer = user?.role !== "maid";
   const firstName = (user?.name || "").split(" ")[0];
 
   function confirmSignOut() {
@@ -54,7 +71,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
 
       <View style={styles.header}>
@@ -76,7 +93,11 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.body}>
+      <ScrollView
+        style={styles.bodyScroll}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.karibu}>Karibu{firstName ? `, ${firstName}` : ""} 👋</Text>
         <Text style={styles.roleLine}>
           You're in as a verified-in-progress{" "}
@@ -86,14 +107,27 @@ export default function HomeScreen() {
           .
         </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Coming up next</Text>
-          <Text style={styles.cardText}>
-            {user?.role === "maid"
-              ? "Your profile, job feed and applications are being built."
-              : "Browse maids, post jobs and manage applications are being built."}
-          </Text>
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.quickAction}
+          onPress={() =>
+            navigation.navigate(isEmployer ? "FindHelpTab" : "MyWorkTab")
+          }
+        >
+          <View style={styles.quickActionTextWrap}>
+            <Text style={styles.quickActionTitle}>
+              {isEmployer ? "Find trusted help near you" : "Set up your work profile"}
+            </Text>
+            <Text style={styles.quickActionText}>
+              {isEmployer
+                ? "Browse verified domestic workers and unlock contacts safely."
+                : "Show employers what you do, your rates and availability."}
+            </Text>
+          </View>
+          <Text style={styles.quickActionArrow}>→</Text>
+        </Pressable>
+
+        <LocationPromptCard user={user} updateUser={updateUser} />
 
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
@@ -115,8 +149,74 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// Nudges the user to share their general location once (lat/lng only).
+function LocationPromptCard({ user, updateUser }) {
+  const [locating, setLocating] = useState(false);
+
+  const hasCoords =
+    user?.locationLat !== null && user?.locationLat !== undefined;
+
+  if (hasCoords) return null;
+
+  async function handleAllow() {
+    if (locating) return;
+    setLocating(true);
+
+    try {
+      const coords = await requestAndFetchLocation();
+      await updateMe(coords);
+      updateUser(coords);
+    } catch (error) {
+      if (error?.code === "PERMISSION_DENIED") {
+        Alert.alert(
+          "Location permission needed",
+          error.message,
+          [
+            { text: "Not now", style: "cancel" },
+            ...(error.canAskAgain
+              ? []
+              : [{ text: "Open settings", onPress: () => openAppSettings() }]),
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Could not get location",
+          error?.message || "Please try again in a moment."
+        );
+      }
+    } finally {
+      setLocating(false);
+    }
+  }
+
+  return (
+    <View style={styles.locationCard}>
+      <View style={styles.locationTextWrap}>
+        <Text style={styles.locationTitle}>Find help near you</Text>
+        <Text style={styles.locationText}>
+          Allow location access so we can show workers and jobs close to you.
+          We store your general area only — never your exact address.
+        </Text>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        style={styles.locationButton}
+        onPress={handleAllow}
+        disabled={locating}
+      >
+        {locating ? (
+          <ActivityIndicator color={colors.white} size="small" />
+        ) : (
+          <Text style={styles.locationButtonText}>Use my location</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -159,9 +259,12 @@ const styles = StyleSheet.create({
   signOutBusy: {
     opacity: 0.6,
   },
-  body: {
+  bodyScroll: {
     flex: 1,
+  },
+  body: {
     padding: 22,
+    paddingBottom: 32,
   },
   karibu: {
     color: colors.ink,
@@ -224,5 +327,67 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 13,
     fontWeight: "600",
+  },
+  quickAction: {
+    backgroundColor: colors.brand,
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  quickActionTextWrap: {
+    flex: 1,
+    marginRight: 12,
+  },
+  quickActionTitle: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  quickActionText: {
+    color: withAlpha(colors.cream, 0.8),
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  quickActionArrow: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  locationCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 16,
+    marginBottom: 14,
+  },
+  locationTextWrap: {
+    marginBottom: 12,
+  },
+  locationTitle: {
+    color: colors.ink,
+    fontSize: 14.5,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  locationText: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 19,
+  },
+  locationButton: {
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  locationButtonText: {
+    color: colors.white,
+    fontSize: 13.5,
+    fontWeight: "800",
   },
 });

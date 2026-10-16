@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -102,10 +101,7 @@ export default function OtpScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <View style={styles.inner}>
           <Text style={styles.eyebrow}>PHONE VERIFICATION</Text>
           <Text style={styles.title}>Enter your code</Text>

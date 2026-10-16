@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -103,7 +102,9 @@ export default function SignUpScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // "padding" on both platforms — under Android edge-to-edge the
+        // legacy resize mode no longer lifts the form above the keyboard.
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 22,
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   eyebrow: {
     color: colors.goldDark,

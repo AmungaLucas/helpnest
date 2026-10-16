@@ -8,7 +8,9 @@ import ConnectionDiagnosticScreen from "../screens/ConnectionDiagnosticScreen";
 import SignUpScreen from "../screens/auth/SignUpScreen";
 import OtpScreen from "../screens/auth/OtpScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
-import HomeScreen from "../screens/HomeScreen";
+import MainTabs from "./MainTabs";
+import WorkerProfileScreen from "../screens/tabs/WorkerProfileScreen";
+import MpesaCheckoutScreen from "../screens/tabs/MpesaCheckoutScreen";
 import { colors } from "../theme/colors";
 
 const Stack = createNativeStackNavigator();
@@ -26,7 +28,7 @@ export default function RootNavigator() {
       // only read at mount time, so without the key a signed-out user
       // would stay stranded on the Home screen.
       key={user ? "authed" : "guest"}
-      initialRouteName={user ? "Home" : "Splash"}
+      initialRouteName={user ? "Main" : "Splash"}
       screenOptions={{
         headerShown: false,
         animation: "fade",
@@ -56,9 +58,21 @@ export default function RootNavigator() {
       />
 
       <Stack.Screen
-        name="Home"
-        component={HomeScreen}
+        name="Main"
+        component={MainTabs}
         options={{ gestureEnabled: false }}
+      />
+
+      <Stack.Screen
+        name="WorkerProfile"
+        component={WorkerProfileScreen}
+        options={{ animation: "slide_from_right" }}
+      />
+
+      <Stack.Screen
+        name="MpesaCheckout"
+        component={MpesaCheckoutScreen}
+        options={{ animation: "slide_from_right" }}
       />
 
       {/* Developer tool — not linked in the user flow. */}

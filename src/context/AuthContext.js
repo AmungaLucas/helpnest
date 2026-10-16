@@ -43,6 +43,17 @@ export function AuthProvider({ children }) {
     SecureStore.deleteItemAsync(USER_KEY);
   }, []);
 
+  // Merge a profile patch (e.g. location) into the session + cache.
+  const updateUser = useCallback((partial) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+
+      const next = { ...prev, ...partial };
+      SecureStore.setItemAsync(USER_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   // Rotate the refresh token in the background. Used on app launch and
   // whenever the API client hits a 401 with an expired access token.
   // Single-flight: concurrent 401s share one rotation instead of racing
@@ -143,8 +154,15 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   const value = useMemo(
-    () => ({ user, initializing, applySession, clearSession, rotateSession }),
-    [user, initializing, applySession, clearSession, rotateSession]
+    () => ({
+      user,
+      initializing,
+      applySession,
+      clearSession,
+      updateUser,
+      rotateSession,
+    }),
+    [user, initializing, applySession, clearSession, updateUser, rotateSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
