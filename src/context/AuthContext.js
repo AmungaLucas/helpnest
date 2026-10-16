@@ -11,6 +11,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { setAuthToken, setAuthEventHandler } from "../config/api";
 import { refreshSession, fetchMe } from "../services/authService";
+import { flushPendingLocation } from "../utils/location";
 
 const ACCESS_KEY = "hn.accessToken";
 const REFRESH_KEY = "hn.refreshToken";
@@ -23,26 +24,6 @@ export function AuthProvider({ children }) {
   const [initializing, setInitializing] = useState(true);
   const refreshInFlight = useRef(null);
 
-  // Store a fresh session: token in memory for the API client, both tokens
-  // plus the profile in SecureStore so the session survives app restarts.
-  const applySession = useCallback(({ tokens, userData }) => {
-    setAuthToken(tokens.access);
-    setUser(userData);
-
-    SecureStore.setItemAsync(ACCESS_KEY, tokens.access);
-    SecureStore.setItemAsync(REFRESH_KEY, tokens.refresh);
-    SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
-  }, []);
-
-  const clearSession = useCallback(() => {
-    setAuthToken(null);
-    setUser(null);
-
-    SecureStore.deleteItemAsync(ACCESS_KEY);
-    SecureStore.deleteItemAsync(REFRESH_KEY);
-    SecureStore.deleteItemAsync(USER_KEY);
-  }, []);
-
   // Merge a profile patch (e.g. location) into the session + cache.
   const updateUser = useCallback((partial) => {
     setUser((prev) => {
@@ -52,6 +33,37 @@ export function AuthProvider({ children }) {
       SecureStore.setItemAsync(USER_KEY, JSON.stringify(next));
       return next;
     });
+  }, []);
+
+  // Store a fresh session: token in memory for the API client, both tokens
+  // plus the profile in SecureStore so the session survives app restarts.
+  const applySession = useCallback(
+    ({ tokens, userData }) => {
+      setAuthToken(tokens.access);
+      setUser(userData);
+
+      SecureStore.setItemAsync(ACCESS_KEY, tokens.access);
+      SecureStore.setItemAsync(REFRESH_KEY, tokens.refresh);
+      SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+
+      // First-run location: if the device coords were captured at launch
+      // (before the user signed in), sync them now that a session exists.
+      flushPendingLocation().then((freshUser) => {
+        if (freshUser) {
+          updateUser(freshUser);
+        }
+      });
+    },
+    [updateUser]
+  );
+
+  const clearSession = useCallback(() => {
+    setAuthToken(null);
+    setUser(null);
+
+    SecureStore.deleteItemAsync(ACCESS_KEY);
+    SecureStore.deleteItemAsync(REFRESH_KEY);
+    SecureStore.deleteItemAsync(USER_KEY);
   }, []);
 
   // Rotate the refresh token in the background. Used on app launch and
