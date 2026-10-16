@@ -1,40 +1,38 @@
-# HelpNest Expo frontend connection test
+# HelpNest (help_nest_ke)
 
-This is an overlay ZIP for the existing Expo project. It includes only the frontend files needed to test the mobile app -> HTTPS API -> MySQL connection.
+React Native (Expo) frontend for HelpNest — connecting employers with trusted domestic workers.
 
-## Install into your existing project
+## Current state
 
-1. Extract this ZIP into the root of your existing `help_nest_ke` Expo project.
-2. Allow `App.js` to be replaced.
-3. Ensure the `src/config` folders and `api.js` file are copied.
-4. No additional npm packages are required; this uses React Native's built-in `fetch`.
+- Animated splash screen, then a role selector (Employer / Domestic Worker)
+- Central API client in `src/config/api.js` (JSON-only, 15s timeout, dev-only logging)
+- Shared brand palette in `src/theme/colors.js` and logo in `src/components/Logo.js`
 
-## Run with Expo Go
-
-From the existing Expo project folder:
+## Getting started
 
 ```bash
+npm install
 npx expo start -c
 ```
 
-Scan the QR code using Expo Go. The app displays a diagnostic screen. Tap **Test API connection**.
+Scan the QR code with Expo Go, or press `a` (Android) / `i` (iOS).
 
-The app calls:
+## API configuration
 
-`https://api.jobready.co.ke/api/health`
+The client defaults to `https://gateway.jobready.co.ke`. To override it:
 
-A successful result means the mobile app reached the API and the API was able to ping MySQL. This does not mean authentication or database CRUD endpoints have been implemented yet.
+1. Copy `.env.example` to `.env`
+2. Set `EXPO_PUBLIC_API_URL` to the base URL you want
+3. Restart Expo with `npx expo start -c` (env changes are not hot-reloaded)
 
-## If the test fails
+For a physical device hitting a dev server on your computer, use the computer's
+LAN IP address — `localhost` won't resolve from the phone.
 
-- Open `https://api.jobready.co.ke/api/health` in your phone browser.
-- If the response is 503, check the backend's MySQL environment variables and server-to-database access.
-- If you see a DNS, TLS, or network error, check the subdomain DNS and SSL certificate.
-- If the URL returns 404, verify the Node.js app is mapped to the subdomain and that the backend health route is deployed.
-- The database password must remain on the backend and must never be added to Expo files.
+## Conventions
 
-## Optional API URL override
+- `npx expo install <package>` — always use this instead of `npm install` so package versions stay SDK-compatible
+- All colors come from `src/theme/colors.js`; use `withAlpha()` for translucent variants
+- The house + heart logo lives in `src/components/Logo.js` — reuse it, don't copy SVG paths
 
-The client defaults to `https://api.jobready.co.ke`. To override it for local testing, create a `.env` file in the Expo project root using `.env.example` as a guide, then restart Expo with `npx expo start -c`.
-
-For a physical phone connecting to a development server on your computer, use the computer's LAN IP address rather than `localhost`. The API must be reachable from the phone.
+Secrets (database passwords, private keys) must stay on the backend and must never
+be added to this repo or committed `.env` files.
