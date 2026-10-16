@@ -7,21 +7,10 @@ import {
   StatusBar,
   Alert,
   ScrollView,
-  LayoutAnimation,
-  Platform,
-  UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import HelpNestLogo, { HelpNestLogoMark } from "../components/Logo";
 import { colors, withAlpha } from "../theme/colors";
-
-// LayoutAnimation is a silent no-op on Android unless explicitly enabled.
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 const ROLES = [
   {
@@ -49,13 +38,9 @@ export default function RoleSelectorScreen() {
   const selected = ROLES.find((role) => role.id === selectedRole);
 
   function chooseRole(id) {
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(
-        260,
-        LayoutAnimation.Types.easeInEaseOut,
-        LayoutAnimation.Properties.opacity
-      )
-    );
+    // Note: LayoutAnimation was removed — it is a no-op under the New
+    // Architecture (Expo SDK 57 default). If the expand/collapse needs
+    // animating later, use react-native-reanimated layout animations.
     setSelectedRole(id);
   }
 
