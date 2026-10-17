@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, G, Line, Path, Rect } from "react-native-svg";
 
 // Feather-style stroke icons for the bottom tab bar (react-native-svg,
 // already a project dependency — no icon package needed).
@@ -71,9 +71,11 @@ export default function TabBarIcon({ name, focused, color, size = 22 }) {
 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
-      {React.Children.map(ICON_PATHS[name], (child) =>
-        child ? React.cloneElement(child, strokeProps) : null
-      )}
+      {/* Stroke props live on the wrapping <G> so SVG inheritance applies
+          them to every child path. (Cloning props onto the <> fragment
+          wrappers used to throw "Invalid prop stroke supplied to
+          React.Fragment" and left icons unstyled.) */}
+      <G {...strokeProps}>{ICON_PATHS[name]}</G>
     </Svg>
   );
 }

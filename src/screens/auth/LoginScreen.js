@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
@@ -67,8 +67,13 @@ export default function LoginScreen() {
       }
 
       if (data.success && data.tokens) {
-        // RootNavigator remounts onto Home as soon as the session lands.
+        // Session lands in context, then the reset below swaps the visible
+        // screen to the app immediately (the RootNavigator key-remount
+        // remains as the state-level backup).
         applySession({ tokens: data.tokens, userData: data.user });
+        navigation.dispatch(
+          CommonActions.reset({ index: 0, routes: [{ name: "Main" }] })
+        );
         return;
       }
 

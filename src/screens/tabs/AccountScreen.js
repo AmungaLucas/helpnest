@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import { logout } from "../../services/authService";
@@ -59,6 +59,12 @@ export default function AccountScreen() {
     }
 
     clearSession();
+    // Swap to the guest flow explicitly (the RootNavigator key-remount
+    // remains as the state-level backup). Splash auto-advances to
+    // RoleSelector.
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: "Splash" }] })
+    );
     setSigningOut(false);
   }
 
