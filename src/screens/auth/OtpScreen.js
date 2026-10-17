@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  CommonActions,
   useNavigation,
   useRoute,
 } from "@react-navigation/native";
@@ -65,13 +64,11 @@ export default function OtpScreen() {
       const data = await verifyOtp(phone, code);
 
       if (data.success && data.tokens) {
-        // Session lands in context, then the reset below swaps the visible
-        // screen to the app immediately (the RootNavigator key-remount
-        // remains as the state-level backup).
+        // Session lands in context; RootNavigator swaps the guest stack for
+        // the authed stack, which unmounts this screen and opens Main. No
+        // explicit navigation needed — a reset dispatched here would target
+        // the guest stack, where "Main" doesn't exist.
         applySession({ tokens: data.tokens, userData: data.user });
-        navigation.dispatch(
-          CommonActions.reset({ index: 0, routes: [{ name: "Main" }] })
-        );
         return;
       }
 

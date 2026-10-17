@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CommonActions, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../context/AuthContext";
 import { logout } from "../services/authService";
@@ -64,13 +64,12 @@ export default function HomeScreen() {
       // Clear locally regardless.
     }
 
-    // Clears the context + SecureStore; the reset below then swaps to the
-    // guest flow explicitly (the RootNavigator key-remount remains as the
-    // state-level backup). Splash auto-advances to RoleSelector.
+    // Clears the context + SecureStore. RootNavigator swaps the authed
+    // stack for the guest stack whenever `user` flips to null, so no
+    // explicit navigation is needed here — and dispatching a reset from
+    // inside the tab navigator would target the wrong navigator anyway.
+    // Splash then auto-advances to RoleSelector.
     clearSession();
-    navigation.dispatch(
-      CommonActions.reset({ index: 0, routes: [{ name: "Splash" }] })
-    );
     setSigningOut(false);
   }
 
