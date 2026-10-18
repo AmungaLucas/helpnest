@@ -16,12 +16,19 @@ import { flushPendingLocation } from "../utils/location";
 const ACCESS_KEY = "hn.accessToken";
 const REFRESH_KEY = "hn.refreshToken";
 const USER_KEY = "hn.user"; // last known profile, for offline-friendly relaunch
+// One-way onboarding marker: set the first time a session is applied and
+// NEVER cleared by sign-out. It answers "has this device been through
+// onboarding before?" so the guest area can open on Login instead of
+// replaying role selection (PRD §5 onboarding flow).
+const HAS_ACCOUNT_KEY = "hn.hasAccount";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  // True once any session has existed on this device (survives sign-out).
+  const [hasAccount, setHasAccount] = useState(false);
   const refreshInFlight = useRef(null);
 
   // Merge a profile patch (e.g. location) into the session + cache.
@@ -35,6 +42,14 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  // Persist the one-way onboarding marker. Deliberately not part of
+  // clearSession — logging out must land the user on Login, not back in
+  // role selection.
+  const markHasAccount = useCallback(() => {
+    setHasAccount(true);
+    SecureStore.setItemAsync(HAS_ACCOUNT_KEY, "1");
+  }, []);
+
   // Store a fresh session: token in memory for the API client, both tokens
   // plus the profile in SecureStore so the session survives app restarts.
   const applySession = useCallback(
@@ -45,6 +60,7 @@ export function AuthProvider({ children }) {
       SecureStore.setItemAsync(ACCESS_KEY, tokens.access);
       SecureStore.setItemAsync(REFRESH_KEY, tokens.refresh);
       SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+      markHasAccount();
 
       // First-run location: if the device coords were captured at launch
       // (before the user signed in), sync them now that a session exists.
@@ -54,7 +70,7 @@ export function AuthProvider({ children }) {
         }
       });
     },
-    [updateUser]
+    [updateUser, markHasAccount]
   );
 
   const clearSession = useCallback(() => {
@@ -117,6 +133,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
+        // Read the onboarding marker first so the guest entry route is
+        // known before `initializing` flips (both state updates batch into
+        // one render, avoiding a one-frame wrong destination).
+        const storedHasAccount = await SecureStore.getItemAsync(HAS_ACCOUNT_KEY);
+        if (storedHasAccount === "1") {
+          setHasAccount(true);
+        }
+
         const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
 
         if (refreshToken) {
@@ -169,12 +193,21 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       initializing,
+      hasAccount,
       applySession,
       clearSession,
       updateUser,
       rotateSession,
     }),
-    [user, initializing, applySession, clearSession, updateUser, rotateSession]
+    [
+      user,
+      initializing,
+      hasAccount,
+      applySession,
+      clearSession,
+      updateUser,
+      rotateSession,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

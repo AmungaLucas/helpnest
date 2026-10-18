@@ -9,9 +9,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HelpNestLogoMark } from "../components/Logo";
+import { useAuth } from "../context/AuthContext";
 import { colors, withAlpha } from "../theme/colors";
 
 export default function SplashScreen({ navigation }) {
+  const { hasAccount } = useAuth();
   // entry animations
   const logoScale = useRef(new Animated.Value(0.6)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -126,15 +128,18 @@ export default function SplashScreen({ navigation }) {
     breatheLoop.start();
 
     // -------- Navigate after the intro finishes --------
+    // Fresh device -> role selection. A device that onboarded before but
+    // has no live session (GuestStack normally skips this screen entirely
+    // in that case) -> Login.
     const timer = setTimeout(() => {
-      navigation.replace("RoleSelector");
+      navigation.replace(hasAccount ? "Login" : "RoleSelector");
     }, 2600);
 
     return () => {
       clearTimeout(timer);
       breatheLoop.stop();
     };
-  }, [navigation]);
+  }, [navigation, hasAccount]);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -62,7 +62,8 @@ export default function AccountScreen() {
     // RootNavigator swaps the authed stack for the guest stack whenever
     // `user` flips to null — no explicit navigation needed (a reset
     // dispatched from inside the drawer navigator would target the wrong
-    // navigator anyway). Splash auto-advances to RoleSelector.
+    // navigator anyway). The guest stack opens directly on Login (the
+    // device already has an account), per the PRD §5 sign-out flow.
     setSigningOut(false);
   }
 

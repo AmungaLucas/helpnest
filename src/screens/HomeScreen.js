@@ -68,7 +68,8 @@ export default function HomeScreen() {
     // stack for the guest stack whenever `user` flips to null, so no
     // explicit navigation is needed here — and dispatching a reset from
     // inside the tab navigator would target the wrong navigator anyway.
-    // Splash then auto-advances to RoleSelector.
+    // The guest stack opens directly on Login (the device already has an
+    // account), per the PRD §5 sign-out flow.
     clearSession();
     setSigningOut(false);
   }
