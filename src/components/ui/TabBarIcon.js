@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Circle, G, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, G, Line, Path, Polygon, Polyline, Rect } from "react-native-svg";
 
 // Feather-style stroke icons for the bottom tab bar (react-native-svg,
 // already a project dependency — no icon package needed).
@@ -56,6 +56,36 @@ const ICON_PATHS = {
     <>
       <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
       <Circle cx="12" cy="7" r="4" />
+    </>
+  ),
+  "chevron-left": <Polyline points="15 18 9 12 15 6" />,
+  "chevron-right": <Polyline points="9 18 15 12 9 6" />,
+  send: (
+    <>
+      <Line x1="22" y1="2" x2="11" y2="13" />
+      <Polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </>
+  ),
+  check: <Polyline points="20 6 9 17 4 12" />,
+  x: (
+    <>
+      <Line x1="18" y1="6" x2="6" y2="18" />
+      <Line x1="6" y1="6" x2="18" y2="18" />
+    </>
+  ),
+  clock: (
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Polyline points="12 6 12 12 16 14" />
+    </>
+  ),
+  phone: (
+    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  ),
+  bell: (
+    <>
+      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </>
   ),
 };
