@@ -192,6 +192,16 @@ export default function SignUpScreen() {
               Log in
             </Text>
           </Text>
+
+          <Text style={styles.changeRoleLink}>
+            Not this role?{" "}
+            <Text
+              style={styles.changeRoleBold}
+              onPress={() => navigation.navigate("RoleSelector")}
+            >
+              Change role
+            </Text>
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -258,6 +268,16 @@ const styles = StyleSheet.create({
   },
   loginLinkBold: {
     color: colors.brand,
+    fontWeight: "800",
+  },
+  changeRoleLink: {
+    color: colors.textFaint,
+    fontSize: 12.5,
+    textAlign: "center",
+    marginTop: 10,
+  },
+  changeRoleBold: {
+    color: colors.goldDark,
     fontWeight: "800",
   },
 });

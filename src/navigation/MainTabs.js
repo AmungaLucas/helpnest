@@ -2,7 +2,8 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import { useAuth } from "../context/AuthContext";
-import HomeScreen from "../screens/HomeScreen";
+import EmployerHomeScreen from "../screens/home/EmployerHomeScreen";
+import MaidHomeScreen from "../screens/home/MaidHomeScreen";
 import FindJobsScreen from "../screens/tabs/FindJobsScreen";
 import ApplicationsScreen from "../screens/tabs/ApplicationsScreen";
 import MyJobsScreen from "../screens/tabs/MyJobsScreen";
@@ -49,7 +50,7 @@ export default function MainTabs() {
     <Tab.Navigator screenOptions={TAB_BAR_OPTIONS}>
       <Tab.Screen
         name="HomeTab"
-        component={HomeScreen}
+        component={isEmployer ? EmployerHomeScreen : MaidHomeScreen}
         options={{ title: "Home", tabBarIcon: icon("home") }}
       />
 

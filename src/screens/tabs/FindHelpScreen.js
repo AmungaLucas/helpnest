@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import { listWorkers } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
@@ -25,6 +25,9 @@ import { colors, withAlpha } from "../../theme/colors";
 
 export default function FindHelpScreen() {
   const navigation = useNavigation();
+  // Deep-link from the employer home category tiles: Maids tab opens with
+  // that service preselected (params merge on every navigate).
+  const { params } = useRoute();
 
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +35,12 @@ export default function FindHelpScreen() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [service, setService] = useState("");
+
+  useEffect(() => {
+    if (params?.service !== undefined && params.service !== null) {
+      setService(params.service);
+    }
+  }, [params?.service]);
 
   async function load({ refresh = false } = {}) {
     setError("");

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StatusBar,
@@ -13,6 +14,7 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 
 import { getWorker } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import {
   availabilityLabel,
   serviceLabel,
@@ -89,8 +91,9 @@ export default function WorkerProfileScreen() {
           accessibilityLabel="Go back"
           onPress={() => navigation.goBack()}
           hitSlop={10}
+          style={styles.backButton}
         >
-          <Text style={styles.headerBack}>Back</Text>
+          <TabBarIcon name="chevron-left" color={colors.ink} size={23} />
         </Pressable>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.headerSpacer} />
@@ -181,6 +184,31 @@ export default function WorkerProfileScreen() {
                 safety, keep payments and agreements inside the app once
                 messaging launches.
               </Text>
+
+              <View style={styles.contactActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={[styles.contactButton, styles.contactButtonPrimary]}
+                  onPress={() =>
+                    Linking.openURL(`tel:${normalizeDialNumber(worker.phone)}`)
+                  }
+                >
+                  <TabBarIcon name="phone" color={colors.white} size={15} />
+                  <Text style={styles.contactButtonPrimaryText}>Call</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.contactButton}
+                  onPress={() =>
+                    Linking.openURL(
+                      `sms:${normalizeDialNumber(worker.phone)}`
+                    )
+                  }
+                >
+                  <TabBarIcon name="message-circle" color={colors.brand} size={15} />
+                  <Text style={styles.contactButtonText}>SMS</Text>
+                </Pressable>
+              </View>
             </>
           ) : (
             <>
@@ -195,7 +223,8 @@ export default function WorkerProfileScreen() {
                 onPress={() =>
                   navigation.navigate("MpesaCheckout", {
                     plan: "contact_unlock",
-                    label: "Unlock a worker's contact",
+                    label: `Unlock ${firstName}'s contact`,
+                    workerId: worker.id,
                   })
                 }
               >
@@ -221,6 +250,21 @@ function formatKenyanPhone(phone) {
   return phone;
 }
 
+// Digits-only, Kenyan-prefixed number for tel:/sms: links.
+function normalizeDialNumber(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+
+  if (/^0\d{9}$/.test(digits)) {
+    return `+254${digits.slice(1)}`;
+  }
+
+  if (/^\d{9}$/.test(digits)) {
+    return `+254${digits}`;
+  }
+
+  return `+${digits}`;
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -237,11 +281,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 14,
   },
-  headerBack: {
-    color: colors.brand,
-    fontSize: 14,
-    fontWeight: "800",
+  backButton: {
     width: 60,
+    alignItems: "flex-start",
   },
   headerTitle: {
     flex: 1,
@@ -413,6 +455,36 @@ const styles = StyleSheet.create({
   unlockText: {
     color: colors.white,
     fontSize: 14.5,
+    fontWeight: "800",
+  },
+  contactActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    alignSelf: "stretch",
+  },
+  contactButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  contactButtonPrimary: {
+    backgroundColor: colors.brand,
+  },
+  contactButtonPrimaryText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  contactButtonText: {
+    color: colors.brand,
+    fontSize: 14,
     fontWeight: "800",
   },
   emptyTitle: {

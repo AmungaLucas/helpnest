@@ -12,6 +12,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import { startStkPush, getTransaction } from "../../services/paymentsService";
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import { formatPhoneDisplay } from "../../utils/phone";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -33,6 +34,9 @@ export default function MpesaCheckoutScreen() {
   const planId = params?.plan || "test_kes1";
   const meta = PLAN_META[planId] || PLAN_META.test_kes1;
   const label = params?.label || meta.label;
+  // Which worker a contact_unlock payment applies to — forwarded as STK
+  // metadata so the backend can attribute the unlock after the callback.
+  const workerId = params?.workerId || null;
 
   const [phase, setPhase] = useState("idle"); // idle | pushing | waiting | success | failed
   const [formError, setFormError] = useState("");
@@ -60,7 +64,10 @@ export default function MpesaCheckoutScreen() {
     setPhase("pushing");
 
     try {
-      const data = await startStkPush(planId);
+      const data = await startStkPush(
+        planId,
+        planId === "contact_unlock" && workerId ? { workerId } : undefined
+      );
 
       setTxn({ id: data.txnId });
       setPollLeft(POLL_MAX_ATTEMPTS);
@@ -136,8 +143,9 @@ export default function MpesaCheckoutScreen() {
           accessibilityLabel="Go back"
           onPress={handleCancel}
           hitSlop={10}
+          style={styles.backButton}
         >
-          <Text style={styles.headerBack}>Back</Text>
+          <TabBarIcon name="chevron-left" color={colors.ink} size={23} />
         </Pressable>
         <Text style={styles.headerTitle}>M-Pesa</Text>
         <View style={styles.headerSpacer} />
@@ -238,18 +246,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 14,
   },
-  headerBack: {
-    color: colors.brand,
-    fontSize: 14,
-    fontWeight: "800",
-    width: 60,
-  },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     color: colors.ink,
     fontSize: 16,
     fontWeight: "800",
+  },
+  backButton: {
+    width: 60,
+    alignItems: "flex-start",
   },
   headerSpacer: {
     width: 60,
