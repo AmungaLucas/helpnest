@@ -18,6 +18,7 @@ import MyWorkScreen from "../tabs/MyWorkScreen";
 import PaymentHubScreen from "./PaymentHubScreen";
 import ComingSoonScreen from "../../components/ui/ComingSoonScreen";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import SignedImage from "../../components/media/SignedImage";
 import { colors, withAlpha } from "../../theme/colors";
 
 const Drawer = createDrawerNavigator();
@@ -56,7 +57,13 @@ function DrawerContent({ state, descriptors, navigation }) {
     >
       <View style={styles.drawerHeader}>
         <View style={styles.drawerAvatar}>
-          <Text style={styles.drawerAvatarText}>{firstName.charAt(0)}</Text>
+          <SignedImage
+            mediaId={user?.profileMediaId}
+            variant="thumb"
+            fallbackText={firstName}
+            style={styles.drawerAvatarImage}
+            textStyle={styles.drawerAvatarText}
+          />
         </View>
         <View style={styles.drawerHeaderMain}>
           <Text style={styles.drawerName} numberOfLines={1}>
@@ -273,10 +280,16 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 17,
+    overflow: "hidden",
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
     marginRight: 13,
+  },
+  drawerAvatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
   },
   drawerAvatarText: {
     color: colors.brand,

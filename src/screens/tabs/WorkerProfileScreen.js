@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import { getWorker } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import SignedImage from "../../components/media/SignedImage";
 import {
   availabilityLabel,
   serviceLabel,
@@ -104,9 +105,14 @@ export default function WorkerProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{firstName.charAt(0)}</Text>
-          </View>
+          <SignedImage
+            url={worker?.avatarDisplayUrl || worker?.avatarUrl}
+            mediaId={worker?.avatarMediaId}
+            variant="display"
+            fallbackText={firstName}
+            style={styles.avatar}
+            textStyle={styles.avatarText}
+          />
 
           <Text style={styles.name}>{worker.name}</Text>
           <Text style={styles.headline}>
@@ -316,6 +322,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+    overflow: "hidden",
   },
   avatarText: {
     color: colors.brand,

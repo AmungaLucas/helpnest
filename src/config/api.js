@@ -70,7 +70,11 @@ export async function apiRequest(path, options = {}) {
         Accept: "application/json",
         "User-Agent": BROWSER_USER_AGENT,
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        ...(fetchOptions.body ? { "Content-Type": "application/json" } : {}),
+        // FormData bodies must NOT get a JSON content-type — the runtime
+        // needs to set multipart/form-data with its own boundary itself.
+        ...(fetchOptions.body && !(fetchOptions.body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...fetchOptions.headers,
       },
     });

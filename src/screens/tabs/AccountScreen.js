@@ -11,10 +11,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 
 import { useAuth } from "../../context/AuthContext";
 import { logout } from "../../services/authService";
 import { updateMe } from "../../services/usersService";
+import { uploadMedia } from "../../services/mediaService";
+import SignedImage from "../../components/media/SignedImage";
 import {
   openAppSettings,
   requestAndFetchLocation,
@@ -33,6 +36,7 @@ export default function AccountScreen() {
   const { user, clearSession, updateUser } = useAuth();
   const [locating, setLocating] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const firstName = (user?.name || "").split(" ")[0] || "?";
   const hasCoords = user?.locationLat !== null && user?.locationLat !== undefined;
@@ -65,6 +69,41 @@ export default function AccountScreen() {
     // navigator anyway). The guest stack opens directly on Login (the
     // device already has an account), per the PRD §5 sign-out flow.
     setSigningOut(false);
+  }
+
+  // Profile photo: square-crop picker (re-encodes to JPEG client-side, so
+  // iPhone HEIC never reaches the API), then multipart upload. The response
+  // carries the refreshed user incl. profileMediaId — merged into the cached
+  // session so drawer/list avatars update immediately.
+  async function handleChangePhoto() {
+    if (uploadingPhoto) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        exif: false,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      setUploadingPhoto(true);
+      const response = await uploadMedia({
+        uri: result.assets[0].uri,
+        kind: "profile",
+      });
+
+      if (response.user) updateUser(response.user);
+    } catch (error) {
+      Alert.alert(
+        "Could not update photo",
+        error?.message || "Please try again in a moment."
+      );
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   async function handleUseLocation() {
@@ -111,9 +150,28 @@ export default function AccountScreen() {
         </View>
 
         <View style={styles.profileRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{firstName.charAt(0)}</Text>
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Change profile photo"
+            style={styles.avatarWrap}
+            onPress={handleChangePhoto}
+            disabled={uploadingPhoto}
+          >
+            <SignedImage
+              mediaId={user?.profileMediaId}
+              variant="thumb"
+              fallbackText={firstName}
+              style={styles.avatar}
+              textStyle={styles.avatarText}
+            />
+            <View style={styles.avatarBadge}>
+              {uploadingPhoto ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.avatarBadgeText}>Edit</Text>
+              )}
+            </View>
+          </Pressable>
           <View style={styles.profileMain}>
             <Text style={styles.name}>{user?.name}</Text>
             <Text style={styles.roleLine}>
@@ -246,6 +304,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  avatarWrap: {
+    marginRight: 14,
+  },
   avatar: {
     width: 58,
     height: 58,
@@ -253,7 +314,23 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
+  },
+  avatarBadge: {
+    position: "absolute",
+    right: -4,
+    bottom: -4,
+    backgroundColor: colors.brand,
+    borderRadius: 9,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderWidth: 2,
+    borderColor: colors.cream,
+  },
+  avatarBadgeText: {
+    color: colors.white,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   avatarText: {
     color: colors.brand,

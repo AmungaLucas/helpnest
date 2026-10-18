@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 
 import { listWorkers } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
+import SignedImage from "../../components/media/SignedImage";
 import {
   SERVICE_OPTIONS,
   availabilityLabel,
@@ -155,9 +156,14 @@ function WorkerCard({ worker, onPress }) {
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{firstName.charAt(0)}</Text>
-      </View>
+      <SignedImage
+        url={worker.avatarUrl}
+        mediaId={worker.avatarMediaId}
+        variant="thumb"
+        fallbackText={firstName}
+        style={styles.avatar}
+        textStyle={styles.avatarText}
+      />
 
       <View style={styles.cardMain}>
         <View style={styles.nameRow}>
@@ -267,6 +273,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    overflow: "hidden",
   },
   avatarText: {
     color: colors.brand,
