@@ -351,9 +351,28 @@ export default function VerificationScreen() {
     );
   }
 
-  const kycStatus = statusData?.kycStatus || user?.kycStatus || "unverified";
   const documents = statusData?.documents || {};
+
+  // Documents are the review ground truth. If the account-level flag and the
+  // document rows ever disagree, follow the documents — the gateway applies
+  // the same rule on every status read (and heals the stored flag).
+  const docStatuses = SLOTS.map((s) => documents[s.key]?.status || null);
+  const hasDocs = docStatuses.some(Boolean);
+  const allApproved = hasDocs && docStatuses.every((s) => s === "approved");
+  const anyRejected = docStatuses.includes("rejected");
+  const kycStatus = allApproved
+    ? "verified"
+    : anyRejected
+    ? "rejected"
+    : statusData?.kycStatus || user?.kycStatus || "unverified";
   const theme = STATUS_THEMES[kycStatus] || STATUS_THEMES.unverified;
+
+  // Plain function, NOT a hook: this sits after the conditional loading
+  // return, so hook order would break if it used useCallback here.
+  function openResubmitForm() {
+    setFormError("");
+    setMode("form");
+  }
 
   // Resubmission after a (partial) rejection: only docs that were NOT
   // approved need a retake. Approved ones render locked in the form.
@@ -409,7 +428,7 @@ export default function VerificationScreen() {
                 "Our team is reviewing your documents right now. This usually takes less than 24 hours — this screen updates by itself the moment a decision is made."
               }
               {kycStatus === "rejected" &&
-                "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Retake only the flagged ones and resubmit."
+                "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Tap a flagged document to retake it, then resubmit."
               }
               {kycStatus === "unverified" &&
                 "Upload your national ID (both sides) and a clear selfie. We review every submission within 24 hours, and your documents stay private — only HelpNest reviewers can see them."
@@ -420,9 +439,9 @@ export default function VerificationScreen() {
             </Text>
           </View>
 
-          {/* Document outcomes while a submission is in flight or reviewed */}
-          {(kycStatus === "pending" || kycStatus === "rejected") &&
-          SLOTS.some((s) => documents[s.key]) ? (
+          {/* Document outcomes — shown whenever any document exists, so the
+              user can see exactly what the reviewer decided per photo. */}
+          {hasDocs ? (
             <View style={styles.docsCard}>
               {SLOTS.map((slot) => {
                 const doc = documents[slot.key];
@@ -431,8 +450,8 @@ export default function VerificationScreen() {
 
                 const rejected = doc.status === "rejected";
 
-                return (
-                  <View key={slot.key} style={styles.docRow}>
+                const rowInner = (
+                  <>
                     <View style={styles.docMain}>
                       <Text style={styles.docLabel}>{slot.label}</Text>
                       {rejected && doc.rejectionReason ? (
@@ -441,16 +460,37 @@ export default function VerificationScreen() {
                         </Text>
                       ) : null}
                     </View>
-                    <Text
-                      style={[
-                        styles.docState,
-                        doc.status === "approved" && styles.docStateOk,
-                        rejected && styles.docStateBad,
-                      ]}
-                    >
-                      {DOC_STATUS_LABELS[doc.status] || doc.status}
-                    </Text>
-                  </View>
+                    <View style={styles.docSide}>
+                      <Text
+                        style={[
+                          styles.docState,
+                          doc.status === "approved" && styles.docStateOk,
+                          rejected && styles.docStateBad,
+                        ]}
+                      >
+                        {DOC_STATUS_LABELS[doc.status] || doc.status}
+                      </Text>
+                      {rejected ? (
+                        <Text style={styles.docRetake}>Tap to retake</Text>
+                      ) : null}
+                    </View>
+                  </>
+                );
+
+                // A rejected document IS the retake entry point — tapping the
+                // row jumps straight into the resubmission form for it.
+                return rejected ? (
+                  <Pressable
+                    key={slot.key}
+                    style={styles.docRow}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Retake ${slot.label}`}
+                    onPress={openResubmitForm}
+                  >
+                    {rowInner}
+                  </Pressable>
+                ) : (
+                  <View key={slot.key} style={styles.docRow}>{rowInner}</View>
                 );
               })}
             </View>
@@ -459,10 +499,7 @@ export default function VerificationScreen() {
           {(kycStatus === "unverified" || kycStatus === "rejected") && (
             <PrimaryButton
               label={resubmitMode ? "Retake rejected photos" : "Start verification"}
-              onPress={() => {
-                setFormError("");
-                setMode("form");
-              }}
+              onPress={openResubmitForm}
             />
           )}
 
@@ -651,10 +688,19 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 3,
   },
+  docSide: {
+    alignItems: "flex-end",
+  },
   docState: {
     fontSize: 12.5,
     fontWeight: "800",
     color: colors.textMuted,
+  },
+  docRetake: {
+    color: colors.brand,
+    fontSize: 11.5,
+    fontWeight: "800",
+    marginTop: 3,
   },
   docStateOk: {
     color: "#1F7A3D",
