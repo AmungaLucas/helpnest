@@ -21,7 +21,14 @@ import { colors, withAlpha } from "../../theme/colors";
 const PLAN_META = {
   test_kes1: { label: "M-Pesa test payment", amountKes: 1 },
   contact_unlock: { label: "Unlock a worker's contact", amountKes: 300 },
+  chat_pass: { label: "One-time chat", amountKes: 200 },
+  chat_week: { label: "Unlimited chats — 1 week", amountKes: 250 },
+  chat_month: { label: "Unlimited chats — 1 month", amountKes: 800 },
 };
+
+// Plans tied to ONE worker — the workerId rides along as STK metadata so
+// the backend can attribute the entitlement after the callback.
+const WORKER_SCOPED = new Set(["contact_unlock", "chat_pass"]);
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 40; // ~2 minutes
@@ -66,7 +73,7 @@ export default function MpesaCheckoutScreen() {
     try {
       const data = await startStkPush(
         planId,
-        planId === "contact_unlock" && workerId ? { workerId } : undefined
+        WORKER_SCOPED.has(planId) && workerId ? { workerId } : undefined
       );
 
       setTxn({ id: data.txnId });
@@ -167,6 +174,17 @@ export default function MpesaCheckoutScreen() {
               <Text style={styles.successHint}>
                 Contact details are now unlocked on worker profiles. Go back to
                 see them.
+              </Text>
+            ) : planId === "chat_pass" ? (
+              <Text style={styles.successHint}>
+                Your conversation is open — go back and tap Chat to start
+                talking.
+              </Text>
+            ) : PLAN_META[planId] ? (
+              <Text style={styles.successHint}>
+                Unlimited chats are active for the next
+                {planId === "chat_week" ? " 7 days" : " 30 days"}. Any maid's
+                Chat button opens straight away.
               </Text>
             ) : (
               <Text style={styles.successHint}>

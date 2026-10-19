@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import { listWorkers } from "../../services/workersService";
+import { getSubscriptionStatus } from "../../services/subscriptionsService";
 import SignedImage from "../../components/media/SignedImage";
 import LocationPickerModal from "../../components/ui/LocationPickerModal";
 import TabBarIcon from "../../components/ui/TabBarIcon";
@@ -40,6 +41,38 @@ import { colors, withAlpha } from "../../theme/colors";
 const CAROUSEL_FETCH = 40; // one page, plenty for three 6-item rails
 const RAIL_SIZE = 6;
 const NEAR_RADIUS_KM = 25; // "near you" cut-off before we loosen the rail
+
+// Subscription tiles on the home plans section — display-only mirror of the
+// server-side PLANS catalog (amounts looked up server-side at push time).
+const PLAN_TILES = [
+  {
+    id: "chat_week",
+    name: "Weekly",
+    price: 250,
+    per: "7 days, unlimited",
+    label: "Unlimited chats — 1 week",
+  },
+  {
+    id: "chat_month",
+    name: "Monthly",
+    price: 800,
+    per: "30 days, unlimited",
+    label: "Unlimited chats — 1 month",
+    best: true,
+  },
+];
+
+function formatExpiry(iso) {
+  try {
+    return new Date(iso).toLocaleDateString("en-KE", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
 
 // Emoji per service — zero icon-package weight, reads well at chip size.
 const SERVICE_EMOJI = {
@@ -201,10 +234,14 @@ export default function EmployerHomeScreen() {
   const [loadError, setLoadError] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [topNearOnly, setTopNearOnly] = useState(false);
+  const [subStatus, setSubStatus] = useState(null);
 
   // Coords live in a ref so the focus fetch can read the latest values
-  // without re-running (the effect deliberately has [] deps — a location
-  // change shows up on the next focus or pull-to-refresh).
+  // without re-render churn. `fetchedCoordsKeyRef` remembers which coords
+  // the last fetch ACTUALLY used: on a cold launch AuthContext hydrates
+  // after the first fetch (which then runs without coords and the rail
+  // falls back to "Available now"), so the effect below refetches ONCE the
+  // moment coords arrive or change — no pull-to-refresh needed.
   const coordsRef = useRef(null);
   if (
     typeof user?.locationLat === "number" &&
@@ -212,6 +249,10 @@ export default function EmployerHomeScreen() {
   ) {
     coordsRef.current = { lat: user.locationLat, lng: user.locationLng };
   }
+  const fetchedCoordsKeyRef = useRef(null);
+  // Monotonic sequence: only the newest fetch may commit state (a slow
+  // no-coords response must never overwrite a fresh coords response).
+  const fetchSeqRef = useRef(0);
 
   const firstName = (user?.name || "").split(" ")[0] || "";
 
@@ -222,24 +263,29 @@ export default function EmployerHomeScreen() {
   const fetchWorkers = useCallback(async ({ asRefresh } = {}) => {
     if (asRefresh) setRefreshing(true);
 
+    const seq = ++fetchSeqRef.current;
+    const coords = coordsRef.current;
+    fetchedCoordsKeyRef.current = coords
+      ? `${coords.lat},${coords.lng}`
+      : "none";
+
     try {
-      const coords = coordsRef.current;
       const data = await listWorkers({
         limit: CAROUSEL_FETCH,
         ...(coords ? { lat: coords.lat, lng: coords.lng, sort: "near" } : {}),
       });
-      if (!aliveRef.current) return;
+      if (!aliveRef.current || seq !== fetchSeqRef.current) return;
       setWorkers(data.workers || []);
       setLoadError(false);
     } catch {
       // Home treats failures as non-fatal, but they must not read as
       // "no workers exist" — the error state changes the empty-box copy
       // and offers a retry (this exact silence once hid a gateway 500).
-      if (!aliveRef.current) return;
+      if (!aliveRef.current || seq !== fetchSeqRef.current) return;
       setWorkers([]);
       setLoadError(true);
     } finally {
-      if (aliveRef.current) {
+      if (aliveRef.current && seq === fetchSeqRef.current) {
         setLoading(false);
         setRefreshing(false);
       }
@@ -247,15 +293,44 @@ export default function EmployerHomeScreen() {
   }, []);
 
   // Fresh picks every time the tab regains focus (cheap: one 40-row page).
+  // Also refreshes the subscription status for the plans section.
   useFocusEffect(
     useCallback(() => {
       aliveRef.current = true;
       fetchWorkers();
+
+      (async () => {
+        try {
+          const data = await getSubscriptionStatus();
+          if (aliveRef.current) setSubStatus(data);
+        } catch {
+          // Non-fatal — the plans section falls back to the generic upsell.
+        }
+      })();
+
       return () => {
         aliveRef.current = false;
       };
     }, [fetchWorkers])
   );
+
+  // Cold-launch fix: AuthContext hydrates AFTER the first focus fetch, so
+  // the first fetch usually runs without coords. The moment coords arrive
+  // (or change after a location save), refetch once — "Maids near you"
+  // with real distances appears without leaving the tab.
+  useEffect(() => {
+    if (
+      typeof user?.locationLat !== "number" ||
+      typeof user?.locationLng !== "number"
+    ) {
+      return;
+    }
+
+    const key = `${user.locationLat},${user.locationLng}`;
+    if (key !== fetchedCoordsKeyRef.current) {
+      fetchWorkers();
+    }
+  }, [user?.locationLat, user?.locationLng, fetchWorkers]);
 
   const hasCoords = Boolean(coordsRef.current);
 
@@ -599,6 +674,63 @@ export default function EmployerHomeScreen() {
             Every contact unlock is paid through M-Pesa and workers keep
             control of who sees their number.
           </Text>
+        </View>
+
+        {/* ---------- Subscription plans (right after the M-Pesa banner) ---------- */}
+        <View style={styles.planCard}>
+          <View style={styles.planHead}>
+            <Text style={styles.planTitle}>Chat without limits</Text>
+            {subStatus?.hasSubscription ? (
+              <View style={styles.planActivePill}>
+                <Text style={styles.planActiveText}>Active</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {subStatus?.hasSubscription ? (
+            <Text style={styles.planActiveCopy}>
+              {subStatus.planLabel} · unlimited chats until{" "}
+              {formatExpiry(subStatus.expiresAt)}.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.planCopy}>
+                Message any maid without paying per conversation.
+              </Text>
+              <View style={styles.planRow}>
+                {PLAN_TILES.map((plan) => (
+                  <Pressable
+                    key={plan.id}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.planTile,
+                      plan.best && styles.planTileBest,
+                      pressed && styles.tilePressed,
+                    ]}
+                    onPress={() =>
+                      navigation.navigate("MpesaCheckout", {
+                        plan: plan.id,
+                        label: plan.label,
+                      })
+                    }
+                  >
+                    {plan.best ? (
+                      <View style={styles.planBest}>
+                        <Text style={styles.planBestText}>Best value</Text>
+                      </View>
+                    ) : null}
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    <Text style={styles.planPrice}>KES {plan.price}</Text>
+                    <Text style={styles.planPer}>{plan.per}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={styles.planFootnote}>
+                Prefer one conversation? A one-time chat is KES 200 on any
+                maid's profile.
+              </Text>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -1042,6 +1174,107 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17.5,
     fontWeight: "600",
+  },
+
+  /* ---- Subscription plans ---- */
+  planCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 16,
+    marginTop: 12,
+  },
+  planHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  planTitle: {
+    color: colors.ink,
+    fontSize: 15.5,
+    fontWeight: "800",
+    flex: 1,
+  },
+  planActivePill: {
+    backgroundColor: withAlpha(colors.brand, 0.14),
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  planActiveText: {
+    color: colors.brand,
+    fontSize: 10.5,
+    fontWeight: "800",
+  },
+  planActiveCopy: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  planCopy: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 19,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  planRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  planTile: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  planTileBest: {
+    borderColor: colors.gold,
+    backgroundColor: withAlpha(colors.gold, 0.1),
+  },
+  planBest: {
+    position: "absolute",
+    top: -9,
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  planBestText: {
+    color: colors.white,
+    fontSize: 9.5,
+    fontWeight: "800",
+  },
+  planName: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  planPrice: {
+    color: colors.ink,
+    fontSize: 19,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  planPer: {
+    color: colors.textFaint,
+    fontSize: 10.5,
+    fontWeight: "700",
+    marginTop: 3,
+    textAlign: "center",
+  },
+  planFootnote: {
+    color: colors.textFaint,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 12,
+    textAlign: "center",
   },
 });
 
