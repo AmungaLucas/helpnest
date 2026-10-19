@@ -9,9 +9,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import PrimaryButton from "../components/ui/PrimaryButton";
-import TabBarIcon from "../components/ui/TabBarIcon";
-import { colors, withAlpha } from "../theme/colors";
+import PrimaryButton from "../../components/ui/PrimaryButton";
+import TabBarIcon from "../../components/ui/TabBarIcon";
+import { colors, withAlpha } from "../../theme/colors";
 
 // Review-before-upload (W2-F3 polish, 2026-10-20).
 //
