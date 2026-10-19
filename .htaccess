@@ -1,8 +1,16 @@
-# HelpNest media subdomain — hardening + signed-URL routing.
+# HelpNest media subdomain — signed-URL routing + rewrite-based access gate.
 # This document root must contain ONLY this file, stream.php, receive.php and
 # disk-report.php. Image bytes NEVER live here — they stay in the storage root
 # defined in helpnest-media.config.php (outside the webroot).
 # NOTE: disk-report.php is CLI-only (cPanel cron) and stays DENIED to the web.
+#
+# WHY THE GATE IS mod_rewrite, NOT "Require all denied":
+# Apache 2.4 evaluates .htaccess authorization BEFORE per-directory rewrites
+# (authz runs in the access-check phase; per-dir mod_rewrite runs later, in
+# fixup). A directory-level deny therefore 403s the /s/<group>/<key> pretty
+# route before it can ever be rewritten onto stream.php, while direct
+# /stream.php requests pass. Gatekeeping inside mod_rewrite (F flag) closes
+# that gap: the pretty route is rewritten first, everything else is refused.
 
 RewriteEngine On
 
@@ -10,25 +18,14 @@ RewriteEngine On
 # The query string (v, exp, sig) is preserved automatically by QSA.
 RewriteRule ^s/([a-z]+)/([0-9a-f-]{36})/?$ stream.php?group=$1&key=$2 [QSA,L]
 
-# Whitelist the two endpoints; deny everything else in this directory so
-# nothing accidentally dropped here can ever be served.
-<FilesMatch "^(stream|receive)\.php$">
-    <IfModule mod_authz_core.c>
-        Require all granted
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Allow from all
-    </IfModule>
-</FilesMatch>
-
-<IfModule mod_authz_core.c>
-    Require all denied
-</IfModule>
-<IfModule !mod_authz_core.c>
-    Order deny,allow
-    Deny from all
-</IfModule>
+# Gate: allow ONLY the two endpoints, the pretty route above, and AutoSSL's
+# DCV path. Everything else in this directory -> 403, so nothing accidentally
+# dropped here can ever be served (the rewritten stream.php pass satisfies the
+# first condition, so the internal redirect is never blocked).
+RewriteCond %{REQUEST_URI} !^/(stream|receive)\.php$
+RewriteCond %{REQUEST_URI} !^/s/[a-z]+/[0-9a-f-]{36}/?$
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^ - [F]
 
 # No directory listings, ever.
 Options -Indexes
