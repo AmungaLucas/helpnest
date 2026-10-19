@@ -24,6 +24,7 @@ const PLAN_META = {
   chat_pass: { label: "One-time chat", amountKes: 200 },
   chat_week: { label: "Unlimited chats — 1 week", amountKes: 250 },
   chat_month: { label: "Unlimited chats — 1 month", amountKes: 800 },
+  job_post: { label: "Post a job", amountKes: 500 },
 };
 
 // Plans tied to ONE worker — the workerId rides along as STK metadata so
@@ -180,9 +181,14 @@ export default function MpesaCheckoutScreen() {
                 Your conversation is open — go back and tap Chat to start
                 talking.
               </Text>
+            ) : planId === "job_post" ? (
+              <Text style={styles.successHint}>
+                Your job is live. Head back to finish posting it, then manage
+                responses under My Jobs.
+              </Text>
             ) : PLAN_META[planId] ? (
               <Text style={styles.successHint}>
-                Unlimited chats are active for the next
+                Unlimited chats and job posts are active for the next
                 {planId === "chat_week" ? " 7 days" : " 30 days"}. Any maid's
                 Chat button opens straight away.
               </Text>

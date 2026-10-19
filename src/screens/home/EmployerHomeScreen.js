@@ -472,7 +472,7 @@ export default function EmployerHomeScreen() {
               styles.ctaPrimary,
               pressed && styles.tilePressedDark,
             ]}
-            onPress={() => navigation.navigate("MyJobsTab")}
+            onPress={() => navigation.navigate("PostJob")}
           >
             <TabBarIcon name="file-text" color={colors.white} size={18} />
             <Text style={styles.postJobText}>Post a job</Text>

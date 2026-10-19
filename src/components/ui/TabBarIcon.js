@@ -67,6 +67,13 @@ const ICON_PATHS = {
     </>
   ),
   check: <Polyline points="20 6 9 17 4 12" />,
+  // Job-post fee hint / success states (feather check-circle)
+  "check-circle": (
+    <>
+      <Path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <Polyline points="22 4 12 14.01 9 11.01" />
+    </>
+  ),
   x: (
     <>
       <Line x1="18" y1="6" x2="6" y2="18" />

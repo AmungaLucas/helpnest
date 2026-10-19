@@ -13,6 +13,7 @@ import LoginScreen from "../screens/auth/LoginScreen";
 import MainTabs from "./MainTabs";
 import WorkerProfileScreen from "../screens/tabs/WorkerProfileScreen";
 import MpesaCheckoutScreen from "../screens/tabs/MpesaCheckoutScreen";
+import PostJobScreen from "../screens/tabs/PostJobScreen";
 import ChatRoomScreen from "../screens/chats/ChatRoomScreen";
 import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
 import ImageReviewScreen from "../screens/profile/ImageReviewScreen";
@@ -78,6 +79,12 @@ function AuthedStack() {
       <Stack.Screen
         name="WorkerProfile"
         component={WorkerProfileScreen}
+        options={{ animation: "slide_from_right" }}
+      />
+
+      <Stack.Screen
+        name="PostJob"
+        component={PostJobScreen}
         options={{ animation: "slide_from_right" }}
       />
 
