@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -29,8 +30,10 @@ import { colors, withAlpha } from "../../theme/colors";
 //   DPA 2019 consent -> submit -> back to status view ("under review").
 //
 // 2026-10-20 round of fixes:
-//   - While "under review" the screen silently polls /api/kyc/status every
-//     12s, so an admin decision shows up on its own (no navigate-away dance).
+//   - The status view silently polls /api/kyc/status every 12s whenever a
+//     decision can still land — review in flight, or any document flagged/
+//     awaiting. Approvals AND late un-rejections appear on their own; only
+//     settled states (verified / unverified / suspended) stop the watch.
 //   - Rejection reasons from the reviewer render per document row.
 //   - After a PARTIAL rejection (e.g. selfie approved, ID back rejected) the
 //     resubmit form only asks for the rejected docs — approved ones render as
@@ -171,14 +174,23 @@ export default function VerificationScreen() {
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Poll gate: the interval always runs while focused, but only fires a
-  // request while the latest known status is "pending" (the one state an
-  // admin can change behind the user's back).
-  const kycStatusRef = useRef("unverified");
+  // request while a decision can still land behind the user's back. With
+  // document-derived status, "rejected" is NOT final — the reviewer can
+  // flip a flagged row to approved later, and the screen must show it
+  // without a navigate-away dance. Only settled states stop the watch.
+  const kycPollRef = useRef(false);
 
   const applyStatus = useCallback((data) => {
-    kycStatusRef.current = data?.kycStatus || "unverified";
+    const raw = data?.kycStatus || "unverified";
+    const docs = data?.documents || {};
+    const anyDocPending = SLOTS.some((s) => docs[s.key]?.status === "pending");
+
+    kycPollRef.current =
+      raw === "pending" || raw === "rejected" || anyDocPending;
+
     setStatusData(data);
   }, []);
 
@@ -207,7 +219,7 @@ export default function VerificationScreen() {
       // Auto-update: an approval/rejection lands on this screen without the
       // user having to leave and come back. Cleared on blur.
       const timer = setInterval(() => {
-        if (kycStatusRef.current === "pending") {
+        if (kycPollRef.current) {
           refresh({ silent: true });
         }
       }, POLL_MS);
@@ -374,6 +386,15 @@ export default function VerificationScreen() {
     setMode("form");
   }
 
+  // Manual safety net — pull down on the status view to re-check now.
+  async function onManualRefresh() {
+    if (refreshing) return;
+
+    setRefreshing(true);
+    await refresh({ silent: true });
+    setRefreshing(false);
+  }
+
   // Resubmission after a (partial) rejection: only docs that were NOT
   // approved need a retake. Approved ones render locked in the form.
   const resubmitMode = kycStatus === "rejected";
@@ -389,6 +410,15 @@ export default function VerificationScreen() {
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onManualRefresh}
+              tintColor={colors.brand}
+              colors={[colors.brand]}
+              progressBackgroundColor={colors.white}
+            />
+          }
         >
           <View style={styles.menuRow}>
             <HamburgerButton />
