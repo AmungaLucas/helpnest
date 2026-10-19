@@ -103,6 +103,13 @@ const ICON_PATHS = {
       <Circle cx="12" cy="13" r="4" />
     </>
   ),
+  // Home location chip (employer header)
+  "map-pin": (
+    <>
+      <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <Circle cx="12" cy="10" r="3" />
+    </>
+  ),
 };
 
 export default function TabBarIcon({ name, focused, color, size = 22 }) {

@@ -26,8 +26,17 @@ export default function LocationPromptCard() {
 
     try {
       const coords = await requestAndFetchLocation();
-      await updateMe(coords);
-      updateUser(coords);
+
+      // A label the user typed themselves always wins — only auto-fill
+      // when there is nothing to preserve.
+      const payload = user?.locationLabel ? { ...coords } : coords;
+      delete payload.locationLabel;
+      if (!user?.locationLabel && coords.locationLabel) {
+        payload.locationLabel = coords.locationLabel;
+      }
+
+      await updateMe(payload);
+      updateUser(payload);
     } catch (error) {
       if (error?.code === "PERMISSION_DENIED") {
         Alert.alert(

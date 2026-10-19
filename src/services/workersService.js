@@ -3,13 +3,20 @@ import { apiRequest } from "../config/api";
 // Browse search-ready domestic workers (PRD §6).
 // limit/offset power the Find Help list's lazy loading (server clamps
 // limit to 1-60; hasMore = the page came back full).
-export function listWorkers({ service, query, limit, offset } = {}) {
+// lat/lng (employer coords) make every worker carry distanceKm (Haversine);
+// sort:"near" additionally orders by distance (no-coords last).
+export function listWorkers({ service, query, limit, offset, lat, lng, sort } = {}) {
   const params = new URLSearchParams();
 
   if (service) params.set("service", service);
   if (query) params.set("q", query);
   if (limit) params.set("limit", String(limit));
   if (offset) params.set("offset", String(offset));
+  if (typeof lat === "number" && typeof lng === "number") {
+    params.set("lat", lat.toFixed(6));
+    params.set("lng", lng.toFixed(6));
+    if (sort) params.set("sort", sort);
+  }
 
   const qs = params.toString();
 

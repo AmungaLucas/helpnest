@@ -2,10 +2,13 @@ import * as Location from "expo-location";
 import { Linking } from "react-native";
 
 import { updateMe } from "../services/usersService";
+import { reverseGeocode } from "../services/geoService";
 
 // Device location helpers (PRD §6 — approximate area + coords).
 // Coarse "Balanced" accuracy is enough: we store lat/lng for proximity
-// matching, while users type their own area label for display.
+// matching, while the display label is reverse-geocoded to an area name
+// ("Kilimani, Nairobi") or typed by the user. A user-typed label always
+// wins — auto-fill only happens when no label exists yet.
 
 // ---------------------------------------------------------------------------
 // Launch capture
@@ -62,9 +65,11 @@ export function stashLocation(coords) {
   pendingLocation = coords;
 }
 
-// PATCHes the stashed coords to /api/users/me. Returns the fresh user
-// object on success (callers merge it into the session), or null on any
-// failure — the coords stay stashed for the next attempt.
+// PATCHes the stashed coords (plus a reverse-geocoded area label) to
+// /api/users/me. Returns the fresh user object on success (callers merge it
+// into the session), or null on any failure — the coords stay stashed for
+// the next attempt. The label lookup is best-effort: coords still save when
+// the geocoder is down, and an empty label never overwrites a typed one.
 export async function flushPendingLocation() {
   if (!pendingLocation || flushInFlight) {
     return null;
@@ -73,7 +78,21 @@ export async function flushPendingLocation() {
   flushInFlight = true;
 
   try {
-    const result = await updateMe(pendingLocation);
+    const payload = { ...pendingLocation };
+
+    // Only attach the label when the geocoder produced one — the PATCH
+    // schema accepts string-or-absent (never null), and a null must not
+    // 400 the whole coords update nor clobber a label typed earlier.
+    if (!payload.locationLabel) {
+      delete payload.locationLabel;
+      const label = await reverseGeocode(
+        payload.locationLat,
+        payload.locationLng
+      );
+      if (label) payload.locationLabel = label;
+    }
+
+    const result = await updateMe(payload);
     pendingLocation = null;
     return result?.user || null;
   } catch (error) {
@@ -92,9 +111,12 @@ export async function flushPendingLocation() {
 }
 
 // ---------------------------------------------------------------------------
-// Manual capture (Home "Use my location" card)
+// Manual capture (Home "Use my location" card / location chip)
 // ---------------------------------------------------------------------------
 
+// Grants permission, takes a coarse fix and reverse-geocodes it to an area
+// label in one go. Throws PERMISSION_DENIED so callers can route to settings;
+// geocoder failures degrade silently (label comes back undefined).
 export async function requestAndFetchLocation() {
   const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
 
@@ -113,10 +135,12 @@ export async function requestAndFetchLocation() {
     accuracy: Location.Accuracy.Balanced,
   });
 
-  return {
-    locationLat: Number(position.coords.latitude.toFixed(7)),
-    locationLng: Number(position.coords.longitude.toFixed(7)),
-  };
+  const locationLat = Number(position.coords.latitude.toFixed(7));
+  const locationLng = Number(position.coords.longitude.toFixed(7));
+
+  const locationLabel = await reverseGeocode(locationLat, locationLng);
+
+  return { locationLat, locationLng, locationLabel };
 }
 
 export function openAppSettings() {

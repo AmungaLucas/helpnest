@@ -1,8 +1,9 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,38 +15,66 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import { listWorkers } from "../../services/workersService";
-import { HelpNestLogoMark } from "../../components/Logo";
 import SignedImage from "../../components/media/SignedImage";
-import LocationPromptCard from "../../components/ui/LocationPromptCard";
-import Chip from "../../components/ui/Chip";
+import LocationPickerModal from "../../components/ui/LocationPickerModal";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import {
   SERVICE_OPTIONS,
-  availabilityLabel,
   serviceLabel,
 } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
 
-// Employer home (PRD §5.1) — 2026-10-20 layout round:
-//   search -> Post a job CTA -> category chips -> location nudge ->
-//   Maids near you (carousel) -> Top rated (carousel) -> How it works ->
-//   trust note.
+// ---------------------------------------------------------------------------
+// Employer home — 2026-10-20 redesign (top -> bottom):
+//   greeting + location chip -> search -> Post a job / Find a maid CTAs ->
+//   category chips -> Maids near you (distance) -> Top rated (+ Near me
+//   filter) -> Verified & background-checked -> How it works -> trust strip.
 //
-// One workers fetch per focus feeds BOTH carousels client-side:
-//   - "near you" = workers whose area overlaps the employer's saved area
-//     (token match on the location label — coarse on purpose, MVP geo)
-//   - "top rated" = verified first, then most experienced
-// No ratings exist yet, so "top rated" ranks by what we can defend.
+// "Near you" is now REAL distance: the employer's saved coords go to
+// GET /api/workers?lat=&lng=&sort=near and every worker comes back with
+// distance_km (Haversine server-side). No coords / no matches fall back to
+// the old area-token match, then to a plain "Available now" rail.
+// ---------------------------------------------------------------------------
 
-const CAROUSEL_FETCH = 40; // one page, plenty for two 6-item rails
+const CAROUSEL_FETCH = 40; // one page, plenty for three 6-item rails
 const RAIL_SIZE = 6;
+const NEAR_RADIUS_KM = 25; // "near you" cut-off before we loosen the rail
 
-// Memoized rail cards — navigation lives inside so the memo contract stays
-// a single `worker` prop (same pattern as the Maids list rows).
+// Emoji per service — zero icon-package weight, reads well at chip size.
+const SERVICE_EMOJI = {
+  cleaning: "🧹",
+  cooking: "🍳",
+  childcare: "🧒",
+  laundry: "👕",
+  elderly_care: "🫶",
+  housekeeping: "🏠",
+};
+
+function greetingForHour() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+// 350 m -> "350 m", 2.4 -> "2.4 km", 38 -> "38 km".
+function formatDistance(km) {
+  if (km === null || km === undefined || !Number.isFinite(km)) return null;
+  if (km < 1) return `${Math.max(1, Math.round(km * 1000))} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
+// ---------------------------------------------------------------------------
+// Rail cards — memoized with navigation inside (same contract as before:
+// the memo key is the `worker` object itself).
+// ---------------------------------------------------------------------------
+
 const NearbyMaidCard = React.memo(function NearbyMaidCard({ worker }) {
   const navigation = useNavigation();
   const firstName = (worker.name || "").split(" ")[0] || "?";
   const verified = worker.kycStatus === "verified";
+  const distance = formatDistance(worker.distanceKm);
 
   const onPress = useCallback(
     () => navigation.navigate("WorkerProfile", { workerId: worker.id }),
@@ -58,52 +87,52 @@ const NearbyMaidCard = React.memo(function NearbyMaidCard({ worker }) {
       style={({ pressed }) => [styles.nearCard, pressed && styles.tilePressed]}
       onPress={onPress}
     >
-      <SignedImage
-        url={worker.avatarUrl}
-        mediaId={worker.avatarMediaId}
-        variant="thumb"
-        fallbackText={firstName}
-        style={styles.nearAvatar}
-        textStyle={styles.nearAvatarText}
-      />
+      <View style={styles.nearPhotoWrap}>
+        <SignedImage
+          url={worker.avatarUrl}
+          mediaId={worker.avatarMediaId}
+          variant="thumb"
+          fallbackText={firstName}
+          style={styles.nearPhoto}
+          textStyle={styles.nearPhotoText}
+        />
+        {verified ? (
+          <View style={styles.nearVerifiedBadge}>
+            <TabBarIcon name="check" color={colors.white} size={9} />
+          </View>
+        ) : null}
+        {distance ? (
+          <View style={styles.nearDistancePill}>
+            <Text style={styles.nearDistanceText}>{distance}</Text>
+          </View>
+        ) : null}
+      </View>
 
-      <View style={styles.nearMain}>
-        <View style={styles.nameRow}>
-          <Text style={styles.nearName} numberOfLines={1}>
-            {worker.name}
-          </Text>
-          {verified ? (
-            <View style={styles.verifiedBadge}>
-              <TabBarIcon name="check" color={colors.white} size={9} />
-            </View>
-          ) : null}
-        </View>
-
-        <Text style={styles.nearServices} numberOfLines={1}>
-          {(worker.services || []).map(serviceLabel).join(" · ") || "Domestic worker"}
+      <View style={styles.nearBody}>
+        <Text style={styles.nearName} numberOfLines={1}>
+          {worker.name}
         </Text>
-
-        <View style={styles.nearMetaRow}>
-          {worker.hourlyRate !== null ? (
-            <Text style={styles.nearRate}>KES {worker.hourlyRate}/hr</Text>
-          ) : (
-            <Text style={styles.nearRate}>Rate on ask</Text>
-          )}
-          {worker.locationLabel ? (
-            <Text style={styles.nearArea} numberOfLines={1}>
-              · {worker.locationLabel}
-            </Text>
-          ) : null}
-        </View>
+        <Text style={styles.nearServices} numberOfLines={1}>
+          {(worker.services || []).map(serviceLabel).join(" · ") ||
+            "Domestic worker"}
+        </Text>
+        <Text style={styles.nearMeta} numberOfLines={1}>
+          {worker.hourlyRate !== null
+            ? `KES ${worker.hourlyRate}/hr`
+            : "Rate on ask"}
+          {worker.locationLabel ? ` · ${worker.locationLabel}` : ""}
+        </Text>
       </View>
     </Pressable>
   );
 });
 
-const TopMaidCard = React.memo(function TopMaidCard({ worker }) {
+// Shared mini card: powers both "Top rated" and "Verified & background-
+// checked" rails (the user's rule — one question per section, shared look).
+const MiniMaidCard = React.memo(function MiniMaidCard({ worker, shield }) {
   const navigation = useNavigation();
   const firstName = (worker.name || "").split(" ")[0] || "?";
-  const verified = worker.kycStatus === "verified";
+  const distance = formatDistance(worker.distanceKm);
 
   const onPress = useCallback(
     () => navigation.navigate("WorkerProfile", { workerId: worker.id }),
@@ -113,7 +142,7 @@ const TopMaidCard = React.memo(function TopMaidCard({ worker }) {
   return (
     <Pressable
       accessibilityRole="button"
-      style={({ pressed }) => [styles.topCard, pressed && styles.tilePressed]}
+      style={({ pressed }) => [styles.miniCard, pressed && styles.tilePressed]}
       onPress={onPress}
     >
       <SignedImage
@@ -121,22 +150,32 @@ const TopMaidCard = React.memo(function TopMaidCard({ worker }) {
         mediaId={worker.avatarMediaId}
         variant="thumb"
         fallbackText={firstName}
-        style={styles.topAvatar}
-        textStyle={styles.topAvatarText}
+        style={styles.miniAvatar}
+        textStyle={styles.miniAvatarText}
       />
-      <Text style={styles.topName} numberOfLines={1}>
+      <Text style={styles.miniName} numberOfLines={1}>
         {firstName}
       </Text>
-      {verified ? (
-        <View style={styles.topVerified}>
-          <Text style={styles.topVerifiedText}>ID verified</Text>
+      {shield ? (
+        <View style={styles.miniShield}>
+          <TabBarIcon name="shield" color={colors.brand} size={10} />
+          <Text style={styles.miniShieldText}>ID verified</Text>
         </View>
+      ) : worker.experienceYears ? (
+        <Text style={styles.miniExperience}>
+          {worker.experienceYears} {worker.experienceYears === 1 ? "yr" : "yrs"} exp
+        </Text>
       ) : (
-        <View style={styles.topVerifiedSpacer} />
+        <View style={styles.miniSpacer} />
       )}
-      <Text style={styles.topRate}>
-        {worker.hourlyRate !== null ? `KES ${worker.hourlyRate}/hr` : "Rate on ask"}
+      <Text style={styles.miniRate}>
+        {worker.hourlyRate !== null
+          ? `KES ${worker.hourlyRate}/hr`
+          : "Rate on ask"}
       </Text>
+      {distance ? (
+        <Text style={styles.miniDistance}>{distance} away</Text>
+      ) : null}
     </Pressable>
   );
 });
@@ -165,36 +204,85 @@ export default function EmployerHomeScreen() {
 
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [topNearOnly, setTopNearOnly] = useState(false);
+
+  // Coords live in a ref so the focus fetch can read the latest values
+  // without re-running (the effect deliberately has [] deps — a location
+  // change shows up on the next focus or pull-to-refresh).
+  const coordsRef = useRef(null);
+  if (
+    typeof user?.locationLat === "number" &&
+    typeof user?.locationLng === "number"
+  ) {
+    coordsRef.current = { lat: user.locationLat, lng: user.locationLng };
+  }
 
   const firstName = (user?.name || "").split(" ")[0] || "";
+
+  // Set false whenever the tab loses focus (and on unmount) so late
+  // responses never setState on a dead screen.
+  const aliveRef = useRef(true);
+
+  const fetchWorkers = useCallback(async ({ asRefresh } = {}) => {
+    if (asRefresh) setRefreshing(true);
+
+    try {
+      const coords = coordsRef.current;
+      const data = await listWorkers({
+        limit: CAROUSEL_FETCH,
+        ...(coords ? { lat: coords.lat, lng: coords.lng, sort: "near" } : {}),
+      });
+      if (!aliveRef.current) return;
+      setWorkers(data.workers || []);
+    } catch {
+      // Non-fatal on the home screen — the Maids tab shows full errors.
+      if (!aliveRef.current) return;
+      setWorkers([]);
+    } finally {
+      if (aliveRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, []);
 
   // Fresh picks every time the tab regains focus (cheap: one 40-row page).
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-
-      listWorkers({ limit: CAROUSEL_FETCH })
-        .then((data) => {
-          if (active) setWorkers(data.workers || []);
-        })
-        .catch(() => {
-          // Non-fatal on the home screen — the Maids tab shows full errors.
-          if (active) setWorkers([]);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-
+      aliveRef.current = true;
+      fetchWorkers();
       return () => {
-        active = false;
+        aliveRef.current = false;
       };
-    }, [])
+    }, [fetchWorkers])
   );
 
-  // Coarse geo: overlap between the employer's saved area and the worker's.
-  const near = useMemo(() => {
-    const area = (user?.locationLabel || "").trim();
+  const hasCoords = Boolean(coordsRef.current);
 
+  // "Maids near you" — real distance when we have coords (server already
+  // returned workers sorted near-first), else the old area-token match.
+  const near = useMemo(() => {
+    if (hasCoords) {
+      const withDistance = workers
+        .filter((w) => w.distanceKm !== null && w.distanceKm <= NEAR_RADIUS_KM)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+
+      if (withDistance.length >= 2) {
+        return { list: withDistance.slice(0, RAIL_SIZE), matched: true };
+      }
+      // Nobody within the radius yet — widen instead of an empty rail.
+      const anyDistance = workers
+        .filter((w) => w.distanceKm !== null)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+      if (anyDistance.length >= 2) {
+        return { list: anyDistance.slice(0, RAIL_SIZE), matched: true };
+      }
+      return { list: workers.slice(0, RAIL_SIZE), matched: false };
+    }
+
+    const area = (user?.locationLabel || "").trim();
     if (!area) {
       return { list: workers.slice(0, RAIL_SIZE), matched: false };
     }
@@ -212,9 +300,16 @@ export default function EmployerHomeScreen() {
 
     const hit = matches.length >= 2;
     return { list: (hit ? matches : workers).slice(0, RAIL_SIZE), matched: hit };
-  }, [workers, user?.locationLabel]);
+  }, [workers, hasCoords, user?.locationLabel]);
 
+  // "Top rated" — verified first, then most experienced. With the "Near me"
+  // filter on, rank the near set by real distance instead.
   const top = useMemo(() => {
+    if (topNearOnly && hasCoords) {
+      return [...near.list]
+        .sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999))
+        .slice(0, RAIL_SIZE);
+    }
     return [...workers]
       .sort((a, b) => {
         const va = a.kycStatus === "verified" ? 1 : 0;
@@ -223,42 +318,69 @@ export default function EmployerHomeScreen() {
         return (b.experienceYears || 0) - (a.experienceYears || 0);
       })
       .slice(0, RAIL_SIZE);
-  }, [workers]);
+  }, [workers, near.list, topNearOnly, hasCoords]);
+
+  // "Verified & background-checked" — the trust section doubles as the
+  // featured/recommended rail. Hidden unless we can show at least 3.
+  const verified = useMemo(
+    () =>
+      workers
+        .filter((w) => w.kycStatus === "verified")
+        .slice(0, RAIL_SIZE),
+    [workers]
+  );
 
   const nearTitle = near.matched ? "Maids near you" : "Available now";
+  const locationChipLabel =
+    user?.locationLabel ||
+    (hasCoords ? "Current location" : "Set your location");
 
   const renderNear = useCallback(({ item }) => <NearbyMaidCard worker={item} />, []);
-  const renderTop = useCallback(({ item }) => <TopMaidCard worker={item} />, []);
+  const renderTop = useCallback(
+    ({ item }) => <MiniMaidCard worker={item} />,
+    []
+  );
+  const renderVerified = useCallback(
+    ({ item }) => <MiniMaidCard worker={item} shield />,
+    []
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
-
-      {/* ---------- Brand header ---------- */}
-      <View style={styles.header}>
-        <View style={styles.brandRow}>
-          <View style={styles.logoBadge}>
-            <HelpNestLogoMark size={22} />
-          </View>
-          <Text style={styles.brandText}>HelpNest</Text>
-        </View>
-        <View style={styles.headerPill}>
-          <Text style={styles.headerPillText}>Employer</Text>
-        </View>
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
       <ScrollView
         style={styles.bodyScroll}
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchWorkers({ asRefresh: true })}
+            tintColor={colors.brand}
+            colors={[colors.brand]}
+          />
+        }
       >
-        <Text style={styles.karibu}>Karibu{firstName ? `, ${firstName}` : ""} 👋</Text>
-        <Text style={styles.lede}>
-          Find trusted domestic workers for your home — verified profiles,
-          safe payments.
+        {/* ---------- Greeting + location chip (new header) ---------- */}
+        <Text style={styles.karibu}>
+          {greetingForHour()}
+          {firstName ? `, ${firstName}` : ""} 👋
         </Text>
 
-        {/* ---------- Search entry ---------- */}
+        <Pressable
+          accessibilityRole="button"
+          style={styles.locationChip}
+          onPress={() => setPickerOpen(true)}
+        >
+          <TabBarIcon name="map-pin" color={colors.brand} size={14} />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {locationChipLabel}
+          </Text>
+          <Text style={styles.locationChange}>Change</Text>
+        </Pressable>
+
+        {/* ---------- Search ---------- */}
         <Pressable
           accessibilityRole="button"
           style={styles.searchCard}
@@ -268,23 +390,33 @@ export default function EmployerHomeScreen() {
           <Text style={styles.searchText}>Search name, skill or area…</Text>
         </Pressable>
 
-        {/* ---------- Post a job CTA ---------- */}
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.postJob, pressed && styles.tilePressed]}
-          onPress={() => navigation.navigate("MyJobsTab")}
-        >
-          <View style={styles.postJobIcon}>
-            <TabBarIcon name="file-text" color={colors.white} size={19} />
-          </View>
-          <View style={styles.postJobMain}>
-            <Text style={styles.postJobTitle}>Post a job</Text>
-            <Text style={styles.postJobBody}>
-              Describe the help you need once — let matching maids come to you.
-            </Text>
-          </View>
-          <TabBarIcon name="chevron-right" color={colors.cream} size={18} />
-        </Pressable>
+        {/* ---------- Primary CTAs ---------- */}
+        <View style={styles.ctaRow}>
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.postJob,
+              styles.ctaPrimary,
+              pressed && styles.tilePressedDark,
+            ]}
+            onPress={() => navigation.navigate("MyJobsTab")}
+          >
+            <TabBarIcon name="file-text" color={colors.white} size={18} />
+            <Text style={styles.postJobText}>Post a job</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.findMaid,
+              styles.ctaSecondary,
+              pressed && styles.tilePressed,
+            ]}
+            onPress={() => navigation.navigate("MaidsTab")}
+          >
+            <TabBarIcon name="users" color={colors.brand} size={18} />
+            <Text style={styles.findMaidText}>Find a maid</Text>
+          </Pressable>
+        </View>
 
         {/* ---------- Categories ---------- */}
         <Text style={styles.sectionTitle}>What do you need help with?</Text>
@@ -294,18 +426,24 @@ export default function EmployerHomeScreen() {
           contentContainerStyle={styles.chipsRow}
         >
           {SERVICE_OPTIONS.map((option) => (
-            <Chip
+            <Pressable
               key={option.value}
-              label={option.label}
-              selected={false}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.categoryChip,
+                pressed && styles.tilePressed,
+              ]}
               onPress={() =>
                 navigation.navigate("MaidsTab", { service: option.value })
               }
-            />
+            >
+              <Text style={styles.categoryEmoji}>
+                {SERVICE_EMOJI[option.value] || "✨"}
+              </Text>
+              <Text style={styles.categoryLabel}>{option.label}</Text>
+            </Pressable>
           ))}
         </ScrollView>
-
-        <LocationPromptCard />
 
         {/* ---------- Workers ---------- */}
         {loading ? (
@@ -323,7 +461,10 @@ export default function EmployerHomeScreen() {
           <>
             <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>{nearTitle}</Text>
-              <Pressable accessibilityRole="button" onPress={() => navigation.navigate("MaidsTab")}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate("MaidsTab")}
+              >
                 <Text style={styles.seeAll}>See all</Text>
               </Pressable>
             </View>
@@ -342,9 +483,39 @@ export default function EmployerHomeScreen() {
 
             <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>Top rated</Text>
-              <Pressable accessibilityRole="button" onPress={() => navigation.navigate("MaidsTab")}>
-                <Text style={styles.seeAll}>See all</Text>
-              </Pressable>
+              <View style={styles.sectionHeadRight}>
+                {hasCoords ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: topNearOnly }}
+                    style={[
+                      styles.filterChip,
+                      topNearOnly && styles.filterChipOn,
+                    ]}
+                    onPress={() => setTopNearOnly((v) => !v)}
+                  >
+                    <TabBarIcon
+                      name="map-pin"
+                      color={topNearOnly ? colors.white : colors.brand}
+                      size={10}
+                    />
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        topNearOnly && styles.filterChipTextOn,
+                      ]}
+                    >
+                      Near me
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate("MaidsTab")}
+                >
+                  <Text style={styles.seeAll}>See all</Text>
+                </Pressable>
+              </View>
             </View>
             <FlatList
               horizontal
@@ -358,12 +529,40 @@ export default function EmployerHomeScreen() {
               windowSize={3}
               removeClippedSubviews
             />
+
+            {verified.length >= 3 ? (
+              <>
+                <View style={styles.sectionHead}>
+                  <Text style={styles.sectionTitle}>
+                    Verified &amp; background-checked
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => navigation.navigate("MaidsTab")}
+                  >
+                    <Text style={styles.seeAll}>See all</Text>
+                  </Pressable>
+                </View>
+                <FlatList
+                  horizontal
+                  data={verified}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderVerified}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.rail}
+                  initialNumToRender={4}
+                  maxToRenderPerBatch={4}
+                  windowSize={3}
+                  removeClippedSubviews
+                />
+              </>
+            ) : null}
           </>
         )}
 
         {/* ---------- How it works ---------- */}
         <Text style={styles.sectionTitle}>How it works</Text>
-        <View style={steps.card}>
+        <View style={styles.stepsCard}>
           {HOW_IT_WORKS.map((step, index) => (
             <View key={step.title} style={styles.stepRow}>
               <View style={styles.stepBadge}>
@@ -373,12 +572,16 @@ export default function EmployerHomeScreen() {
                 <Text style={styles.stepTitle}>{step.title}</Text>
                 <Text style={styles.stepBody}>{step.body}</Text>
               </View>
-              <TabBarIcon name={step.icon} color={withAlpha(colors.brand, 0.55)} size={18} />
+              <TabBarIcon
+                name={step.icon}
+                color={withAlpha(colors.brand, 0.55)}
+                size={18}
+              />
             </View>
           ))}
         </View>
 
-        {/* ---------- Trust note ---------- */}
+        {/* ---------- Trust strip ---------- */}
         <View style={styles.trustCard}>
           <TabBarIcon name="shield" color={colors.brand} size={17} />
           <Text style={styles.trustText}>
@@ -387,82 +590,61 @@ export default function EmployerHomeScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <LocationPickerModal
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+      />
     </SafeAreaView>
   );
 }
-
-const steps = StyleSheet.create({
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 6,
-    marginBottom: 18,
-  },
-});
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.cream,
   },
-  header: {
-    backgroundColor: colors.brand,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  logoBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: colors.cream,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  brandText: {
-    color: colors.white,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  headerPill: {
-    backgroundColor: withAlpha(colors.cream, 0.16),
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-  },
-  headerPillText: {
-    color: colors.cream,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-  },
   bodyScroll: {
     flex: 1,
   },
   body: {
-    padding: 22,
+    padding: 20,
     paddingBottom: 36,
   },
+
+  /* ---- Header: greeting + location chip ---- */
   karibu: {
     color: colors.ink,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
-    marginBottom: 6,
+    marginBottom: 10,
   },
-  lede: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 18,
+  locationChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 999,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 7,
+    gap: 6,
+    marginBottom: 14,
+    maxWidth: "100%",
+  },
+  locationText: {
+    flexShrink: 1,
+    color: colors.ink,
+    fontSize: 12.5,
+    fontWeight: "700",
+  },
+  locationChange: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
+    marginLeft: 2,
   },
 
   /* ---- Search ---- */
@@ -485,38 +667,55 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ---- Post a job ---- */
+  /* ---- Primary CTAs ---- */
+  ctaRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
   postJob: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.brand,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-    marginBottom: 20,
-  },
-  postJobIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: withAlpha("#FFFFFF", 0.16),
-    alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    borderRadius: 15,
+    minHeight: 52,
+    paddingHorizontal: 14,
   },
-  postJobMain: {
-    flex: 1,
+  ctaPrimary: {
+    flex: 1.15,
+    backgroundColor: colors.brand,
   },
-  postJobTitle: {
+  postJobText: {
     color: colors.white,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
   },
-  postJobBody: {
-    color: withAlpha("#FFFFFF", 0.82),
-    fontSize: 12,
-    lineHeight: 16.5,
-    marginTop: 2,
+  findMaid: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 15,
+    minHeight: 52,
+    paddingHorizontal: 14,
+  },
+  ctaSecondary: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+  },
+  findMaidText: {
+    color: colors.brand,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  tilePressed: {
+    backgroundColor: colors.mist,
+  },
+  tilePressedDark: {
+    backgroundColor: "#1A3D2E",
   },
 
   /* ---- Sections ---- */
@@ -533,72 +732,127 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 4,
   },
+  sectionHeadRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   seeAll: {
     color: colors.brand,
     fontSize: 13,
     fontWeight: "800",
   },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    backgroundColor: colors.white,
+  },
+  filterChipOn: {
+    backgroundColor: colors.brand,
+  },
+  filterChipText: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  filterChipTextOn: {
+    color: colors.white,
+  },
   chipsRow: {
-    paddingRight: 22,
-    marginBottom: 16,
+    paddingRight: 20,
+    marginBottom: 18,
     gap: 8,
+  },
+
+  /* ---- Category chips ---- */
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    borderRadius: 999,
+    paddingLeft: 12,
+    paddingRight: 14,
+    paddingVertical: 8,
+    gap: 7,
+  },
+  categoryEmoji: {
+    fontSize: 14,
+  },
+  categoryLabel: {
+    color: colors.ink,
+    fontSize: 12.5,
+    fontWeight: "700",
   },
 
   /* ---- Rails ---- */
   rail: {
-    paddingRight: 22,
+    paddingRight: 20,
     marginBottom: 18,
     gap: 10,
   },
-  tilePressed: {
-    backgroundColor: colors.cream,
-  },
 
-  /* ---- Nearby card ---- */
+  /* ---- Nearby card (photo top) ---- */
   nearCard: {
-    width: 250,
-    flexDirection: "row",
-    alignItems: "center",
+    width: 196,
     backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 12,
-  },
-  nearAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
-    backgroundColor: withAlpha(colors.brand, 0.14),
-    marginRight: 10,
     overflow: "hidden",
   },
-  nearAvatarText: {
+  nearPhotoWrap: {
+    position: "relative",
+  },
+  nearPhoto: {
+    width: "100%",
+    height: 108,
+    backgroundColor: withAlpha(colors.brand, 0.14),
+  },
+  nearPhotoText: {
     color: colors.brand,
-    fontSize: 18,
+    fontSize: 30,
     fontWeight: "800",
   },
-  nearMain: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  nearName: {
-    flexShrink: 1,
-    color: colors.ink,
-    fontSize: 13.5,
-    fontWeight: "800",
-    marginRight: 6,
-  },
-  verifiedBadge: {
-    width: 17,
-    height: 17,
+  nearVerifiedBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    width: 18,
+    height: 18,
     borderRadius: 9,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
+  },
+  nearDistancePill: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    backgroundColor: "rgba(38, 49, 43, 0.78)",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  nearDistanceText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  nearBody: {
+    padding: 11,
+  },
+  nearName: {
+    color: colors.ink,
+    fontSize: 13.5,
+    fontWeight: "800",
   },
   nearServices: {
     color: colors.textFaint,
@@ -606,26 +860,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 2,
   },
-  nearMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 3,
-  },
-  nearRate: {
-    color: colors.brand,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  nearArea: {
-    flexShrink: 1,
+  nearMeta: {
     color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 11.5,
+    fontWeight: "700",
+    marginTop: 4,
   },
 
-  /* ---- Top rated card ---- */
-  topCard: {
-    width: 132,
+  /* ---- Mini card (Top rated / Verified) ---- */
+  miniCard: {
+    width: 128,
     backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
@@ -634,50 +878,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: "center",
   },
-  topAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  miniAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: withAlpha(colors.brand, 0.14),
     marginBottom: 8,
     overflow: "hidden",
   },
-  topAvatarText: {
+  miniAvatarText: {
     color: colors.brand,
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: "800",
   },
-  topName: {
+  miniName: {
     color: colors.ink,
     fontSize: 13,
     fontWeight: "800",
     maxWidth: "100%",
   },
-  topVerified: {
+  miniShield: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     backgroundColor: withAlpha(colors.brand, 0.13),
     borderRadius: 999,
     paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingVertical: 3,
     marginTop: 4,
   },
-  topVerifiedText: {
+  miniShieldText: {
     color: colors.brand,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
-  topVerifiedSpacer: {
-    height: 15,
-    marginTop: 4,
-  },
-  topRate: {
+  miniExperience: {
     color: colors.textMuted,
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: "700",
     marginTop: 5,
   },
+  miniSpacer: {
+    height: 14,
+    marginTop: 5,
+  },
+  miniRate: {
+    color: colors.brand,
+    fontSize: 11.5,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+  miniDistance: {
+    color: colors.textFaint,
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+  },
 
-  /* ---- Steps ---- */
+  /* ---- How it works ---- */
+  stepsCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 6,
+    marginBottom: 14,
+  },
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -751,3 +1018,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
