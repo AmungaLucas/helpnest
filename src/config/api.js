@@ -25,21 +25,33 @@ export const BROWSER_USER_AGENT =
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL;
 
-// Set by AuthContext after login / OTP verification. Attached to every
-// request as a Bearer header until the user signs out.
-let authToken = null;
+// Client-side session state (auth token + 401 rotation handler).
+//
+// WHY globalThis and not a plain `let`? Metro Fast Refresh re-evaluates
+// changed modules during development. A re-evaluated importer (e.g.
+// mediaService.js after a git pull) can rebind to a fresh evaluation of
+// this module — with module-local state reset to null. That once sent an
+// upload WITHOUT its Authorization header (gateway 401 "Authentication
+// required.") while the UI still showed a logged-in user. Keeping the
+// state on globalThis means every module evaluation — old or new — reads
+// and writes the SAME state, so the session can never be orphaned.
+const AUTH_STATE_KEY = "__helpnestApiAuthState";
+
+const authState =
+  (globalThis[AUTH_STATE_KEY] = globalThis[AUTH_STATE_KEY] || {
+    token: null,
+    eventHandler: null,
+  });
 
 export function setAuthToken(token) {
-  authToken = token;
+  authState.token = typeof token === "string" && token ? token : null;
 }
 
 // Set by AuthContext: called when a request comes back 401 so the context
 // can rotate the refresh token. Returning true makes the original request
 // retry once with the fresh access token.
-let authEventHandler = null;
-
 export function setAuthEventHandler(handler) {
-  authEventHandler = typeof handler === "function" ? handler : null;
+  authState.eventHandler = typeof handler === "function" ? handler : null;
 }
 
 function apiError(message, { status, isNetwork } = {}) {
@@ -69,7 +81,7 @@ export async function apiRequest(path, options = {}) {
       headers: {
         Accept: "application/json",
         "User-Agent": BROWSER_USER_AGENT,
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(authState.token ? { Authorization: `Bearer ${authState.token}` } : {}),
         // FormData bodies must NOT get a JSON content-type — the runtime
         // needs to set multipart/form-data with its own boundary itself.
         ...(fetchOptions.body && !(fetchOptions.body instanceof FormData)
@@ -130,12 +142,21 @@ export async function apiRequest(path, options = {}) {
   if (!response.ok) {
     // Access token expired (12h) — rotate the refresh token once and retry
     // the original request transparently. skipAuthRetry breaks any loop.
+    if (response.status === 401 && __DEV__) {
+      // One-line state probe: if a 401 ever shows tokenAttached=false or a
+      // missing rotation handler, the client state was orphaned (see the
+      // globalThis note above) or the session was never restored.
+      console.log(
+        `[AUTH] 401 on ${path} | tokenAttached: ${Boolean(authState.token)} | rotationHandler: ${typeof authState.eventHandler}`
+      );
+    }
+
     if (
       response.status === 401 &&
       !options.skipAuthRetry &&
-      authEventHandler
+      authState.eventHandler
     ) {
-      const recovered = await authEventHandler();
+      const recovered = await authState.eventHandler();
 
       if (recovered) {
         return apiRequest(path, { ...options, skipAuthRetry: true });
