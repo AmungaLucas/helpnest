@@ -198,6 +198,7 @@ export default function EmployerHomeScreen() {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [topNearOnly, setTopNearOnly] = useState(false);
 
@@ -229,10 +230,14 @@ export default function EmployerHomeScreen() {
       });
       if (!aliveRef.current) return;
       setWorkers(data.workers || []);
+      setLoadError(false);
     } catch {
-      // Non-fatal on the home screen — the Maids tab shows full errors.
+      // Home treats failures as non-fatal, but they must not read as
+      // "no workers exist" — the error state changes the empty-box copy
+      // and offers a retry (this exact silence once hid a gateway 500).
       if (!aliveRef.current) return;
       setWorkers([]);
+      setLoadError(true);
     } finally {
       if (aliveRef.current) {
         setLoading(false);
@@ -446,9 +451,22 @@ export default function EmployerHomeScreen() {
         ) : workers.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyText}>
-              No worker profiles yet. They'll appear here as domestic workers
-              complete their profiles.
+              {loadError
+                ? "Couldn't load workers just now. Check your connection and try again."
+                : "No worker profiles yet. They'll appear here as domestic workers complete their profiles."}
             </Text>
+            {loadError ? (
+              <Pressable
+                accessibilityRole="button"
+                style={styles.retryButton}
+                onPress={() => {
+                  setLoading(true);
+                  fetchWorkers();
+                }}
+              >
+                <Text style={styles.retryText}>Try again</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
           <>
@@ -991,6 +1009,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19.5,
     textAlign: "center",
+  },
+  retryButton: {
+    alignSelf: "center",
+    marginTop: 12,
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  retryText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "800",
   },
 
   /* ---- Trust ---- */
