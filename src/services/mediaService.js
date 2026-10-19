@@ -1,4 +1,5 @@
 import { apiRequest } from "../config/api";
+import { buildMultipartBody, createBoundary } from "./multipart";
 
 // Media upload + signed-URL helpers (Wave 2, W2-B3).
 //
@@ -11,45 +12,82 @@ import { apiRequest } from "../config/api";
 // pass allowsEditing + quality so the OS re-encodes to JPEG (avoids HEIC,
 // which the server rejects) and bakes EXIF orientation into pixels.
 //
-// Expo SDK 57's fetch runtime (expo/winter) serializes FormData itself and
-// does NOT support the legacy {uri, name, type} file parts — fetch() rejects
-// them with "Unsupported FormDataPart implementation" (see expo/winter
-// convertFormData.ts). The supported path: read the picked file into bytes,
-// wrap them in a Blob and append it with a filename as the 3rd argument —
-// the serialized part then carries filename + content-type, so the server's
-// multer sees a proper file field.
+// Why not FormData? Expo SDK 57's runtime made every serializer path fail on
+// device: winter's converter throws "Unsupported FormDataPart implementation"
+// for legacy {uri} parts, and RN's global Blob constructor throws on binary
+// parts ("Creating blobs from 'ArrayBuffer' ... not supported"). So v3 reads
+// the file natively and builds the multipart body by hand — see
+// ./multipart.js for the rationale. Server-side multer cannot tell the
+// difference.
+
+/**
+ * Reads the picked file into bytes.
+ *
+ * Primary: expo-file-system's File.arrayBuffer() — a direct native read, no
+ * HTTP stack involved, so it cannot hang the way fetch(file://) can.
+ * Fallback: expo fetch with its file:// interceptor, guarded by a timeout so
+ * an unresponsive read can never stall the upload silently.
+ */
+async function readImageBytes(uri) {
+  try {
+    const { File } = require("expo-file-system");
+    const file = new File(uri);
+    const buffer = await file.arrayBuffer();
+    if (buffer && buffer.byteLength > 0) return new Uint8Array(buffer);
+  } catch (error) {
+    if (__DEV__) {
+      console.log("[MEDIA] native read failed, falling back to fetch:", error?.message);
+    }
+  }
+
+  const response = await Promise.race([
+    fetch(uri),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("reading the file timed out")), 10000)
+    ),
+  ]);
+  const buffer = await response.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
 export async function uploadMedia({ uri, kind, timeoutMs = 60000 }) {
-  // Dev-only marker: proves the device bundle contains this uploader. If this
-  // line does NOT appear when saving, the phone is running stale JS (see
-  // "Unsupported FormDataPart implementation" = the old {uri} file part).
+  // Dev-only marker: proves the device bundle contains this uploader.
   if (__DEV__) {
-    console.log("[MEDIA] uploader v2 (Blob part), reading:", String(uri).slice(0, 64));
+    console.log("[MEDIA] uploader v3 (native read + manual multipart):", String(uri).slice(0, 64));
   }
 
   let bytes;
   try {
-    const response = await fetch(uri);
-    bytes = await response.arrayBuffer();
+    bytes = await readImageBytes(uri);
   } catch (error) {
     throw new Error(
       "Could not read the selected image from device storage. Pick the photo again and retry."
     );
   }
 
-  const blob = new Blob([bytes], { type: "image/jpeg" });
-
-  if (blob.size === 0) {
+  if (!bytes || bytes.length === 0) {
     throw new Error("The selected image could not be read (0 bytes). Try a different photo.");
   }
 
-  const form = new FormData();
-  form.append("kind", kind);
-  form.append("file", blob, `helpnest-${kind}-${Date.now()}.jpg`);
+  const boundary = createBoundary();
+  const body = buildMultipartBody({
+    boundary,
+    fields: { kind },
+    file: {
+      name: "file",
+      filename: `helpnest-${kind}-${Date.now()}.jpg`,
+      contentType: "image/jpeg",
+      bytes,
+    },
+  });
 
   return apiRequest("/api/media/upload", {
     method: "POST",
-    body: form,
+    body, // Uint8Array — accepted directly by expo fetch
     timeoutMs,
+    // Overrides api.js's JSON default (its header spread runs ours last).
+    // Winter fetch does NOT auto-set a boundary for non-FormData bodies.
+    headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
   });
 }
 
