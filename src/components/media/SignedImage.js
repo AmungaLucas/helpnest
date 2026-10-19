@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { getMediaLink } from "../../services/mediaService";
+import { BROWSER_USER_AGENT } from "../../config/api";
 import { colors, withAlpha } from "../../theme/colors";
 
 /**
@@ -85,9 +86,13 @@ export default function SignedImage({
     );
   }
 
+  // The UA header rides on the image GET for the same reason api.js sends
+  // one: the media host's LiteSpeed bot verification challenges requests
+  // without a browser-like User-Agent, and <Image> loads cannot run the
+  // challenge. Remove once the host confirms the vhost-level exemption.
   return (
     <Image
-      source={{ uri }}
+      source={{ uri, headers: { "User-Agent": BROWSER_USER_AGENT } }}
       style={style}
       onError={handleError}
       accessible={false}

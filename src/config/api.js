@@ -20,7 +20,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * Revisit this once /api/health passes WITHOUT it, then remove both this
  * header and the challenge-detection branch below.
  */
-const BROWSER_USER_AGENT =
+export const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL;

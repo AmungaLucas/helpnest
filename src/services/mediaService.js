@@ -10,14 +10,22 @@ import { apiRequest } from "../config/api";
 // `uri` must be a local file URI from expo-image-picker. The picker screens
 // pass allowsEditing + quality so the OS re-encodes to JPEG (avoids HEIC,
 // which the server rejects) and bakes EXIF orientation into pixels.
+//
+// Expo SDK 57's fetch runtime (expo/winter) serializes FormData itself and
+// does NOT support the legacy {uri, name, type} file parts — fetch() rejects
+// them with "Unsupported FormDataPart implementation" (see expo/winter
+// convertFormData.ts). The supported path: read the picked file into bytes,
+// wrap them in a Blob and append it with a filename as the 3rd argument —
+// the serialized part then carries filename + content-type, so the server's
+// multer sees a proper file field.
 export async function uploadMedia({ uri, kind, timeoutMs = 60000 }) {
+  const response = await fetch(uri);
+  const bytes = await response.arrayBuffer();
+  const blob = new Blob([bytes], { type: "image/jpeg" });
+
   const form = new FormData();
   form.append("kind", kind);
-  form.append("file", {
-    uri,
-    name: `helpnest-${kind}-${Date.now()}.jpg`,
-    type: "image/jpeg",
-  });
+  form.append("file", blob, `helpnest-${kind}-${Date.now()}.jpg`);
 
   return apiRequest("/api/media/upload", {
     method: "POST",
