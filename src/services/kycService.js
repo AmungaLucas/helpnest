@@ -13,9 +13,18 @@ export function getKycStatus() {
 }
 
 // -> { success, message, kycStatus: "pending" }
+// Partial resubmission: after a rejection the reviewer may have APPROVED some
+// documents — the app then sends only the retaken ones (>= 1). A first
+// submission (unverified) still sends all three; the server enforces both.
 export function submitKyc({ idFront, idBack, selfie }) {
+  const body = { consent: true };
+
+  if (idFront) body.idFront = idFront;
+  if (idBack) body.idBack = idBack;
+  if (selfie) body.selfie = selfie;
+
   return apiRequest("/api/kyc/submit", {
     method: "POST",
-    body: JSON.stringify({ idFront, idBack, selfie, consent: true }),
+    body: JSON.stringify(body),
   });
 }

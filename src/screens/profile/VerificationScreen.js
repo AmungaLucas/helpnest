@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,11 +25,18 @@ import { colors, withAlpha } from "../../theme/colors";
 // KYC verification flow (PRD §4.2, §10.2, BUILD-PLAN W2-F3).
 //
 // Both roles use this screen — the copy adapts via `roleCopy`. The flow is:
-//   status view (default) -> form view (ID front / ID back / selfie, each
-//   captured with the guided camera or picked from the gallery, then uploaded
-//   immediately through the media API) -> DPA 2019 consent -> submit -> back
-//   to status view ("under review").
-// Server review flips the status; this screen always re-fetches on focus.
+//   status view (default) -> form view (ID front / ID back / selfie) ->
+//   DPA 2019 consent -> submit -> back to status view ("under review").
+//
+// 2026-10-20 round of fixes:
+//   - While "under review" the screen silently polls /api/kyc/status every
+//     12s, so an admin decision shows up on its own (no navigate-away dance).
+//   - Rejection reasons from the reviewer render per document row.
+//   - After a PARTIAL rejection (e.g. selfie approved, ID back rejected) the
+//     resubmit form only asks for the rejected docs — approved ones render as
+//     locked rows and are NOT re-uploaded (server accepts the subset).
+//   - Gallery picks pass through ImageReview before anything uploads, so the
+//     user always decides what leaves the phone.
 
 const SLOTS = [
   {
@@ -48,6 +55,9 @@ const SLOTS = [
     hint: "Plain background, good light, no sunglasses or hat. Just you.",
   },
 ];
+
+// How often the status view re-checks while a submission is under review.
+const POLL_MS = 12000;
 
 const STATUS_THEMES = {
   verified: { bg: "#EAF7EE", border: "#BFE3C8", text: "#1F7A3D" },
@@ -125,6 +135,24 @@ function DocSlot({ label, hint, state, onPick, disabled }) {
   );
 }
 
+// Approved documents during a resubmission — shown but not editable, so the
+// reviewer's decision is respected and the user never re-uploads needlessly.
+function LockedApprovedSlot({ label }) {
+  return (
+    <View style={[styles.slot, styles.slotLocked]}>
+      <View style={[styles.slotPress, styles.slotLockedThumb]}>
+        <TabBarIcon name="check" color={colors.white} size={22} />
+      </View>
+      <View style={styles.slotCopy}>
+        <Text style={styles.slotLabel}>{label}</Text>
+        <Text style={[styles.slotHint, styles.slotLockedHint]}>
+          Approved — passed review. No need to retake this one.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function VerificationScreen() {
   const { user } = useAuth();
   const navigation = useNavigation();
@@ -144,22 +172,47 @@ export default function VerificationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const refresh = useCallback(async () => {
-    setLoadError("");
+  // Poll gate: the interval always runs while focused, but only fires a
+  // request while the latest known status is "pending" (the one state an
+  // admin can change behind the user's back).
+  const kycStatusRef = useRef("unverified");
 
-    try {
-      const data = await getKycStatus();
-      setStatusData(data);
-    } catch (err) {
-      setLoadError(err?.message || "Could not load your verification status.");
-    } finally {
-      setLoading(false);
-    }
+  const applyStatus = useCallback((data) => {
+    kycStatusRef.current = data?.kycStatus || "unverified";
+    setStatusData(data);
   }, []);
+
+  const refresh = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!silent) setLoadError("");
+
+      try {
+        const data = await getKycStatus();
+        applyStatus(data);
+      } catch (err) {
+        if (!silent) {
+          setLoadError(err?.message || "Could not load your verification status.");
+        }
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [applyStatus]
+  );
 
   useFocusEffect(
     useCallback(() => {
       refresh();
+
+      // Auto-update: an approval/rejection lands on this screen without the
+      // user having to leave and come back. Cleared on blur.
+      const timer = setInterval(() => {
+        if (kycStatusRef.current === "pending") {
+          refresh({ silent: true });
+        }
+      }, POLL_MS);
+
+      return () => clearInterval(timer);
     }, [refresh])
   );
 
@@ -196,7 +249,9 @@ export default function VerificationScreen() {
     }
   }
 
-  async function pickFromGallery(slotKey, mediaKind) {
+  // Gallery path: pick + crop, then a review stop — the photo is only staged
+  // for upload once the user confirms it on the ImageReview screen.
+  async function pickFromGallery(slotKey, mediaKind, slotLabel) {
     setFormError("");
 
     let result;
@@ -214,16 +269,22 @@ export default function VerificationScreen() {
 
     if (result.canceled || !result.assets?.length) return;
 
-    await handleCaptured(slotKey, mediaKind, result.assets[0].uri);
+    const pickedUri = result.assets[0].uri;
+
+    navigation.navigate("ImageReview", {
+      uri: pickedUri,
+      title: slotLabel,
+      subtitle:
+        "Check that everything is readable — this is what the reviewer will see.",
+      onUse: (uri) => handleCaptured(slotKey, mediaKind, uri),
+    });
   }
 
-  function chooseSource(slotKey, mediaKind) {
+  function chooseSource(slotKey, mediaKind, slotLabel) {
     setFormError("");
-    const label =
-      SLOTS.find((slot) => slot.key === slotKey)?.label || "Add a photo";
 
     Alert.alert(
-      label,
+      slotLabel,
       "Use the guided camera, or pick a photo you already have.",
       [
         {
@@ -236,7 +297,7 @@ export default function VerificationScreen() {
         },
         {
           text: "Choose from gallery",
-          onPress: () => pickFromGallery(slotKey, mediaKind),
+          onPress: () => pickFromGallery(slotKey, mediaKind, slotLabel),
         },
         { text: "Cancel", style: "cancel" },
       ],
@@ -244,13 +305,13 @@ export default function VerificationScreen() {
     );
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(editableKeys) {
     setFormError("");
 
-    const missing = SLOTS.some((slot) => !docs[slot.key]?.mediaId);
+    const missing = editableKeys.some((key) => !docs[key]?.mediaId);
 
     if (missing) {
-      setFormError("Add all three photos before submitting.");
+      setFormError("Retake every highlighted photo before submitting.");
       return;
     }
 
@@ -262,10 +323,12 @@ export default function VerificationScreen() {
     setSubmitting(true);
 
     try {
+      // Partial resubmission: only the retaken documents go to the server —
+      // approved docs keep their review state (server enforces the rules).
       await submitKyc({
-        idFront: docs.id_front.mediaId,
-        idBack: docs.id_back.mediaId,
-        selfie: docs.selfie.mediaId,
+        idFront: docs.id_front?.mediaId || null,
+        idBack: docs.id_back?.mediaId || null,
+        selfie: docs.selfie?.mediaId || null,
       });
 
       setDocs({ id_front: null, id_back: null, selfie: null });
@@ -290,9 +353,14 @@ export default function VerificationScreen() {
 
   const kycStatus = statusData?.kycStatus || user?.kycStatus || "unverified";
   const documents = statusData?.documents || {};
-  const rejectionReason =
-    SLOTS.map((s) => documents[s.key]?.rejectionReason).find(Boolean) || null;
   const theme = STATUS_THEMES[kycStatus] || STATUS_THEMES.unverified;
+
+  // Resubmission after a (partial) rejection: only docs that were NOT
+  // approved need a retake. Approved ones render locked in the form.
+  const resubmitMode = kycStatus === "rejected";
+  const editableKeys = resubmitMode
+    ? SLOTS.filter((s) => documents[s.key]?.status !== "approved").map((s) => s.key)
+    : SLOTS.map((s) => s.key);
 
   // --- STATUS VIEW --------------------------------------------------------
   if (mode === "status") {
@@ -338,11 +406,10 @@ export default function VerificationScreen() {
             <Text style={[styles.statusBody, { color: theme.text }]}>
               {kycStatus === "verified" && roleCopy.verifiedBlurb}
               {kycStatus === "pending" &&
-                "Our team is reviewing your documents right now. This usually takes less than 24 hours — the status on this screen updates automatically when we're done."
+                "Our team is reviewing your documents right now. This usually takes less than 24 hours — this screen updates by itself the moment a decision is made."
               }
               {kycStatus === "rejected" &&
-                (rejectionReason ||
-                  "One of your documents could not be accepted. Please retake it and submit again.")
+                "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Retake only the flagged ones and resubmit."
               }
               {kycStatus === "unverified" &&
                 "Upload your national ID (both sides) and a clear selfie. We review every submission within 24 hours, and your documents stay private — only HelpNest reviewers can see them."
@@ -362,14 +429,23 @@ export default function VerificationScreen() {
 
                 if (!doc) return null;
 
+                const rejected = doc.status === "rejected";
+
                 return (
                   <View key={slot.key} style={styles.docRow}>
-                    <Text style={styles.docLabel}>{slot.label}</Text>
+                    <View style={styles.docMain}>
+                      <Text style={styles.docLabel}>{slot.label}</Text>
+                      {rejected && doc.rejectionReason ? (
+                        <Text style={styles.docReason}>
+                          Reviewer: {doc.rejectionReason}
+                        </Text>
+                      ) : null}
+                    </View>
                     <Text
                       style={[
                         styles.docState,
                         doc.status === "approved" && styles.docStateOk,
-                        doc.status === "rejected" && styles.docStateBad,
+                        rejected && styles.docStateBad,
                       ]}
                     >
                       {DOC_STATUS_LABELS[doc.status] || doc.status}
@@ -382,7 +458,7 @@ export default function VerificationScreen() {
 
           {(kycStatus === "unverified" || kycStatus === "rejected") && (
             <PrimaryButton
-              label={kycStatus === "rejected" ? "Resubmit documents" : "Start verification"}
+              label={resubmitMode ? "Retake rejected photos" : "Start verification"}
               onPress={() => {
                 setFormError("");
                 setMode("form");
@@ -405,7 +481,7 @@ export default function VerificationScreen() {
   }
 
   // --- FORM VIEW ----------------------------------------------------------
-  const allUploaded = SLOTS.every((slot) => docs[slot.key]?.mediaId);
+  const allUploaded = editableKeys.every((key) => docs[key]?.mediaId);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -420,21 +496,30 @@ export default function VerificationScreen() {
 
         <Text style={styles.title}>Submit your documents</Text>
         <Text style={styles.subtitle}>
-          Three quick photos. Tap a box to shoot with the guided camera or pick
-          from your gallery — each one uploads as soon as it's ready.
+          {resubmitMode
+            ? "Only the flagged photos need a retake — the approved ones stay as they are. Tap a box to shoot with the guided camera or pick from your gallery."
+            : "Three quick photos. Tap a box to shoot with the guided camera or pick from your gallery — each one is checked by you before it uploads."}
         </Text>
 
         <View style={styles.card}>
-          {SLOTS.map((slot) => (
-            <DocSlot
-              key={slot.key}
-              label={slot.label}
-              hint={slot.hint}
-              state={docs[slot.key]}
-              disabled={submitting}
-              onPick={() => chooseSource(slot.key, `kyc_${slot.key}`)}
-            />
-          ))}
+          {SLOTS.map((slot) => {
+            const editable = editableKeys.includes(slot.key);
+
+            if (!editable) {
+              return <LockedApprovedSlot key={slot.key} label={slot.label} />;
+            }
+
+            return (
+              <DocSlot
+                key={slot.key}
+                label={slot.label}
+                hint={slot.hint}
+                state={docs[slot.key]}
+                disabled={submitting}
+                onPick={() => chooseSource(slot.key, `kyc_${slot.key}`, slot.label)}
+              />
+            );
+          })}
 
           <Pressable
             accessibilityRole="checkbox"
@@ -461,8 +546,8 @@ export default function VerificationScreen() {
           ) : null}
 
           <PrimaryButton
-            label="Submit for review"
-            onPress={handleSubmit}
+            label={resubmitMode ? "Resubmit for review" : "Submit for review"}
+            onPress={() => handleSubmit(editableKeys)}
             loading={submitting}
             disabled={!allUploaded}
           />
@@ -551,10 +636,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
   },
+  docMain: {
+    flex: 1,
+    marginRight: 10,
+  },
   docLabel: {
     color: colors.ink,
     fontSize: 13.5,
     fontWeight: "700",
+  },
+  docReason: {
+    color: "#7D2922",
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
   },
   docState: {
     fontSize: 12.5,
@@ -596,9 +691,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  slotLocked: {
+    opacity: 0.92,
+  },
   slotPress: {
     width: 84,
     height: 84,
+  },
+  slotLockedThumb: {
+    borderRadius: 14,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  slotLockedHint: {
+    color: "#1F7A3D",
+    fontWeight: "600",
   },
   slotThumb: {
     width: 84,

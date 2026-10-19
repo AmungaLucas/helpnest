@@ -71,27 +71,22 @@ export default function AccountScreen() {
     setSigningOut(false);
   }
 
-  // Profile photo: square-crop picker (re-encodes to JPEG client-side, so
-  // iPhone HEIC never reaches the API), then multipart upload. The response
-  // carries the refreshed user incl. profileMediaId — merged into the cached
-  // session so drawer/list avatars update immediately.
-  async function handleChangePhoto() {
+  // Profile photo flow (2026-10-20): the user chooses camera or gallery —
+  // the guided camera starts on the FRONT lens with flip to the back one and
+  // a circular avatar guide. Gallery picks + camera captures pass a review
+  // stop (KYCCamera has its own Retake/Use step; gallery goes to ImageReview)
+  // so nothing uploads until the user confirms. Upload re-encodes to JPEG
+  // client-side (iPhone HEIC never reaches the API). The response carries the
+  // refreshed user incl. profileMediaId — merged into the cached session so
+  // drawer/list avatars update immediately.
+  async function uploadProfilePhoto(uri) {
     if (uploadingPhoto) return;
 
+    setUploadingPhoto(true);
+
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        exif: false,
-      });
-
-      if (result.canceled || !result.assets?.length) return;
-
-      setUploadingPhoto(true);
       const response = await uploadMedia({
-        uri: result.assets[0].uri,
+        uri,
         kind: "profile",
       });
 
@@ -104,6 +99,55 @@ export default function AccountScreen() {
     } finally {
       setUploadingPhoto(false);
     }
+  }
+
+  async function pickProfileFromGallery() {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        exif: false,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      navigation.navigate("ImageReview", {
+        uri: result.assets[0].uri,
+        title: "Profile photo",
+        subtitle:
+          "This becomes your profile picture — visible to employers and workers.",
+        onUse: (uri) => uploadProfilePhoto(uri),
+      });
+    } catch (error) {
+      Alert.alert(
+        "Could not open the photo picker",
+        "Please try again in a moment."
+      );
+    }
+  }
+
+  function chooseProfileSource() {
+    if (uploadingPhoto) return;
+
+    Alert.alert(
+      "Profile photo",
+      "Take a new photo, or pick one you already have.",
+      [
+        {
+          text: "Take photo",
+          onPress: () =>
+            navigation.navigate("KYCCamera", {
+              docKind: "profile",
+              onCaptured: (uri) => uploadProfilePhoto(uri),
+            }),
+        },
+        { text: "Choose from gallery", onPress: pickProfileFromGallery },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
   }
 
   async function handleUseLocation() {
@@ -154,7 +198,7 @@ export default function AccountScreen() {
             accessibilityRole="button"
             accessibilityLabel="Change profile photo"
             style={styles.avatarWrap}
-            onPress={handleChangePhoto}
+            onPress={chooseProfileSource}
             disabled={uploadingPhoto}
           >
             <SignedImage

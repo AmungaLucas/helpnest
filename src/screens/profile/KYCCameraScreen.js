@@ -27,11 +27,12 @@ import { colors, withAlpha } from "../../theme/colors";
 //                         corner brackets — "fit the card inside the frame"
 //   selfie             -> oval head-and-shoulders guide on the front camera —
 //                         "head, shoulders and upper chest inside the oval"
+//   profile            -> circular avatar guide (profile picture capture);
+//                         starts on the front camera, flip gives the back one
 //
 // The screen NEVER uploads and holds no server state: on "Use photo" it hands
 // the local file URI back to the caller via route.params.onCaptured(uri) and
-// pops itself. VerificationScreen owns staging + upload, exactly as if the
-// photo had come from the gallery.
+// pops itself. VerificationScreen / AccountScreen own staging + upload.
 //
 // Captures are downscaled to <=1600px JPEG q0.8 on-device before handing off —
 // the gateway ceiling is 8 MB per upload and modern phone sensors produce
@@ -42,6 +43,7 @@ const GUIDE = {
   // ID-1 cards (Kenyan national ID) are 85.6 x 53.98 mm.
   id: { aspect: 85.6 / 54.0 },
   selfie: { ovalAspect: 0.74 }, // oval width as a fraction of screen width
+  profile: { circleAspect: 0.68 }, // circular guide, avatar-style
 };
 
 const HINTS = {
@@ -51,17 +53,21 @@ const HINTS = {
     "Flip the ID over and fit it inside the frame — the serial number must be readable.",
   selfie:
     "Center your face in the oval — head, shoulders and upper chest, plain background.",
+  profile:
+    "Center your face in the circle — head and shoulders, good light. Flip for the back camera.",
 };
 
 export default function KYCCameraScreen({ route, navigation }) {
   const docKind = route?.params?.docKind || "id_front";
   const onCaptured = route?.params?.onCaptured;
   const isSelfie = docKind === "selfie";
+  const isProfile = docKind === "profile";
+  const isId = !isSelfie && !isProfile;
 
   const cameraRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [facing, setFacing] = useState(isSelfie ? "front" : "back");
+  const [facing, setFacing] = useState(isSelfie || isProfile ? "front" : "back");
   const [torchOn, setTorchOn] = useState(false);
   const [shot, setShot] = useState(null); // { uri, width, height } awaiting confirm
   const [busy, setBusy] = useState(false);
@@ -70,17 +76,26 @@ export default function KYCCameraScreen({ route, navigation }) {
   const { width: screenW, height: screenH } = useWindowDimensions();
 
   // --- guide geometry ------------------------------------------------------
-  const isId = !isSelfie;
-  const frameW = isId
-    ? Math.min(screenW * 0.84, 420)
-    : screenW * GUIDE.selfie.ovalAspect;
-  const frameH = isId
-    ? frameW / GUIDE.id.aspect
-    : frameW * 1.38; // tall oval -> head + shoulders + chest
+  let frameW;
+  let frameH;
+
+  if (isId) {
+    frameW = Math.min(screenW * 0.84, 420);
+    frameH = frameW / GUIDE.id.aspect;
+  } else if (isProfile) {
+    frameW = Math.min(screenW * GUIDE.profile.circleAspect, 340);
+    frameH = frameW; // circle
+  } else {
+    frameW = screenW * GUIDE.selfie.ovalAspect;
+    frameH = frameW * 1.38; // tall oval -> head + shoulders + chest
+  }
+
   const frameLeft = (screenW - frameW) / 2;
   const frameTop = isId
     ? (screenH - frameH) / 2 - screenH * 0.05
-    : screenH * 0.22;
+    : isProfile
+      ? (screenH - frameH) / 2 - screenH * 0.08
+      : screenH * 0.22;
 
   async function takeShot() {
     if (busy || !cameraRef.current) return;
@@ -216,7 +231,7 @@ export default function KYCCameraScreen({ route, navigation }) {
             style={StyleSheet.absoluteFill}
             facing={facing}
             mode="picture"
-            enableTorch={torchOn && !isSelfie}
+            enableTorch={torchOn && !isSelfie && facing === "back"}
           />
         )}
 
@@ -248,6 +263,20 @@ export default function KYCCameraScreen({ route, navigation }) {
 
             {isSelfie ? (
               // Oval face guide
+              <View
+                style={{
+                  position: "absolute",
+                  left: frameLeft,
+                  top: frameTop,
+                  width: frameW,
+                  height: frameH,
+                  borderRadius: frameW / 2,
+                  borderWidth: 2.5,
+                  borderColor: withAlpha("#FFFFFF", 0.95),
+                }}
+              />
+            ) : isProfile ? (
+              // Circular avatar guide for profile photos
               <View
                 style={{
                   position: "absolute",
@@ -327,10 +356,18 @@ export default function KYCCameraScreen({ route, navigation }) {
           </Pressable>
 
           <Text style={styles.topTitle}>
-            {shot ? "Review photo" : isSelfie ? "Selfie check" : docKind === "id_front" ? "ID — front" : "ID — back"}
+            {shot
+              ? "Review photo"
+              : isSelfie
+                ? "Selfie check"
+                : isProfile
+                  ? "Profile photo"
+                  : docKind === "id_front"
+                    ? "ID — front"
+                    : "ID — back"}
           </Text>
 
-          {isId && !shot ? (
+          {(isId || isProfile) && !shot ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Toggle torch"

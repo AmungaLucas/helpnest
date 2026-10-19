@@ -15,6 +15,7 @@ import WorkerProfileScreen from "../screens/tabs/WorkerProfileScreen";
 import MpesaCheckoutScreen from "../screens/tabs/MpesaCheckoutScreen";
 import ChatRoomScreen from "../screens/chats/ChatRoomScreen";
 import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
+import ImageReviewScreen from "../screens/profile/ImageReviewScreen";
 import { HelpNestLogoMark } from "../components/Logo";
 import { colors } from "../theme/colors";
 
@@ -97,6 +98,14 @@ function AuthedStack() {
       <Stack.Screen
         name="KYCCamera"
         component={KYCCameraScreen}
+        options={{ animation: "slide_from_right", orientation: "portrait" }}
+      />
+
+      {/* Review-before-upload for every gallery pick (KYC docs + profile
+          photo). Root-level like KYCCamera so it covers the chrome. */}
+      <Stack.Screen
+        name="ImageReview"
+        component={ImageReviewScreen}
         options={{ animation: "slide_from_right", orientation: "portrait" }}
       />
 

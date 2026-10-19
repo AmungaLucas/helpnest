@@ -24,6 +24,10 @@ import {
 } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
 
+// List virtualization + lazy loading (2026-10-20 perf round).
+// The server pages with limit/offset; hasMore = last page came back full.
+const PAGE_SIZE = 20;
+
 export default function FindHelpScreen() {
   const navigation = useNavigation();
   // Deep-link from the employer home category tiles: Maids tab opens with
@@ -33,6 +37,8 @@ export default function FindHelpScreen() {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [service, setService] = useState("");
@@ -50,8 +56,16 @@ export default function FindHelpScreen() {
     else setLoading(true);
 
     try {
-      const data = await listWorkers({ service, query: query.trim() });
-      setWorkers(data.workers || []);
+      const data = await listWorkers({
+        service,
+        query: query.trim(),
+        limit: PAGE_SIZE,
+        offset: 0,
+      });
+      const page = data.workers || [];
+
+      setWorkers(page);
+      setHasMore(page.length === PAGE_SIZE);
     } catch (err) {
       setError(
         err?.message || "Could not load workers. Pull down to try again."
@@ -62,12 +76,47 @@ export default function FindHelpScreen() {
     }
   }
 
+  // Scroll-end pagination — appends the next page with the SAME service /
+  // query the current list was loaded with.
+  async function loadMore() {
+    if (loading || loadingMore || refreshing || !hasMore) return;
+
+    setLoadingMore(true);
+
+    try {
+      const data = await listWorkers({
+        service,
+        query: query.trim(),
+        limit: PAGE_SIZE,
+        offset: workers.length,
+      });
+      const page = data.workers || [];
+
+      setWorkers((prev) => {
+        const seen = new Set(prev.map((w) => w.id));
+        return [...prev, ...page.filter((w) => !seen.has(w.id))];
+      });
+      setHasMore(page.length === PAGE_SIZE);
+    } catch (err) {
+      // Quiet failure: keep the loaded rows, allow retrying on next scroll-end.
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service]);
 
   const onRefresh = useCallback(() => load({ refresh: true }), [service, query]);
+
+  // Stable renderItem — the row component is memoized, so list state updates
+  // (pagination appends) only re-render the rows whose worker data changed.
+  const renderItem = useCallback(
+    ({ item }) => <WorkerCard worker={item} />,
+    []
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -136,23 +185,40 @@ export default function FindHelpScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          renderItem={({ item }) => (
-            <WorkerCard
-              worker={item}
-              onPress={() =>
-                navigation.navigate("WorkerProfile", { workerId: item.id })
-              }
-            />
-          )}
+          renderItem={renderItem}
+          // Lazy loading: render a small first window, top up in small
+          // batches, and keep a moderate render window as the list grows.
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={7}
+          removeClippedSubviews
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.35}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerSpinner}>
+                <ActivityIndicator color={colors.brand} />
+              </View>
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
   );
 }
 
-function WorkerCard({ worker, onPress }) {
+// Memoized row: only re-renders when its worker object changes (new fetch /
+// page append). Navigation happens inside the card so the memo contract is
+// just `worker` — no per-render onPress closures to break it.
+const WorkerCard = React.memo(function WorkerCard({ worker }) {
+  const navigation = useNavigation();
   const firstName = (worker.name || "").split(" ")[0] || "?";
   const kycVerified = worker.kycStatus === "verified";
+
+  const onPress = useCallback(
+    () => navigation.navigate("WorkerProfile", { workerId: worker.id }),
+    [navigation, worker.id]
+  );
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -213,7 +279,7 @@ function WorkerCard({ worker, onPress }) {
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -346,6 +412,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
+  },
+  footerSpinner: {
+    paddingVertical: 18,
   },
   emptyTitle: {
     color: colors.ink,

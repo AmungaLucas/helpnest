@@ -2,6 +2,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { getMediaLink } from "../../services/mediaService";
+import {
+  peekCachedSignedUrl,
+  rememberSignedUrl,
+  shouldPreferCachedUrl,
+} from "../../utils/signedUrlCache";
 import { BROWSER_USER_AGENT } from "../../config/api";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -16,6 +21,11 @@ import { colors, withAlpha } from "../../theme/colors";
  * - `fallbackText` renders the initial-letter block while loading or when the
  *   media cannot be loaded (no access / not found).
  * - `variant`: "thumb" (320px, lists) | "display" (full size, profiles).
+ *
+ * Signatures rotate every ~5 minutes, which would re-download identical
+ * bytes on every mount. A module-level cache (utils/signedUrlCache) reuses
+ * the held signature for 4 minutes — stable URL, warm native image cache,
+ * zero extra /link calls for re-mounted rows.
  */
 export default function SignedImage({
   mediaId,
@@ -25,15 +35,32 @@ export default function SignedImage({
   style,
   textStyle,
 }) {
-  const [uri, setUri] = useState(url);
   const [failed, setFailed] = useState(false);
   const [retried, setRetried] = useState(false);
+  const [uri, setUri] = useState(() => {
+    if (url) {
+      return mediaId && shouldPreferCachedUrl(mediaId, variant, url)
+        ? peekCachedSignedUrl(mediaId, variant)
+        : url;
+    }
+
+    return mediaId ? peekCachedSignedUrl(mediaId, variant) : null;
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     if (url) {
-      setUri(url);
+      // Fresh list-payload signature — remember it, but keep showing the
+      // cached one while it is still valid (same bytes, warmer cache).
+      if (mediaId) rememberSignedUrl(mediaId, variant, url);
+
+      const preferred =
+        mediaId && shouldPreferCachedUrl(mediaId, variant, url)
+          ? peekCachedSignedUrl(mediaId, variant)
+          : url;
+
+      setUri(preferred);
       setFailed(false);
       return undefined;
     }
@@ -44,12 +71,23 @@ export default function SignedImage({
       return undefined;
     }
 
+    // Still-fresh cached signature? Skip the /link round-trip entirely.
+    const cached = peekCachedSignedUrl(mediaId, variant);
+
+    if (cached) {
+      setUri(cached);
+      setFailed(false);
+      return undefined;
+    }
+
     setUri(null);
     setFailed(false);
 
     getMediaLink(mediaId, variant)
       .then((signed) => {
-        if (!cancelled) setUri(signed);
+        if (cancelled) return;
+        rememberSignedUrl(mediaId, variant, signed);
+        setUri(signed);
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -72,7 +110,10 @@ export default function SignedImage({
     setUri(null);
 
     getMediaLink(mediaId, variant)
-      .then((signed) => setUri(`${signed}&r=${Date.now()}`))
+      .then((signed) => {
+        rememberSignedUrl(mediaId, variant, signed);
+        setUri(`${signed}&r=${Date.now()}`);
+      })
       .catch(() => setFailed(true));
   }, [mediaId, retried, variant]);
 
