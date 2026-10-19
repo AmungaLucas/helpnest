@@ -22,6 +22,7 @@ import {
   SERVICE_OPTIONS,
   serviceLabel,
 } from "../../utils/workerMeta";
+import { formatDistance } from "../../utils/geo";
 import { colors, withAlpha } from "../../theme/colors";
 
 // ---------------------------------------------------------------------------
@@ -55,14 +56,6 @@ function greetingForHour() {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
-}
-
-// 350 m -> "350 m", 2.4 -> "2.4 km", 38 -> "38 km".
-function formatDistance(km) {
-  if (km === null || km === undefined || !Number.isFinite(km)) return null;
-  if (km < 1) return `${Math.max(1, Math.round(km * 1000))} m`;
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km)} km`;
 }
 
 // ---------------------------------------------------------------------------

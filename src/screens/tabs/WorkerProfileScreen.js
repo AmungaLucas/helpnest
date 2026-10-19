@@ -20,6 +20,7 @@ import {
   availabilityLabel,
   serviceLabel,
 } from "../../utils/workerMeta";
+import { formatDistance } from "../../utils/geo";
 import { colors, withAlpha } from "../../theme/colors";
 
 export default function WorkerProfileScreen() {
@@ -131,8 +132,16 @@ export default function WorkerProfileScreen() {
                 </Text>
               </View>
             )}
-            {worker.locationLabel ? (
-              <Text style={styles.areaText}>{worker.locationLabel}</Text>
+            {worker.locationLabel || worker.distanceKm != null ? (
+              <Text style={styles.areaText} numberOfLines={1}>
+                {worker.locationLabel || ""}
+                {worker.locationLabel && formatDistance(worker.distanceKm)
+                  ? " · "
+                  : ""}
+                {formatDistance(worker.distanceKm)
+                  ? `${formatDistance(worker.distanceKm)} away`
+                  : ""}
+              </Text>
             ) : null}
           </View>
         </View>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,9 +14,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
+import { useAuth } from "../../context/AuthContext";
 import { listWorkers } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
 import SignedImage from "../../components/media/SignedImage";
+import { formatDistance } from "../../utils/geo";
 import {
   SERVICE_OPTIONS,
   availabilityLabel,
@@ -30,6 +32,7 @@ const PAGE_SIZE = 20;
 
 export default function FindHelpScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
   // Deep-link from the employer home category tiles: Maids tab opens with
   // that service preselected (params merge on every navigate).
   const { params } = useRoute();
@@ -42,6 +45,18 @@ export default function FindHelpScreen() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [service, setService] = useState("");
+  const [nearOnly, setNearOnly] = useState(false);
+
+  // Employer coords via ref — always current, never a re-fetch dependency
+  // (a location change lands on the next load/refresh, same as home).
+  const coordsRef = useRef(null);
+  if (
+    typeof user?.locationLat === "number" &&
+    typeof user?.locationLng === "number"
+  ) {
+    coordsRef.current = { lat: user.locationLat, lng: user.locationLng };
+  }
+  const hasCoords = Boolean(coordsRef.current);
 
   useEffect(() => {
     if (params?.service !== undefined && params.service !== null) {
@@ -56,11 +71,17 @@ export default function FindHelpScreen() {
     else setLoading(true);
 
     try {
+      const coords = coordsRef.current;
       const data = await listWorkers({
         service,
         query: query.trim(),
         limit: PAGE_SIZE,
         offset: 0,
+        // Coords ride along on every load so each row can show its
+        // distance; sort=near only when the "Near me" filter is on.
+        ...(coords
+          ? { lat: coords.lat, lng: coords.lng, sort: nearOnly ? "near" : undefined }
+          : {}),
       });
       const page = data.workers || [];
 
@@ -84,11 +105,15 @@ export default function FindHelpScreen() {
     setLoadingMore(true);
 
     try {
+      const coords = coordsRef.current;
       const data = await listWorkers({
         service,
         query: query.trim(),
         limit: PAGE_SIZE,
         offset: workers.length,
+        ...(coords
+          ? { lat: coords.lat, lng: coords.lng, sort: nearOnly ? "near" : undefined }
+          : {}),
       });
       const page = data.workers || [];
 
@@ -107,7 +132,7 @@ export default function FindHelpScreen() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [service]);
+  }, [service, nearOnly]);
 
   const onRefresh = useCallback(() => load({ refresh: true }), [service, query]);
 
@@ -144,6 +169,13 @@ export default function FindHelpScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipsRow}
         >
+          {hasCoords ? (
+            <Chip
+              label="Near me"
+              selected={nearOnly}
+              onPress={() => setNearOnly((v) => !v)}
+            />
+          ) : null}
           <Chip
             label="All"
             selected={service === ""}
@@ -248,8 +280,14 @@ const WorkerCard = React.memo(function WorkerCard({ worker }) {
         </Text>
 
         <View style={styles.metaRow}>
+          {formatDistance(worker.distanceKm) ? (
+            <Text style={styles.distanceText}>
+              {formatDistance(worker.distanceKm)}
+            </Text>
+          ) : null}
           {worker.locationLabel ? (
             <Text style={styles.metaText} numberOfLines={1}>
+              {formatDistance(worker.distanceKm) ? " · " : ""}
               {worker.locationLabel}
             </Text>
           ) : null}
@@ -387,6 +425,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: "600",
+  },
+  distanceText: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
   },
   servicesText: {
     color: colors.textFaint,
