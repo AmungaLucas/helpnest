@@ -19,9 +19,28 @@ import { apiRequest } from "../config/api";
 // the serialized part then carries filename + content-type, so the server's
 // multer sees a proper file field.
 export async function uploadMedia({ uri, kind, timeoutMs = 60000 }) {
-  const response = await fetch(uri);
-  const bytes = await response.arrayBuffer();
+  // Dev-only marker: proves the device bundle contains this uploader. If this
+  // line does NOT appear when saving, the phone is running stale JS (see
+  // "Unsupported FormDataPart implementation" = the old {uri} file part).
+  if (__DEV__) {
+    console.log("[MEDIA] uploader v2 (Blob part), reading:", String(uri).slice(0, 64));
+  }
+
+  let bytes;
+  try {
+    const response = await fetch(uri);
+    bytes = await response.arrayBuffer();
+  } catch (error) {
+    throw new Error(
+      "Could not read the selected image from device storage. Pick the photo again and retry."
+    );
+  }
+
   const blob = new Blob([bytes], { type: "image/jpeg" });
+
+  if (blob.size === 0) {
+    throw new Error("The selected image could not be read (0 bytes). Try a different photo.");
+  }
 
   const form = new FormData();
   form.append("kind", kind);
