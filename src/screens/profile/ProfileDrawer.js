@@ -16,6 +16,8 @@ import { useAuth } from "../../context/AuthContext";
 import AccountScreen from "../tabs/AccountScreen";
 import MyWorkScreen from "../tabs/MyWorkScreen";
 import PaymentHubScreen from "./PaymentHubScreen";
+import HouseholdScreen from "./HouseholdScreen";
+import VerificationScreen from "./VerificationScreen";
 import ComingSoonScreen from "../../components/ui/ComingSoonScreen";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import SignedImage from "../../components/media/SignedImage";
@@ -131,7 +133,7 @@ function MaidProfileNavigator() {
       />
       <Drawer.Screen
         name="Kyc"
-        component={KycPlaceholder}
+        component={VerificationScreen}
         options={{
           title: "ID verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
@@ -171,8 +173,16 @@ function EmployerProfileNavigator() {
         }}
       />
       <Drawer.Screen
+        name="Household"
+        component={HouseholdScreen}
+        options={{
+          title: "Household details",
+          drawerIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+        }}
+      />
+      <Drawer.Screen
         name="Verification"
-        component={VerificationPlaceholder}
+        component={VerificationScreen}
         options={{
           title: "Account verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
@@ -202,17 +212,6 @@ function EmployerProfileNavigator() {
   );
 }
 
-function KycPlaceholder() {
-  return (
-    <ComingSoonScreen
-      withMenu
-      icon="shield"
-      title="ID verification is coming soon"
-      blurb="Upload your national ID and get a verified badge that makes employers trust your profile instantly. KYC checks land in the next release."
-    />
-  );
-}
-
 function ReviewsPlaceholder() {
   return (
     <ComingSoonScreen
@@ -220,17 +219,6 @@ function ReviewsPlaceholder() {
       icon="star"
       title="Reviews are coming soon"
       blurb="After every completed job, households rate your work. Great reviews push you higher in employer search results."
-    />
-  );
-}
-
-function VerificationPlaceholder() {
-  return (
-    <ComingSoonScreen
-      withMenu
-      icon="shield"
-      title="Verification is coming soon"
-      blurb="Verify your identity to unlock the verified-employer badge — workers respond faster to verified households."
     />
   );
 }
