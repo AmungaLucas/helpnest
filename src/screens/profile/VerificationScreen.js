@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 
 import PrimaryButton from "../../components/ui/PrimaryButton";
@@ -24,9 +25,10 @@ import { colors, withAlpha } from "../../theme/colors";
 // KYC verification flow (PRD §4.2, §10.2, BUILD-PLAN W2-F3).
 //
 // Both roles use this screen — the copy adapts via `roleCopy`. The flow is:
-//   status view (default) -> form view (ID front / ID back / selfie picked
-//   from the gallery, each uploaded immediately through the media API) ->
-//   DPA 2019 consent -> submit -> back to status view ("under review").
+//   status view (default) -> form view (ID front / ID back / selfie, each
+//   captured with the guided camera or picked from the gallery, then uploaded
+//   immediately through the media API) -> DPA 2019 consent -> submit -> back
+//   to status view ("under review").
 // Server review flips the status; this screen always re-fetches on focus.
 
 const SLOTS = [
@@ -125,6 +127,7 @@ function DocSlot({ label, hint, state, onPick, disabled }) {
 
 export default function VerificationScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const roleCopy = ROLE_COPY[user?.role] || ROLE_COPY.employer;
 
   const [loading, setLoading] = useState(true);
@@ -160,26 +163,9 @@ export default function VerificationScreen() {
     }, [refresh])
   );
 
-  async function pickDoc(slotKey, mediaKind) {
-    setFormError("");
-
-    let result;
-    try {
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        quality: 0.8,
-        exif: false,
-      });
-    } catch (err) {
-      setFormError("Could not open the photo picker. Try again.");
-      return;
-    }
-
-    if (result.canceled || !result.assets?.length) return;
-
-    const uri = result.assets[0].uri;
-
+  // Shared tail of both capture paths (guided camera + gallery): stage the
+  // local photo, upload immediately, surface a per-slot retry pill on error.
+  async function handleCaptured(slotKey, mediaKind, uri) {
     setDocs((prev) => ({
       ...prev,
       [slotKey]: { uri, mediaId: null, uploading: true, error: "" },
@@ -208,6 +194,54 @@ export default function VerificationScreen() {
         },
       }));
     }
+  }
+
+  async function pickFromGallery(slotKey, mediaKind) {
+    setFormError("");
+
+    let result;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.8,
+        exif: false,
+      });
+    } catch (err) {
+      setFormError("Could not open the photo picker. Try again.");
+      return;
+    }
+
+    if (result.canceled || !result.assets?.length) return;
+
+    await handleCaptured(slotKey, mediaKind, result.assets[0].uri);
+  }
+
+  function chooseSource(slotKey, mediaKind) {
+    setFormError("");
+    const label =
+      SLOTS.find((slot) => slot.key === slotKey)?.label || "Add a photo";
+
+    Alert.alert(
+      label,
+      "Use the guided camera, or pick a photo you already have.",
+      [
+        {
+          text: "Take photo",
+          onPress: () =>
+            navigation.navigate("KYCCamera", {
+              docKind: slotKey,
+              onCaptured: (uri) => handleCaptured(slotKey, mediaKind, uri),
+            }),
+        },
+        {
+          text: "Choose from gallery",
+          onPress: () => pickFromGallery(slotKey, mediaKind),
+        },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
   }
 
   async function handleSubmit() {
@@ -386,8 +420,8 @@ export default function VerificationScreen() {
 
         <Text style={styles.title}>Submit your documents</Text>
         <Text style={styles.subtitle}>
-          Three quick photos. Tap a box to pick from your gallery — each one
-          uploads as soon as you select it.
+          Three quick photos. Tap a box to shoot with the guided camera or pick
+          from your gallery — each one uploads as soon as it's ready.
         </Text>
 
         <View style={styles.card}>
@@ -398,7 +432,7 @@ export default function VerificationScreen() {
               hint={slot.hint}
               state={docs[slot.key]}
               disabled={submitting}
-              onPick={() => pickDoc(slot.key, `kyc_${slot.key}`)}
+              onPick={() => chooseSource(slot.key, `kyc_${slot.key}`)}
             />
           ))}
 

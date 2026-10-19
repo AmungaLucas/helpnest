@@ -88,6 +88,21 @@ const ICON_PATHS = {
       <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </>
   ),
+  // Camera screen (KYC guided capture)
+  zap: <Polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
+  "refresh-cw": (
+    <>
+      <Polyline points="23 4 23 10 17 10" />
+      <Polyline points="1 20 1 14 7 14" />
+      <Path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </>
+  ),
+  camera: (
+    <>
+      <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <Circle cx="12" cy="13" r="4" />
+    </>
+  ),
 };
 
 export default function TabBarIcon({ name, focused, color, size = 22 }) {

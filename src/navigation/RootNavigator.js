@@ -14,6 +14,7 @@ import MainTabs from "./MainTabs";
 import WorkerProfileScreen from "../screens/tabs/WorkerProfileScreen";
 import MpesaCheckoutScreen from "../screens/tabs/MpesaCheckoutScreen";
 import ChatRoomScreen from "../screens/chats/ChatRoomScreen";
+import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
 import { HelpNestLogoMark } from "../components/Logo";
 import { colors } from "../theme/colors";
 
@@ -89,6 +90,14 @@ function AuthedStack() {
         name="MpesaCheckout"
         component={MpesaCheckoutScreen}
         options={{ animation: "slide_from_right" }}
+      />
+
+      {/* Full-screen guided capture for KYC documents (ID rect / selfie oval).
+          Registered at the root so it covers the drawer + tab chrome. */}
+      <Stack.Screen
+        name="KYCCamera"
+        component={KYCCameraScreen}
+        options={{ animation: "slide_from_right", orientation: "portrait" }}
       />
 
       {/* Developer tool — not linked in the user flow. */}
