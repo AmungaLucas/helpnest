@@ -22,6 +22,9 @@ export const colors = {
   cloud: "#D6DCD6", // grabber, oversized row numbers
   linen: "#ECE6D8", // assistant bubble border
   white: "#FFFFFF", // pure white — cards and on-brand text
+
+  /* Status (semantic) */
+  danger: "#B3402E", // brick red — destructive actions, restricted/blocked banners
 };
 
 /**
