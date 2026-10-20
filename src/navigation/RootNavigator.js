@@ -18,6 +18,7 @@ import JobApplicationsScreen from "../screens/employer/JobApplicationsScreen";
 import ChatRoomScreen from "../screens/chats/ChatRoomScreen";
 import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
 import ImageReviewScreen from "../screens/profile/ImageReviewScreen";
+import VerifyEmailScreen from "../screens/profile/VerifyEmailScreen";
 import { HelpNestLogoMark } from "../components/Logo";
 import { colors } from "../theme/colors";
 
@@ -123,6 +124,14 @@ function AuthedStack() {
         name="ImageReview"
         component={ImageReviewScreen}
         options={{ animation: "slide_from_right", orientation: "portrait" }}
+      />
+
+      {/* Email verification code entry (PRD §4.2) — opened from the
+          Account verification card when the address is still unverified. */}
+      <Stack.Screen
+        name="VerifyEmail"
+        component={VerifyEmailScreen}
+        options={{ animation: "slide_from_right" }}
       />
 
       {/* Developer tool — not linked in the user flow. */}

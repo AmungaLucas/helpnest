@@ -55,3 +55,19 @@ export function logout() {
     skipAuthRetry: true,
   });
 }
+
+// Email verification (PRD v1.1 §4.2/§4.3). The code lands in the user's
+// inbox; @example.com test accounts get a devCode in the response.
+export function requestEmailVerification() {
+  return apiRequest("/api/auth/verify-email/request", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function confirmEmailVerification(code) {
+  return apiRequest("/api/auth/verify-email/confirm", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}

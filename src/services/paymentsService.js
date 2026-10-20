@@ -15,3 +15,19 @@ export function startStkPush(plan, metadata) {
 export function getTransaction(txnId) {
   return apiRequest(`/api/payments/txn/${txnId}`);
 }
+
+// Purchase history (PRD §14.7 receipts) — reconciles missed callbacks
+// server-side first, then returns the last 100 transactions with outcome
+// vocabulary and refund status.
+export function fetchHistory() {
+  return apiRequest("/api/payments/history");
+}
+
+// "Get help" on a purchase (PRD §14.7): file a refund request that the
+// team handles manually (approve -> till reversal -> reference recorded).
+export function requestRefund(txnId, reason) {
+  return apiRequest(`/api/payments/txn/${txnId}/refund-request`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}

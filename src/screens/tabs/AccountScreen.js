@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   Share,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +21,7 @@ import { logout } from "../../services/authService";
 import { updateMe } from "../../services/usersService";
 import { uploadMedia } from "../../services/mediaService";
 import { getMyReferrals } from "../../services/referralsService";
+import { fetchHistory, requestRefund } from "../../services/paymentsService";
 import SignedImage from "../../components/media/SignedImage";
 import {
   openAppSettings,
@@ -41,6 +44,10 @@ export default function AccountScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [referral, setReferral] = useState(null);
   const [referralLoading, setReferralLoading] = useState(true);
+  const [history, setHistory] = useState(null);
+  const [refundFor, setRefundFor] = useState(null); // txn row awaiting a reason
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBusy, setRefundBusy] = useState(false);
 
   // Referral programme summary — invite code, reward rules, earnings.
   // Silent failure: the card just doesn't render if the API hiccups.
@@ -55,6 +62,34 @@ export default function AccountScreen() {
   useEffect(() => {
     loadReferral();
   }, [loadReferral]);
+
+  // Purchase history (PRD §14.7) + refund request action (§14.3 manual
+  // flow). Silent failure: the card just stays minimal if the API hiccups.
+  const loadHistory = useCallback(() => {
+    fetchHistory()
+      .then((d) => setHistory(d.history || []))
+      .catch(() => setHistory(null));
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  async function submitRefundRequest() {
+    if (!refundFor || refundReason.trim().length < 10) return;
+    setRefundBusy(true);
+    try {
+      const d = await requestRefund(refundFor.id, refundReason.trim());
+      Alert.alert("Request sent", d.message || "Our team will contact you.");
+      setRefundFor(null);
+      setRefundReason("");
+      loadHistory();
+    } catch (e) {
+      Alert.alert("Could not send", e.message || "Try again in a minute.");
+    } finally {
+      setRefundBusy(false);
+    }
+  }
 
   async function shareInvite() {
     if (!referral?.code) return;
@@ -267,7 +302,16 @@ export default function AccountScreen() {
           <StatusRow
             ok={user?.emailVerified}
             okText="Email verified"
-            pendingText="Email verification coming soon"
+            pendingText={
+              user?.email
+                ? "Email not verified — tap to verify"
+                : "Email verification coming soon"
+            }
+            action={
+              user?.email && !user?.emailVerified
+                ? () => navigation.navigate("VerifyEmail", { email: user.email })
+                : undefined
+            }
           />
           <StatusRow
             ok={user?.kycStatus === "verified"}
@@ -275,6 +319,15 @@ export default function AccountScreen() {
             pendingText={`KYC: ${user?.kycStatus || "unverified"}`}
           />
         </View>
+
+        <PurchasesCard
+          history={history}
+          onRefresh={loadHistory}
+          onRequestRefund={(txn) => {
+            setRefundFor(txn);
+            setRefundReason("");
+          }}
+        />
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Location</Text>
@@ -392,15 +445,154 @@ export default function AccountScreen() {
 
         <Text style={styles.versionText}>HelpNest v1.0.0</Text>
       </ScrollView>
+
+      {/* Refund request (PRD §14.7 "Get help") — a short reason is all the
+          manual refund workflow needs from the user. */}
+      <Modal
+        visible={Boolean(refundFor)}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRefundFor(null)}
+      >
+        <View style={styles.refundSheetWrap}>
+          <Pressable style={styles.refundSheetBackdrop} onPress={() => setRefundFor(null)} />
+          <View style={styles.refundSheet}>
+            <Text style={styles.refundSheetTitle}>Request a refund</Text>
+            {refundFor ? (
+              <Text style={styles.refundSheetSub}>
+                {refundFor.planLabel || refundFor.plan} · KES {refundFor.amountKes}
+              </Text>
+            ) : null}
+            <Text style={styles.refundSheetHint}>
+              Tell us what went wrong (at least 10 characters). Our team
+              reviews within 72 hours and refunds are sent to M-Pesa manually.
+            </Text>
+            <TextInput
+              style={styles.refundSheetInput}
+              value={refundReason}
+              onChangeText={setRefundReason}
+              multiline
+              numberOfLines={3}
+              maxLength={500}
+              placeholder="e.g. I paid for the job post but it was never published"
+              placeholderTextColor={colors.textFaint}
+            />
+            <View style={styles.refundSheetActions}>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.refundSheetBtn, styles.refundSheetBtnGhost]}
+                onPress={() => setRefundFor(null)}
+                disabled={refundBusy}
+              >
+                <Text style={styles.refundSheetBtnGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={[
+                  styles.refundSheetBtn,
+                  (refundBusy || refundReason.trim().length < 10) &&
+                    styles.btnDisabled,
+                ]}
+                onPress={submitRefundRequest}
+                disabled={refundBusy || refundReason.trim().length < 10}
+              >
+                {refundBusy ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.refundSheetBtnText}>Send request</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-function StatusRow({ ok, okText, pendingText }) {
-  return (
+function StatusRow({ ok, okText, pendingText, action }) {
+  const content = (
     <View style={styles.statusRow}>
       <View style={[styles.dot, ok ? styles.dotOk : styles.dotIdle]} />
-      <Text style={styles.statusText}>{ok ? okText : pendingText}</Text>
+      <Text
+        style={[styles.statusText, action && !ok && styles.statusActionText]}
+      >
+        {ok ? okText : pendingText}
+      </Text>
+      {action && !ok ? <Text style={styles.statusActionArrow}>›</Text> : null}
+    </View>
+  );
+
+  if (action && !ok) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        onPress={action}
+        hitSlop={6}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
+}
+
+const REFUND_LABEL = {
+  none: null,
+  requested: "refund requested",
+  approved: "refund approved",
+  completed: "refunded",
+  rejected: "refund declined",
+};
+
+// Purchases & refunds (PRD §14.7): recent payments with their outcome plus
+// the per-transaction "Get help" action. Money moves stay manual on our
+// side — this card only files and tracks the request.
+function PurchasesCard({ history, onRefresh, onRequestRefund }) {
+  if (!history || history.length === 0) return null;
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.refundHead}>
+        <Text style={styles.cardTitle}>Purchases & refunds</Text>
+        <Pressable onPress={onRefresh} hitSlop={8}>
+          <Text style={styles.refundRefresh}>Refresh</Text>
+        </Pressable>
+      </View>
+
+      {history.slice(0, 8).map((t) => {
+        const refundLabel = REFUND_LABEL[t.refundStatus || "none"];
+        return (
+          <View key={t.id} style={styles.purchaseRow}>
+            <View style={styles.purchaseMain}>
+              <Text style={styles.purchaseTitle} numberOfLines={1}>
+                {t.planLabel || t.plan} · KES {t.amountKes}
+              </Text>
+              <Text style={styles.purchaseSub} numberOfLines={1}>
+                {t.status === "success"
+                  ? `Paid · ${t.unitsGranted > 0 ? `${t.unitsGranted} credit${t.unitsGranted === 1 ? "" : "s"}` : "recorded"}`
+                  : t.status === "pending"
+                    ? "Awaiting payment"
+                    : t.status === "timeout"
+                      ? "Outcome unknown"
+                      : "Payment failed"}
+                {refundLabel ? ` · ${refundLabel}` : ""}
+              </Text>
+            </View>
+            {t.status === "success" &&
+              (t.refundStatus || "none") === "none" ? (
+              <Pressable
+                accessibilityRole="button"
+                style={styles.refundBtn}
+                onPress={() => onRequestRefund(t)}
+              >
+                <Text style={styles.refundBtnText}>Get help</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -521,6 +713,117 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  statusActionText: {
+    color: colors.brand,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  statusActionArrow: {
+    color: colors.brand,
+    fontSize: 18,
+    fontWeight: "700",
+    marginLeft: "auto",
+  },
+  refundHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  refundRefresh: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  purchaseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.mist,
+  },
+  purchaseMain: { flex: 1, marginRight: 8 },
+  purchaseTitle: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  purchaseSub: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  refundBtn: {
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.white,
+  },
+  refundBtnText: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  refundSheetWrap: { flex: 1, justifyContent: "flex-end" },
+  refundSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(38, 49, 43, 0.45)",
+  },
+  refundSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    padding: 20,
+    paddingBottom: 30,
+  },
+  refundSheetTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  refundSheetSub: {
+    color: colors.brand,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  refundSheetHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  refundSheetInput: {
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 12,
+    backgroundColor: colors.cream,
+    padding: 12,
+    minHeight: 84,
+    textAlignVertical: "top",
+    color: colors.ink,
+    fontSize: 14,
+  },
+  refundSheetActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 14,
+  },
+  refundSheetBtn: {
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    minWidth: 110,
+    alignItems: "center",
+  },
+  refundSheetBtnText: { color: colors.white, fontWeight: "800", fontSize: 14 },
+  refundSheetBtnGhost: { backgroundColor: colors.mist },
+  refundSheetBtnGhostText: { color: colors.ink, fontWeight: "700", fontSize: 14 },
+  btnDisabled: { opacity: 0.45 },
   locationLine: {
     color: colors.ink,
     fontSize: 13.5,
