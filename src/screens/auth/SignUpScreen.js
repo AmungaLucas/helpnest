@@ -34,6 +34,7 @@ export default function SignUpScreen() {
   const [phone, setPhone] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
@@ -75,6 +76,9 @@ export default function SignUpScreen() {
         phone: normalizePhone(phone),
         password,
         locationLabel: locationLabel.trim(),
+        // Optional invite code — the friend who shared it earns cash once
+        // this account makes its first payment (see Account > Referrals).
+        referralCode: referralCode.trim().toUpperCase() || undefined,
       });
 
       if (data.requiresOtp) {
@@ -163,6 +167,15 @@ export default function SignUpScreen() {
               value={password}
               onChangeText={setPassword}
               error={errors.password}
+            />
+
+            <TextField
+              label="Referral code (optional)"
+              placeholder="e.g. K7QW2M"
+              autoCapitalize="characters"
+              value={referralCode}
+              onChangeText={(v) => setReferralCode(v.toUpperCase())}
+              hint="Got a code from a friend? They earn a cash reward when you pay."
             />
 
             {formError ? (

@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { logout } from "../../services/authService";
 import { updateMe } from "../../services/usersService";
 import { uploadMedia } from "../../services/mediaService";
+import { getMyReferrals } from "../../services/referralsService";
 import SignedImage from "../../components/media/SignedImage";
 import {
   openAppSettings,
@@ -37,6 +39,35 @@ export default function AccountScreen() {
   const [locating, setLocating] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [referral, setReferral] = useState(null);
+  const [referralLoading, setReferralLoading] = useState(true);
+
+  // Referral programme summary — invite code, reward rules, earnings.
+  // Silent failure: the card just doesn't render if the API hiccups.
+  const loadReferral = useCallback(() => {
+    setReferralLoading(true);
+    getMyReferrals()
+      .then(setReferral)
+      .catch(() => setReferral(null))
+      .finally(() => setReferralLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadReferral();
+  }, [loadReferral]);
+
+  async function shareInvite() {
+    if (!referral?.code) return;
+    try {
+      await Share.share({
+        message:
+          referral.shareText ||
+          `Join me on HelpNest — use my code ${referral.code} when you sign up!`,
+      });
+    } catch (error) {
+      // User dismissed the share sheet — nothing to do.
+    }
+  }
 
   const firstName = (user?.name || "").split(" ")[0] || "?";
   const hasCoords = user?.locationLat !== null && user?.locationLat !== undefined;
@@ -305,6 +336,49 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
+        {/* Referral programme — earn cash when friends you invite pay. */}
+        {!referralLoading && referral?.code ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Earn with referrals</Text>
+            <Text style={styles.locationNote}>{referral.rewardText}</Text>
+
+            <View style={styles.referralCodeRow}>
+              <Text style={styles.referralCode}>{referral.code}</Text>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.shareButton}
+                onPress={shareInvite}
+              >
+                <Text style={styles.shareButtonText}>Share code</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.referralStatsRow}>
+              <ReferralStat
+                value={referral.stats?.invited || 0}
+                label="invited"
+              />
+              <ReferralStat
+                value={referral.stats?.qualified || 0}
+                label="paid"
+              />
+              <ReferralStat
+                value={`KES ${Number(referral.stats?.earnedKes || 0).toLocaleString("en-KE")}`}
+                label="earned"
+                strong
+              />
+            </View>
+
+            {Number(referral.stats?.pendingKes || 0) > 0 && (
+              <Text style={styles.referralPending}>
+                KES {Number(referral.stats.pendingKes).toLocaleString("en-KE")} on
+                the way — payouts go out to M-Pesa once your balance reaches
+                KES {Number(referral.minPayoutKes || 0).toLocaleString("en-KE")}.
+              </Text>
+            )}
+          </View>
+        ) : null}
+
         <Pressable
           accessibilityRole="button"
           style={styles.signOutButton}
@@ -327,6 +401,22 @@ function StatusRow({ ok, okText, pendingText }) {
     <View style={styles.statusRow}>
       <View style={[styles.dot, ok ? styles.dotOk : styles.dotIdle]} />
       <Text style={styles.statusText}>{ok ? okText : pendingText}</Text>
+    </View>
+  );
+}
+
+function ReferralStat({ value, label, strong }) {
+  return (
+    <View style={styles.referralStat}>
+      <Text
+        style={[
+          styles.referralStatValue,
+          strong && styles.referralStatValueStrong,
+        ]}
+      >
+        {value}
+      </Text>
+      <Text style={styles.referralStatLabel}>{label}</Text>
     </View>
   );
 }
@@ -464,6 +554,66 @@ const styles = StyleSheet.create({
     minHeight: 50,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 6,
+  },
+  referralCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.brand, 0.25),
+    padding: 12,
+    marginBottom: 12,
+  },
+  referralCode: {
+    color: colors.brand,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 2.5,
+  },
+  shareButton: {
+    backgroundColor: colors.brand,
+    borderRadius: 11,
+    minHeight: 42,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shareButtonText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  referralStatsRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  referralStat: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  referralStatValue: {
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  referralStatValueStrong: {
+    color: colors.brand,
+  },
+  referralStatLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  referralPending: {
+    color: colors.goldDark,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "600",
     marginTop: 6,
   },
   signOutText: {
