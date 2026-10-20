@@ -268,7 +268,11 @@ const WorkerCard = React.memo(function WorkerCard({ worker }) {
           <Text style={styles.cardName} numberOfLines={1}>
             {worker.name}
           </Text>
-          {kycVerified ? (
+          {worker.featured ? (
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredText}>Featured</Text>
+            </View>
+          ) : kycVerified ? (
             <View style={styles.verifiedBadge}>
               <Text style={styles.verifiedText}>Verified</Text>
             </View>
@@ -398,6 +402,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     marginRight: 6,
+  },
+  featuredBadge: {
+    backgroundColor: "#FBF3E1",
+    borderWidth: 1,
+    borderColor: "#E7D2A8",
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  featuredText: {
+    color: colors.goldDark,
+    fontSize: 9.5,
+    fontWeight: "800",
   },
   verifiedBadge: {
     backgroundColor: withAlpha(colors.brand, 0.14),

@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +33,7 @@ export default function MyJobsScreen() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const [boostJob, setBoostJob] = useState(null);
 
   const load = useCallback(async () => {
     setError("");
@@ -278,6 +280,18 @@ export default function MyJobsScreen() {
                       </Text>
                     </View>
                   </View>
+                  {open && !expired ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.boostBtn,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setBoostJob(job)}
+                    >
+                      <Text style={styles.boostBtnText}>Boost</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     disabled={busyId === job.id}
@@ -310,6 +324,80 @@ export default function MyJobsScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* Boost options (PRD §5.2/§18.3) — Urgent +100 and Spotlight 200
+          stack; the purchase rides the standard M-Pesa checkout with the
+          job id as metadata so the gateway targets the right listing. */}
+      <Modal
+        visible={Boolean(boostJob)}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBoostJob(null)}
+      >
+        <View style={styles.boostSheetWrap}>
+          <Pressable
+            style={styles.boostSheetBackdrop}
+            onPress={() => setBoostJob(null)}
+          />
+          <View style={styles.boostSheet}>
+            <Text style={styles.boostSheetTitle}>Boost this job</Text>
+            <Text style={styles.boostSheetSub} numberOfLines={1}>
+              {boostJob?.title}
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              style={styles.boostOption}
+              onPress={() => {
+                const job = boostJob;
+                setBoostJob(null);
+                navigation.navigate("MpesaCheckout", {
+                  plan: "urgent_boost",
+                  jobId: job.id,
+                  label: "Urgent boost — 24h",
+                });
+              }}
+            >
+              <View style={styles.boostOptionMain}>
+                <Text style={styles.boostOptionTitle}>Urgent boost</Text>
+                <Text style={styles.boostOptionText}>
+                  Labeled urgent placement at the top of the feed for 24
+                  hours.
+                </Text>
+              </View>
+              <Text style={styles.boostOptionPrice}>+KES 100</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={styles.boostOption}
+              onPress={() => {
+                const job = boostJob;
+                setBoostJob(null);
+                navigation.navigate("MpesaCheckout", {
+                  plan: "spotlight",
+                  jobId: job.id,
+                  label: "Spotlight — 24h",
+                });
+              }}
+            >
+              <View style={styles.boostOptionMain}>
+                <Text style={styles.boostOptionTitle}>Spotlight</Text>
+                <Text style={styles.boostOptionText}>
+                  Pinned spotlight placement for 24 hours — stacks with
+                  urgent.
+                </Text>
+              </View>
+              <Text style={styles.boostOptionPrice}>KES 200</Text>
+            </Pressable>
+
+            <Text style={styles.boostNote}>
+              Placement is labeled “Promoted”, never guaranteed a position
+              (PRD §18.3). Not delivered? You get a refund or credit.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -528,6 +616,74 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11.5,
     fontWeight: "600",
+  },
+  boostBtn: {
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: colors.white,
+  },
+  boostBtnText: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  boostSheetWrap: { flex: 1, justifyContent: "flex-end" },
+  boostSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(38, 49, 43, 0.45)",
+  },
+  boostSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    padding: 20,
+    paddingBottom: 30,
+    gap: 10,
+  },
+  boostSheetTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  boostSheetSub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  boostOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: colors.cream,
+  },
+  boostOptionMain: { flex: 1, marginRight: 10 },
+  boostOptionTitle: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  boostOptionText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  boostOptionPrice: {
+    color: colors.brand,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  boostNote: {
+    color: colors.textFaint,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: "center",
   },
   statusToggle: {
     borderRadius: 10,

@@ -3,12 +3,14 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +23,7 @@ import TabBarIcon from "../../components/ui/TabBarIcon";
 import { useAuth } from "../../context/AuthContext";
 import { uploadMedia } from "../../services/mediaService";
 import { getKycStatus, submitKyc } from "../../services/kycService";
+import { fileAppeal } from "../../services/appealsService";
 import { colors, withAlpha } from "../../theme/colors";
 
 // KYC verification flow (PRD §4.2, §10.2, BUILD-PLAN W2-F3).
@@ -163,6 +166,9 @@ export default function VerificationScreen() {
 
   const [loading, setLoading] = useState(true);
   const [statusData, setStatusData] = useState(null);
+  const [appealOpen, setAppealOpen] = useState(false);
+  const [appealMsg, setAppealMsg] = useState("");
+  const [appealBusy, setAppealBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [mode, setMode] = useState("status"); // "status" | "form"
 
@@ -469,6 +475,51 @@ export default function VerificationScreen() {
             </Text>
           </View>
 
+          {/* Fast-track (PRD §4.8) — optional 6-hour priority review, offered
+              only while a submission is actually pending. */}
+          {kycStatus === "pending" ? (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.fastTrackCard}
+              onPress={() =>
+                navigation.navigate("MpesaCheckout", {
+                  plan: "verification_fast_track",
+                  label: "Fast-track review (6 hours)",
+                })
+              }
+            >
+              <View style={styles.fastTrackMain}>
+                <Text style={styles.fastTrackTitle}>In a hurry?</Text>
+                <Text style={styles.fastTrackText}>
+                  Fast-track moves your review to the front of the queue —
+                  target 6 hours instead of 48–72. Payment does not change
+                  the outcome, only the speed.
+                </Text>
+              </View>
+              <Text style={styles.fastTrackPrice}>KES 100</Text>
+            </Pressable>
+          ) : null}
+
+          {/* Appeal (PRD §4.7 — within 14 days of rejection a second
+              reviewer re-examines the decision, target 72h). */}
+          {kycStatus === "rejected" ? (
+            <Pressable
+              accessibilityRole="button"
+              style={styles.appealCard}
+              onPress={() => setAppealOpen(true)}
+            >
+              <View style={styles.fastTrackMain}>
+                <Text style={styles.fastTrackTitle}>
+                  Think this was a mistake?
+                </Text>
+                <Text style={styles.fastTrackText}>
+                  File an appeal and a second reviewer — not the original one
+                  — re-examines your documents within 72 hours.
+                </Text>
+              </View>
+              <Text style={styles.appealArrow}>›</Text>
+            </Pressable>
+          ) : null}
           {/* Document outcomes — shown whenever any document exists, so the
               user can see exactly what the reviewer decided per photo. */}
           {hasDocs ? (
@@ -632,6 +683,94 @@ export default function VerificationScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Appeal sheet (PRD §4.7) — one message is all the second reviewer
+          needs; the target document is filed automatically. */}
+      <Modal
+        visible={appealOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAppealOpen(false)}
+      >
+        <View style={styles.appealSheetWrap}>
+          <Pressable
+            style={styles.appealSheetBackdrop}
+            onPress={() => setAppealOpen(false)}
+          />
+          <View style={styles.appealSheet}>
+            <Text style={styles.appealSheetTitle}>Appeal this decision</Text>
+            <Text style={styles.appealSheetHint}>
+              Tell the second reviewer why you believe the rejection was a
+              mistake (at least 20 characters). You will get the outcome on
+              this screen and by SMS.
+            </Text>
+            <TextInput
+              style={styles.appealSheetInput}
+              value={appealMsg}
+              onChangeText={setAppealMsg}
+              multiline
+              numberOfLines={4}
+              maxLength={2000}
+              placeholder="e.g. The photo was taken in daylight and every detail of my ID is readable..."
+              placeholderTextColor={colors.textFaint}
+            />
+            <View style={styles.appealSheetActions}>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.appealSheetBtn, styles.appealSheetBtnGhost]}
+                onPress={() => setAppealOpen(false)}
+                disabled={appealBusy}
+              >
+                <Text style={styles.appealSheetBtnGhostText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={[
+                  styles.appealSheetBtn,
+                  (appealBusy || appealMsg.trim().length < 20) &&
+                    styles.appealSheetBtnDisabled,
+                ]}
+                onPress={async () => {
+                  const rejectedDoc = SLOTS.map((s) => documents[s.key]).find(
+                    (d) => d && d.status === "rejected"
+                  );
+
+                  if (!rejectedDoc) {
+                    Alert.alert(
+                      "Nothing to appeal",
+                      "No rejected document was found on this account."
+                    );
+                    return;
+                  }
+
+                  setAppealBusy(true);
+                  try {
+                    const d = await fileAppeal({
+                      kind: "kyc_rejection",
+                      targetId: rejectedDoc.id,
+                      message: appealMsg.trim(),
+                    });
+                    setAppealOpen(false);
+                    setAppealMsg("");
+                    Alert.alert("Appeal sent", d.message || "A second reviewer will take a look.");
+                  } catch (e) {
+                    Alert.alert("Could not send", e?.message || "Try again in a minute.");
+                  } finally {
+                    setAppealBusy(false);
+                  }
+                }}
+                disabled={appealBusy || appealMsg.trim().length < 20}
+              >
+                {appealBusy ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.appealSheetBtnText}>Send appeal</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -641,6 +780,101 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
+  fastTrackCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  fastTrackMain: { flex: 1, marginRight: 10 },
+  fastTrackTitle: {
+    color: colors.ink,
+    fontSize: 13.5,
+    fontWeight: "800",
+  },
+  fastTrackText: {
+    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 15.5,
+    marginTop: 3,
+  },
+  fastTrackPrice: {
+    color: colors.brand,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  appealCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  appealArrow: {
+    color: colors.brand,
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  appealSheetWrap: { flex: 1, justifyContent: "flex-end" },
+  appealSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(38, 49, 43, 0.45)",
+  },
+  appealSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    padding: 20,
+    paddingBottom: 30,
+  },
+  appealSheetTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  appealSheetHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  appealSheetInput: {
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 12,
+    backgroundColor: colors.cream,
+    padding: 12,
+    minHeight: 100,
+    textAlignVertical: "top",
+    color: colors.ink,
+    fontSize: 14,
+  },
+  appealSheetActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 14,
+  },
+  appealSheetBtn: {
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    minWidth: 110,
+    alignItems: "center",
+  },
+  appealSheetBtnText: { color: colors.white, fontWeight: "800", fontSize: 14 },
+  appealSheetBtnGhost: { backgroundColor: colors.mist },
+  appealSheetBtnGhostText: { color: colors.ink, fontWeight: "700", fontSize: 14 },
+  appealSheetBtnDisabled: { opacity: 0.45 },
   flex: {
     flex: 1,
   },

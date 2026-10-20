@@ -369,6 +369,33 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
+        {/* Profile boost (PRD §5.1/§18.4) — maids only: 7 days of labeled
+            featured placement in employer searches. */}
+        {user?.role === "maid" ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Boost your profile</Text>
+            <Text style={styles.locationNote}>
+              Get a labeled “Featured” placement at the top of employer
+              searches for 7 days — KES 100. Placement is labeled, never a
+              guaranteed position.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.secondaryButton}
+              onPress={() =>
+                navigation.navigate("MpesaCheckout", {
+                  plan: "profile_boost",
+                  label: "Profile boost — 7 days featured",
+                })
+              }
+            >
+              <Text style={styles.secondaryButtonText}>
+                Boost my profile — KES 100 / 7 days
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Payments</Text>
           <Text style={styles.locationNote}>

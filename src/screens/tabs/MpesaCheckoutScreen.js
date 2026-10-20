@@ -33,6 +33,12 @@ const PLAN_META = {
   chat_week: { label: "Unlimited chats — 1 week", amountKes: 250 },
   chat_month: { label: "Unlimited chats — 1 month", amountKes: 800 },
   job_post: { label: "Standard job post", amountKes: 300 },
+  // Promotions (PRD §5, §18) — prices shown are the current hypotheses; the
+  // gateway charges whatever the plans table has at push time.
+  profile_boost: { label: "Profile boost — 7 days featured", amountKes: 100 },
+  verification_fast_track: { label: "Fast-track review (6 hours)", amountKes: 100 },
+  urgent_boost: { label: "Urgent boost — 24h urgent placement", amountKes: 100 },
+  spotlight: { label: "Spotlight — 24h pinned placement", amountKes: 200 },
 };
 
 // Plans tied to ONE worker — the workerId rides along as STK metadata so
@@ -53,6 +59,9 @@ export default function MpesaCheckoutScreen() {
   // Which worker a contact_unlock payment applies to — forwarded as STK
   // metadata so the backend can attribute the unlock after the callback.
   const workerId = params?.workerId || null;
+  // Which job a promotion (urgent_boost / spotlight) applies to — same
+  // metadata channel (PRD §5.2/§18.3).
+  const jobId = params?.jobId || null;
 
   const [phase, setPhase] = useState("idle"); // idle | pushing | waiting | success | failed
   const [formError, setFormError] = useState("");
@@ -80,9 +89,15 @@ export default function MpesaCheckoutScreen() {
     setPhase("pushing");
 
     try {
+      const metadata = {};
+      if (WORKER_SCOPED.has(planId) && workerId) metadata.workerId = workerId;
+      if (jobId && (planId === "urgent_boost" || planId === "spotlight")) {
+        metadata.jobId = jobId;
+      }
+
       const data = await startStkPush(
         planId,
-        WORKER_SCOPED.has(planId) && workerId ? { workerId } : undefined
+        Object.keys(metadata).length > 0 ? metadata : undefined
       );
 
       setTxn({ id: data.txnId });

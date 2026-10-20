@@ -336,6 +336,18 @@ export default function FindJobsScreen() {
               >
                 <View style={styles.jobTop}>
                   <View style={styles.jobTitleWrap}>
+                    {job.promoted ? (
+                      <View
+                        style={[
+                          styles.promoPill,
+                          job.promoted === "spotlight" && styles.promoPillSpotlight,
+                        ]}
+                      >
+                        <Text style={styles.promoPillText}>
+                          {job.promoted === "spotlight" ? "SPOTLIGHT" : "URGENT"}
+                        </Text>
+                      </View>
+                    ) : null}
                     <Text style={styles.jobTitle} numberOfLines={2}>
                       {job.title}
                     </Text>
@@ -656,6 +668,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
+  },
+  promoPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF0EE",
+    borderWidth: 1,
+    borderColor: "#F2CFC9",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  promoPillSpotlight: {
+    backgroundColor: "#FBF3E1",
+    borderColor: "#E7D2A8",
+  },
+  promoPillText: {
+    color: colors.danger,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   jobTitleWrap: {
     flex: 1,
