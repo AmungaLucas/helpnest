@@ -39,6 +39,11 @@ import {
   grantConsent,
 } from "../../services/chatService";
 import { scanForContacts, maskedSenderNotice } from "../../utils/contactGuard";
+import {
+  confirmHire,
+  getHireState,
+  submitReview as submitReviewApi,
+} from "../../services/reviewsService";
 
 const ROLE_LABELS = {
   maid: "Domestic Worker",
@@ -138,6 +143,12 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showConsentSheet, setShowConsentSheet] = useState(false);
   const [consentBusy, setConsentBusy] = useState(false);
+  // Hire confirmation + review (v1.0 §9) — opened from the conversation menu.
+  const [showHireSheet, setShowHireSheet] = useState(false);
+  const [hireState, setHireState] = useState(null);
+  const [hireRating, setHireRating] = useState(0);
+  const [hireComment, setHireComment] = useState("");
+  const [hireBusy, setHireBusy] = useState(false);
   const [maskNotice, setMaskNotice] = useState("");
 
   const convRef = useRef(null);
@@ -530,6 +541,35 @@ export default function ChatRoomScreen({ route, navigation }) {
     ]);
   }
 
+  // v1.0 §9 — load the hire-confirmation state for this conversation
+  // whenever the sheet opens.
+  async function loadHireState() {
+    const id = convRef.current?.id || initialConversationId;
+    if (!id) return;
+    setHireState(null);
+    try {
+      const d = await getHireState(id);
+      setHireState(d);
+    } catch (_) {
+      setHireState(null);
+    }
+  }
+
+  // Shared executor for hire-confirm / dispute / review actions.
+  async function runHireAction(action) {
+    const id = convRef.current?.id || initialConversationId;
+    if (!id || hireBusy) return;
+    setHireBusy(true);
+    try {
+      const message = await action(id);
+      Alert.alert("Done", message || "Saved.");
+    } catch (e) {
+      Alert.alert("Not completed", e?.message || "Try again in a moment.");
+    } finally {
+      setHireBusy(false);
+    }
+  }
+
   function openReport() {
     setShowMenu(false);
     Alert.prompt
@@ -885,6 +925,21 @@ export default function ChatRoomScreen({ route, navigation }) {
               <TabBarIcon name="flag" color={colors.ink} size={17} />
               <Text style={styles.menuItemText}>Report conversation</Text>
             </Pressable>
+            {user?.role ? (
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setShowMenu(false);
+                  loadHireState();
+                  setShowHireSheet(true);
+                }}
+              >
+                <TabBarIcon name="shield" color={colors.brand} size={17} />
+                <Text style={[styles.menuItemText, { color: colors.brand, fontWeight: "800" }]}>
+                  Hire confirmation & review
+                </Text>
+              </Pressable>
+            ) : null}
             <Pressable style={styles.menuItem} onPress={confirmClose}>
               <TabBarIcon name="x" color={colors.ink} size={17} />
               <Text style={styles.menuItemText}>Close conversation</Text>
@@ -896,6 +951,45 @@ export default function ChatRoomScreen({ route, navigation }) {
           </View>
         </Pressable>
       </Modal>
+
+      {/* ---------- Hire confirmation + review (v1.0 §9) ---------- */}
+      <HireSheet
+        visible={showHireSheet}
+        onClose={() => setShowHireSheet(false)}
+        state={hireState}
+        rating={hireRating}
+        setRating={setHireRating}
+        comment={hireComment}
+        setComment={setHireComment}
+        busy={hireBusy}
+        onConfirm={() =>
+          runHireAction(async (id) => {
+            const d = await confirmHire(id, true);
+            setHireState((prev) => ({
+              ...(prev || {}),
+              hireConfirmed: true,
+              bothConfirmed: d.bothConfirmed,
+            }));
+            return d.message;
+          })
+        }
+        onDispute={() =>
+          runHireAction(async (id) => {
+            const d = await confirmHire(id, false);
+            setHireState((prev) => ({ ...(prev || {}), disputed: true }));
+            return d.message;
+          })
+        }
+        onSubmitReview={() =>
+          runHireAction(async (id) => {
+            const d = await submitReviewApi(id, hireRating, hireComment.trim());
+            setHireState((prev) => ({ ...(prev || {}), myReviewSubmitted: true }));
+            setHireRating(0);
+            setHireComment("");
+            return d.message;
+          })
+        }
+      />
 
       {/* ---------- Unlock sheet (in-room purchase) ---------- */}
       <ChatAccessModal
@@ -1289,4 +1383,177 @@ const styles = StyleSheet.create({
   menuItemDanger: {},
   menuItemText: { color: colors.ink, fontSize: 14.5, fontWeight: "700" },
   menuItemTextDanger: { color: colors.danger },
+});
+
+// v1.0 §9 — hire confirmation + double-blind review sheet. The gateway
+// enforces every gate (participants, both-confirmed, one review per
+// direction, 14-day auto-confirm); this sheet is the prompt surface.
+function HireSheet({
+  visible,
+  onClose,
+  state,
+  rating,
+  setRating,
+  comment,
+  setComment,
+  busy,
+  onConfirm,
+  onDispute,
+  onSubmitReview,
+}) {
+  if (!visible) return null;
+
+  const confirmed = Boolean(state?.hireConfirmed);
+  const disputed = Boolean(state?.disputed);
+
+  return (
+    <Modal transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.menuBackdrop} onPress={onClose}>
+        <Pressable style={styles.menuSheet} onPress={() => {}}>
+          <Text style={styles.menuTitle}>Hire confirmation</Text>
+          <Text style={styles.menuSub}>
+            Reviews unlock when you both confirm the hire happened. Silence
+            for 14 days counts as confirmation; disputing sends it to our
+            team instead.
+          </Text>
+
+          {disputed ? (
+            <Text style={hireStyles.disputedText}>
+              This hire is disputed — our team is reviewing the conversation.
+            </Text>
+          ) : confirmed ? (
+            <Text style={hireStyles.confirmedText}>
+              Hire confirmed by both of you. You can leave a review below.
+            </Text>
+          ) : (
+            <View style={hireStyles.confirmRow}>
+              <Pressable
+                accessibilityRole="button"
+                style={[hireStyles.btn, hireStyles.btnPrimary]}
+                onPress={onConfirm}
+                disabled={busy}
+              >
+                <Text style={hireStyles.btnPrimaryText}>
+                  {busy ? "…" : "We hired each other"}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={[hireStyles.btn, hireStyles.btnGhost]}
+                onPress={onDispute}
+                disabled={busy}
+              >
+                <Text style={hireStyles.btnGhostText}>Dispute</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {confirmed && !disputed ? (
+            state?.myReviewSubmitted ? (
+              <Text style={hireStyles.confirmedText}>
+                Your review is in — it publishes when the other side reviews
+                too (or after 14 days).
+              </Text>
+            ) : (
+              <>
+                <Text style={hireStyles.rateLabel}>Your rating</Text>
+                <View style={hireStyles.starsRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable
+                      key={n}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${n} star${n === 1 ? "" : "s"}`}
+                      onPress={() => setRating(n)}
+                      hitSlop={6}
+                    >
+                      <Text
+                        style={[
+                          hireStyles.star,
+                          n <= rating && hireStyles.starOn,
+                        ]}
+                      >
+                        ★
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={hireStyles.commentInput}
+                  value={comment}
+                  onChangeText={setComment}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={1000}
+                  placeholder="How did it go? (optional — visible after publishing)"
+                  placeholderTextColor={colors.textFaint}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  style={[
+                    hireStyles.btn,
+                    hireStyles.btnPrimary,
+                    (busy || rating < 1) && hireStyles.btnDisabled,
+                  ]}
+                  onPress={onSubmitReview}
+                  disabled={busy || rating < 1}
+                >
+                  <Text style={hireStyles.btnPrimaryText}>
+                    {busy ? "Sending…" : "Submit review"}
+                  </Text>
+                </Pressable>
+              </>
+            )
+          ) : null}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const hireStyles = StyleSheet.create({
+  confirmRow: { flexDirection: "row", gap: 10 },
+  confirmedText: {
+    color: colors.brand,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  disputedText: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  btn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  btnPrimary: { backgroundColor: colors.brand },
+  btnPrimaryText: { color: colors.white, fontWeight: "800", fontSize: 13.5 },
+  btnGhost: { backgroundColor: colors.mist },
+  btnGhostText: { color: colors.ink, fontWeight: "700", fontSize: 13.5 },
+  btnDisabled: { opacity: 0.45 },
+  rateLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  starsRow: { flexDirection: "row", gap: 8, marginVertical: 8 },
+  star: { fontSize: 30, color: colors.mistDark },
+  starOn: { color: colors.gold },
+  commentInput: {
+    borderWidth: 1,
+    borderColor: colors.mistDark,
+    borderRadius: 12,
+    backgroundColor: colors.cream,
+    padding: 12,
+    minHeight: 84,
+    textAlignVertical: "top",
+    color: colors.ink,
+    fontSize: 13.5,
+    marginBottom: 12,
+  },
 });
