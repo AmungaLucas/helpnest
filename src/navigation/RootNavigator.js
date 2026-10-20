@@ -19,6 +19,7 @@ import ChatRoomScreen from "../screens/chats/ChatRoomScreen";
 import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
 import ImageReviewScreen from "../screens/profile/ImageReviewScreen";
 import VerifyEmailScreen from "../screens/profile/VerifyEmailScreen";
+import NotificationsScreen from "../screens/profile/NotificationsScreen";
 import { HelpNestLogoMark } from "../components/Logo";
 import { colors } from "../theme/colors";
 
@@ -131,6 +132,13 @@ function AuthedStack() {
       <Stack.Screen
         name="VerifyEmail"
         component={VerifyEmailScreen}
+        options={{ animation: "slide_from_right" }}
+      />
+
+      {/* Notifications feed (PRD §17) — opened from the Account header. */}
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
         options={{ animation: "slide_from_right" }}
       />
 

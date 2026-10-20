@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +22,7 @@ import { updateMe } from "../../services/usersService";
 import { uploadMedia } from "../../services/mediaService";
 import { getMyReferrals } from "../../services/referralsService";
 import { fetchHistory, requestRefund } from "../../services/paymentsService";
+import { fetchNotifications } from "../../services/notificationsService";
 import SignedImage from "../../components/media/SignedImage";
 import {
   openAppSettings,
@@ -48,6 +49,7 @@ export default function AccountScreen() {
   const [refundFor, setRefundFor] = useState(null); // txn row awaiting a reason
   const [refundReason, setRefundReason] = useState("");
   const [refundBusy, setRefundBusy] = useState(false);
+  const [unread, setUnread] = useState(0);
 
   // Referral programme summary — invite code, reward rules, earnings.
   // Silent failure: the card just doesn't render if the API hiccups.
@@ -74,6 +76,20 @@ export default function AccountScreen() {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
+
+  // Unread notifications count (§17) — re-checked every time the tab
+  // regains focus so returning from the feed clears the badge.
+  const loadUnread = useCallback(() => {
+    fetchNotifications()
+      .then((d) => setUnread(d.unread || 0))
+      .catch(() => setUnread(0));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUnread();
+    }, [loadUnread])
+  );
 
   async function submitRefundRequest() {
     if (!refundFor || refundReason.trim().length < 10) return;
@@ -290,6 +306,30 @@ export default function AccountScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Notifications (§17) — feed of verification, payment, application
+            and account events. Badge shows the unread count. */}
+        <Pressable
+          accessibilityRole="button"
+          style={styles.card}
+          onPress={() => navigation.navigate("Notifications")}
+        >
+          <View style={styles.notifRow}>
+            <Text style={styles.cardTitle}>Notifications</Text>
+            {unread > 0 ? (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {unread > 99 ? "99+" : unread}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.locationNote}>
+            {unread > 0
+              ? `${unread} unread update${unread === 1 ? "" : "s"} — verification, payments and applications.`
+              : "Verification, payments and account updates land here."}
+          </Text>
+        </Pressable>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Verification</Text>
@@ -739,6 +779,25 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 13,
     fontWeight: "600",
+  },
+  notifRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  notifBadge: {
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notifBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: "800",
   },
   statusActionText: {
     color: colors.brand,
