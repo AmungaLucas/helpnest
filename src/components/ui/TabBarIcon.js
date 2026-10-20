@@ -46,6 +46,19 @@ const ICON_PATHS = {
     <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
   ),
   shield: <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+  "shield-check": (
+    <>
+      <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <Polyline points="9 11.6 11.2 13.8 15.2 9.4" />
+    </>
+  ),
+  info: (
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Line x1="12" y1="16" x2="12" y2="12" />
+      <Line x1="12" y1="8" x2="12.01" y2="8" />
+    </>
+  ),
   "credit-card": (
     <>
       <Rect x="1" y="4" width="22" height="16" rx="2" />

@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import { getMyWorkerProfile } from "../../services/workersService";
+import { getEntitlements } from "../../services/entitlementsService";
 import { HelpNestLogoMark } from "../../components/Logo";
 import LocationPromptCard from "../../components/ui/LocationPromptCard";
 import TabBarIcon from "../../components/ui/TabBarIcon";
@@ -23,6 +24,7 @@ export default function MaidHomeScreen() {
   const { user } = useAuth();
 
   const [profile, setProfile] = useState(null);
+  const [ent, setEnt] = useState(null);
 
   const firstName = (user?.name || "").split(" ")[0] || "";
 
@@ -39,6 +41,15 @@ export default function MaidHomeScreen() {
         .catch(() => {
           // Non-fatal — the completeness card falls back to account fields.
           if (active) setProfile(null);
+        });
+
+      getEntitlements()
+        .then((data) => {
+          if (active) setEnt(data || null);
+        })
+        .catch(() => {
+          // Non-fatal — the plans card just renders its default copy.
+          if (active) setEnt(null);
         });
 
       return () => {
@@ -202,6 +213,82 @@ export default function MaidHomeScreen() {
 
         <LocationPromptCard />
 
+        {/* ---------- Application plans (PRD §5.1 maid products) ---------- */}
+        <View style={styles.planCard}>
+          <View style={styles.planHead}>
+            <Text style={styles.planTitle}>Get more applications</Text>
+            {ent?.subscription ? (
+              <View style={styles.planActivePill}>
+                <Text style={styles.planActiveText}>Active</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {ent?.subscription ? (
+            <Text style={styles.planActiveCopy}>
+              {ent.subscription.planLabel} · active until{" "}
+              {new Date(ent.subscription.expiresAt).toLocaleDateString("en-KE", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+              .
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.planCopy}>
+                {ent?.credits?.apply > 0
+                  ? `${ent.credits.apply} application${ent.credits.apply === 1 ? "" : "s"} ready — or grab a weekly bundle:`
+                  : "Your first application is free. After that, bundles keep the search going:"}
+              </Text>
+              <View style={styles.planRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.planTile,
+                    pressed && styles.tilePressed,
+                  ]}
+                  onPress={() =>
+                    navigation.navigate("MpesaCheckout", {
+                      plan: "maid_basic",
+                      label: "Basic — 3 applications",
+                    })
+                  }
+                >
+                  <Text style={styles.planName}>Basic</Text>
+                  <Text style={styles.planPrice}>KES 199</Text>
+                  <Text style={styles.planPer}>3 applications · 7 days</Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.planTile,
+                    styles.planTileBest,
+                    pressed && styles.tilePressed,
+                  ]}
+                  onPress={() =>
+                    navigation.navigate("MpesaCheckout", {
+                      plan: "maid_gold",
+                      label: "Gold — 10 applications",
+                    })
+                  }
+                >
+                  <View style={styles.planBest}>
+                    <Text style={styles.planBestText}>Best value</Text>
+                  </View>
+                  <Text style={styles.planName}>Gold</Text>
+                  <Text style={styles.planPrice}>KES 349</Text>
+                  <Text style={styles.planPer}>10 applications · 7 days</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.planFootnote}>
+                Just one role? A single application is KES 50 on any job.
+              </Text>
+            </>
+          )}
+        </View>
+
         {/* ---------- Tips ---------- */}
         <View style={styles.tipsCard}>
           <Text style={styles.tipsTitle}>Tips to get hired faster</Text>
@@ -222,6 +309,109 @@ export default function MaidHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  /* ---- Application plans ---- */
+  planCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 16,
+    marginBottom: 14,
+  },
+  planHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  planTitle: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  planActivePill: {
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  planActiveText: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  planActiveCopy: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 19,
+    fontWeight: "600",
+    marginTop: 8,
+  },
+  planCopy: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 19,
+    fontWeight: "600",
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  planRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  planTile: {
+    flex: 1,
+    backgroundColor: colors.cream,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 14,
+  },
+  planTileBest: {
+    borderColor: colors.brand,
+    backgroundColor: withAlpha(colors.brand, 0.05),
+  },
+  planBest: {
+    alignSelf: "flex-start",
+    backgroundColor: withAlpha(colors.gold, 0.2),
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 6,
+  },
+  planBestText: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  planName: {
+    color: colors.ink,
+    fontSize: 13.5,
+    fontWeight: "800",
+  },
+  planPrice: {
+    color: colors.brand,
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  planPer: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  planFootnote: {
+    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 17,
+    fontWeight: "600",
+    marginTop: 12,
+  },
+  tilePressed: {
+    opacity: 0.9,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: colors.cream,

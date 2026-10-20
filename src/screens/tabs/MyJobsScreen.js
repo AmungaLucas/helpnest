@@ -19,10 +19,11 @@ import { serviceLabel } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
 
 // ---------------------------------------------------------------------------
-// My Jobs (employer) — the caller's own posts with the paid posting flow one
-// tap away. The server enforces the KES 500 fee / plan coverage on submit;
-// this screen only displays what exists and lets the employer close or
-// reopen a listing.
+// My Jobs (employer) — the caller's own posts. Each card shows its applicant
+// count and publication window (30 days, PRD §11.7); tapping opens the
+// applicant review. The server enforces the posting gate on submit; this
+// screen only displays what exists and lets the employer close or reopen a
+// listing (free within the window, PRD §11.2).
 // ---------------------------------------------------------------------------
 export default function MyJobsScreen() {
   const navigation = useNavigation();
@@ -190,9 +191,32 @@ export default function MyJobsScreen() {
 
           {jobs.map((job) => {
             const open = job.status === "open";
+            const expired =
+              job.expiresAt && new Date(job.expiresAt).getTime() < Date.now();
+            const daysLeft = expired
+              ? 0
+              : job.expiresAt
+                ? Math.max(
+                    1,
+                    Math.ceil(
+                      (new Date(job.expiresAt).getTime() - Date.now()) /
+                        86400000
+                    )
+                  )
+                : null;
 
             return (
-              <View key={job.id} style={styles.jobCard}>
+              <Pressable
+                key={job.id}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.jobCard,
+                  pressed && styles.cardPressed,
+                ]}
+                onPress={() =>
+                  navigation.navigate("JobApplications", { job })
+                }
+              >
                 <View style={styles.jobTop}>
                   <Text style={styles.jobTitle} numberOfLines={2}>
                     {job.title}
@@ -200,16 +224,18 @@ export default function MyJobsScreen() {
                   <View
                     style={[
                       styles.statusPill,
-                      open ? styles.statusOpen : styles.statusClosed,
+                      open && !expired ? styles.statusOpen : styles.statusClosed,
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusText,
-                        open ? styles.statusOpenText : styles.statusClosedText,
+                        open && !expired
+                          ? styles.statusOpenText
+                          : styles.statusClosedText,
                       ]}
                     >
-                      {open ? "Open" : "Closed"}
+                      {open ? (expired ? "Expired" : "Open") : "Closed"}
                     </Text>
                   </View>
                 </View>
@@ -237,9 +263,21 @@ export default function MyJobsScreen() {
                 ) : null}
 
                 <View style={styles.jobFooter}>
-                  <Text style={styles.dateText}>
-                    Posted {postedLabel(job.createdAt)}
-                  </Text>
+                  <View style={styles.footerInfo}>
+                    <Text style={styles.dateText}>
+                      Posted {postedLabel(job.createdAt)}
+                      {open && !expired && daysLeft
+                        ? ` · ${daysLeft}d left`
+                        : ""}
+                    </Text>
+                    <View style={styles.appsBadge}>
+                      <TabBarIcon name="users" color={colors.brand} size={12} />
+                      <Text style={styles.appsBadgeText}>
+                        {job.applicationsCount || 0} applicant
+                        {(job.applicationsCount || 0) === 1 ? "" : "s"}
+                      </Text>
+                    </View>
+                  </View>
                   <Pressable
                     accessibilityRole="button"
                     disabled={busyId === job.id}
@@ -259,7 +297,7 @@ export default function MyJobsScreen() {
                     )}
                   </Pressable>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
 
@@ -391,6 +429,28 @@ const styles = StyleSheet.create({
     borderColor: colors.mist,
     padding: 16,
     marginBottom: 12,
+  },
+  cardPressed: {
+    opacity: 0.92,
+  },
+  footerInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  appsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  appsBadgeText: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "800",
   },
   jobTop: {
     flexDirection: "row",

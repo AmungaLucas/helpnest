@@ -16,15 +16,23 @@ import TabBarIcon from "../../components/ui/TabBarIcon";
 import { formatPhoneDisplay } from "../../utils/phone";
 import { colors, withAlpha } from "../../theme/colors";
 
-// Display-only mirror of the server-side plan catalog (amounts are still
-// looked up server-side at push time).
+// Display-only mirror of the server-side catalog (utils/catalog.js on the
+// gateway — PRD v1.1 §5; amounts are still looked up server-side at push
+// time).
 const PLAN_META = {
   test_kes1: { label: "M-Pesa test payment", amountKes: 1 },
   contact_unlock: { label: "Unlock a worker's contact", amountKes: 300 },
-  chat_pass: { label: "One-time chat", amountKes: 200 },
+  chat_pass: { label: "Chat unlock", amountKes: 150 },
+  hire_pass: { label: "Hire Pass — 5 chats + 1 job post", amountKes: 500 },
+  emp_basic: { label: "Basic — 3 chats + 3 job posts", amountKes: 499 },
+  emp_gold: { label: "Gold — 7 chats + 5 job posts", amountKes: 899 },
+  apply_pass: { label: "1 application", amountKes: 50 },
+  maid_basic: { label: "Basic — 3 applications", amountKes: 199 },
+  maid_gold: { label: "Gold — 10 applications", amountKes: 349 },
+  // Legacy — still bookable for older installs, hidden from new paywalls.
   chat_week: { label: "Unlimited chats — 1 week", amountKes: 250 },
   chat_month: { label: "Unlimited chats — 1 month", amountKes: 800 },
-  job_post: { label: "Post a job", amountKes: 500 },
+  job_post: { label: "Standard job post", amountKes: 300 },
 };
 
 // Plans tied to ONE worker — the workerId rides along as STK metadata so
@@ -183,8 +191,30 @@ export default function MpesaCheckoutScreen() {
               </Text>
             ) : planId === "job_post" ? (
               <Text style={styles.successHint}>
-                Your job is live. Head back to finish posting it, then manage
-                responses under My Jobs.
+                Your post credit is ready. Head back to publish the job, then
+                manage responses under My Jobs.
+              </Text>
+            ) : planId === "hire_pass" ? (
+              <Text style={styles.successHint}>
+                Hire Pass active for 14 days — 5 chats and 1 job post. Every
+                extra chat unlocks instantly.
+              </Text>
+            ) : planId === "emp_basic" || planId === "emp_gold" ? (
+              <Text style={styles.successHint}>
+                {planId === "emp_gold" ? "Gold" : "Basic"} is active for 7
+                days — chats and job posts are covered. Your balance updates
+                on the home screen.
+              </Text>
+            ) : planId === "apply_pass" ? (
+              <Text style={styles.successHint}>
+                Application credit ready — go back and apply. Unused credits
+                keep for 90 days.
+              </Text>
+            ) : planId === "maid_basic" || planId === "maid_gold" ? (
+              <Text style={styles.successHint}>
+                {planId === "maid_gold" ? "Gold" : "Basic"} is active for 7
+                days — your applications are refilled. Employers see verified
+                applicants first.
               </Text>
             ) : PLAN_META[planId] ? (
               <Text style={styles.successHint}>

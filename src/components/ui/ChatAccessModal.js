@@ -12,32 +12,39 @@ import { useNavigation } from "@react-navigation/native";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Paywall sheet shown when an employer taps "Chat with {name}" without an
-// active entitlement. Three options (pricing mirrors the server-side PLANS
-// catalog in the gateway — amounts here are display-only):
-//   chat_pass  KES 200 — opens THIS conversation permanently
-//   chat_week  KES 250 — unlimited chats for 7 days
-//   chat_month KES 800 — unlimited chats for 30 days
+// active entitlement. PRD §5.2 catalogue — pricing mirrors the server-side
+// catalog (utils/catalog.js), display only:
+//   chat_pass  KES 150 — chat unlock with THIS maid, 14 days
+//   hire_pass  KES 500 — 5 chats + 1 job post, 14 days
+//   emp_basic  KES 499 — 3 chats + 3 job posts per 7 days
+//   emp_gold   KES 899 — 7 chats + 5 job posts per 7 days
 //
 // "Continue" hands over to the M-Pesa checkout with the chosen plan; the
 // workerId only rides along for chat_pass (the server rejects it otherwise).
 const PLAN_OPTIONS = [
   {
     id: "chat_pass",
-    title: "One-time chat",
-    subtitle: "This conversation only — stays open forever",
-    price: 200,
+    title: "Chat unlock",
+    subtitle: "This conversation only — 14 days",
+    price: 150,
   },
   {
-    id: "chat_week",
-    title: "Weekly unlimited",
-    subtitle: "Chat with any maid for 7 days",
-    price: 250,
+    id: "hire_pass",
+    title: "Hire Pass",
+    subtitle: "5 chats + 1 job post · valid 14 days",
+    price: 500,
   },
   {
-    id: "chat_month",
-    title: "Monthly unlimited",
-    subtitle: "Chat with any maid for 30 days",
-    price: 800,
+    id: "emp_basic",
+    title: "Basic · weekly",
+    subtitle: "3 chats + 3 job posts every 7 days",
+    price: 499,
+  },
+  {
+    id: "emp_gold",
+    title: "Gold · weekly",
+    subtitle: "7 chats + 5 job posts every 7 days + priority support",
+    price: 899,
     best: true,
   },
 ];
@@ -73,7 +80,8 @@ export default function ChatAccessModal({ visible, onClose, workerName, workerId
 
         <Text style={styles.title}>Chat with {firstName}</Text>
         <Text style={styles.subtitle}>
-          Start the conversation — pick a one-time chat or go unlimited.
+          Start the conversation — unlock this chat, or pick a plan that also
+          covers job posts.
         </Text>
 
         {PLAN_OPTIONS.map((plan) => {
@@ -129,8 +137,8 @@ export default function ChatAccessModal({ visible, onClose, workerName, workerId
         </Pressable>
 
         <Text style={styles.footnote}>
-          Paid via M-Pesa STK push. A one-time chat keeps {firstName}'s
-          conversation open forever — plans cover every maid.
+          Paid via M-Pesa STK push. Chat unlock covers {firstName} for 14
+          days — plans and the Hire Pass cover every maid plus job posts.
         </Text>
       </View>
     </Modal>

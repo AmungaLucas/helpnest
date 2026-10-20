@@ -27,7 +27,7 @@ import { colors, withAlpha } from "../../theme/colors";
 // Post a job — form -> server-side entitlement check -> optional paywall.
 //
 // Flow: submit calls POST /api/jobs. When the server answers 402 (no active
-// subscription and no unused KES 500 post credit) the SAME payload is held
+// subscription and no unused post credit) the SAME payload is held
 // in pendingPayloadRef and the JobPostModal opens (one-time post vs plans).
 // After an M-Pesa purchase the user lands back here, the focus effect
 // retries the held payload, and the job publishes itself.
@@ -203,7 +203,7 @@ export default function PostJobScreen() {
     canPostJob === true
       ? "Your plan covers posting — this one is free."
       : canPostJob === false
-        ? "Posting costs KES 500, or is included with a chat plan."
+        ? "Posting costs KES 300, or is included with a plan."
         : "You can review everything before it goes live.";
 
   return (
@@ -331,7 +331,7 @@ export default function PostJobScreen() {
               <>
                 <TabBarIcon name="file-text" color={colors.white} size={16} />
                 <Text style={styles.submitText}>
-                  {canPostJob === false ? "Continue · KES 500" : "Post job"}
+                  {canPostJob === false ? "Continue · from KES 300" : "Post job"}
                 </Text>
               </>
             )}

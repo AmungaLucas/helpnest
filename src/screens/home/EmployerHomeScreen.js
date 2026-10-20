@@ -43,21 +43,22 @@ const RAIL_SIZE = 6;
 const NEAR_RADIUS_KM = 25; // "near you" cut-off before we loosen the rail
 
 // Subscription tiles on the home plans section — display-only mirror of the
-// server-side PLANS catalog (amounts looked up server-side at push time).
+// server-side catalog (PRD v1.1 §5.2; amounts looked up server-side at push
+// time). Hire Pass is one-time, Basic/Gold are fixed 7-day periods (§8.1).
 const PLAN_TILES = [
   {
-    id: "chat_week",
-    name: "Weekly",
-    price: 250,
-    per: "7 days, unlimited",
-    label: "Unlimited chats — 1 week",
+    id: "emp_basic",
+    name: "Basic",
+    price: 499,
+    per: "3 chats + 3 posts · 7 days",
+    label: "Basic — 3 chats + 3 job posts",
   },
   {
-    id: "chat_month",
-    name: "Monthly",
-    price: 800,
-    per: "30 days, unlimited",
-    label: "Unlimited chats — 1 month",
+    id: "emp_gold",
+    name: "Gold",
+    price: 899,
+    per: "7 chats + 5 posts · 7 days",
+    label: "Gold — 7 chats + 5 job posts",
     best: true,
   },
 ];
@@ -676,10 +677,10 @@ export default function EmployerHomeScreen() {
           </Text>
         </View>
 
-        {/* ---------- Subscription plans (right after the M-Pesa banner) ---------- */}
+        {/* ---------- Subscription plans (PRD §5.2 employer products) ---------- */}
         <View style={styles.planCard}>
           <View style={styles.planHead}>
-            <Text style={styles.planTitle}>Chat without limits</Text>
+            <Text style={styles.planTitle}>Hire faster</Text>
             {subStatus?.hasSubscription ? (
               <View style={styles.planActivePill}>
                 <Text style={styles.planActiveText}>Active</Text>
@@ -689,13 +690,13 @@ export default function EmployerHomeScreen() {
 
           {subStatus?.hasSubscription ? (
             <Text style={styles.planActiveCopy}>
-              {subStatus.planLabel} · unlimited chats until{" "}
+              {subStatus.planLabel} · active until{" "}
               {formatExpiry(subStatus.expiresAt)}.
             </Text>
           ) : (
             <>
               <Text style={styles.planCopy}>
-                Message any maid without paying per conversation.
+                Chat with maids and post jobs from one weekly bundle.
               </Text>
               <View style={styles.planRow}>
                 {PLAN_TILES.map((plan) => (
@@ -726,8 +727,8 @@ export default function EmployerHomeScreen() {
                 ))}
               </View>
               <Text style={styles.planFootnote}>
-                Prefer one conversation? A one-time chat is KES 200 on any
-                maid's profile.
+                Just one thing? A chat unlock is KES 150 on any maid's
+                profile and a standard job post is KES 300.
               </Text>
             </>
           )}

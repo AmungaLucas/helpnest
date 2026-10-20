@@ -12,33 +12,40 @@ import { useNavigation } from "@react-navigation/native";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Payment sheet shown when an employer submits a job without an active
-// entitlement (the server answered 402). Pricing mirrors the server-side
-// PLANS catalog in the gateway — amounts here are display-only:
-//   job_post   KES 500 — publishes THIS job
-//   chat_week  KES 250 — posting + unlimited chats for 7 days
-//   chat_month KES 800 — posting + unlimited chats for 30 days
+// entitlement (the server answered 402). PRD §5.2 catalogue — pricing
+// mirrors the server-side catalog (utils/catalog.js), display only:
+//   job_post   KES 300 — publishes THIS listing (30 days)
+//   hire_pass  KES 500 — 5 chats + 1 job post, 14 days
+//   emp_basic  KES 499 — 3 chats + 3 job posts per 7 days
+//   emp_gold   KES 899 — 7 chats + 5 job posts per 7 days
 //
 // "Continue" hands over to the M-Pesa checkout with the chosen plan; no
 // workerId rides along (none of these plans is worker-scoped).
 const PLAN_OPTIONS = [
   {
     id: "job_post",
-    title: "One-time post",
-    subtitle: "Publish this job — pay once, no expiry",
+    title: "Standard post",
+    subtitle: "Publish this job for 30 days — pay once",
+    price: 300,
+  },
+  {
+    id: "hire_pass",
+    title: "Hire Pass",
+    subtitle: "5 chats + 1 job post · valid 14 days",
     price: 500,
   },
   {
-    id: "chat_week",
-    title: "Weekly unlimited",
-    subtitle: "Post jobs + chat with any maid for 7 days",
-    price: 250,
-    best: true,
+    id: "emp_basic",
+    title: "Basic · weekly",
+    subtitle: "3 chats + 3 job posts every 7 days",
+    price: 499,
   },
   {
-    id: "chat_month",
-    title: "Monthly unlimited",
-    subtitle: "Post jobs + chat with any maid for 30 days",
-    price: 800,
+    id: "emp_gold",
+    title: "Gold · weekly",
+    subtitle: "7 chats + 5 job posts every 7 days + priority support",
+    price: 899,
+    best: true,
   },
 ];
 
@@ -77,8 +84,8 @@ export default function JobPostModal({ visible, onClose, jobTitle }) {
 
         <Text style={styles.title}>Post this job</Text>
         <Text style={styles.subtitle}>
-          Pick a one-time post or go unlimited — plans also cover chats with
-          every maid.
+          One post credit publishes it for 30 days — or pick a plan that also
+          covers chatting with maids.
         </Text>
 
         {PLAN_OPTIONS.map((plan) => {
@@ -132,8 +139,8 @@ export default function JobPostModal({ visible, onClose, jobTitle }) {
         </Pressable>
 
         <Text style={styles.footnote}>
-          Paid via M-Pesa STK push. A one-time post publishes this job once;
-          plans keep posting and chats unlimited while active.
+          Paid via M-Pesa STK push. A standard post publishes this listing for
+          30 days; plans and the Hire Pass also cover chats with maids.
         </Text>
       </View>
     </Modal>

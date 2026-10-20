@@ -14,6 +14,7 @@ import MainTabs from "./MainTabs";
 import WorkerProfileScreen from "../screens/tabs/WorkerProfileScreen";
 import MpesaCheckoutScreen from "../screens/tabs/MpesaCheckoutScreen";
 import PostJobScreen from "../screens/tabs/PostJobScreen";
+import JobApplicationsScreen from "../screens/employer/JobApplicationsScreen";
 import ChatRoomScreen from "../screens/chats/ChatRoomScreen";
 import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
 import ImageReviewScreen from "../screens/profile/ImageReviewScreen";
@@ -85,6 +86,14 @@ function AuthedStack() {
       <Stack.Screen
         name="PostJob"
         component={PostJobScreen}
+        options={{ animation: "slide_from_right" }}
+      />
+
+      {/* Applicant review for one of the employer's listings. The job is
+          passed as a param so the header shows the listing being reviewed. */}
+      <Stack.Screen
+        name="JobApplications"
+        component={JobApplicationsScreen}
         options={{ animation: "slide_from_right" }}
       />
 
