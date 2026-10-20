@@ -1,76 +1,93 @@
-import React from "react";
-import { FlatList, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import { useAuth } from "../../context/AuthContext";
 import { colors, withAlpha } from "../../theme/colors";
+import { listConversations, registerChatKey } from "../../services/chatService";
+import {
+  ensureIdentity,
+  openEnvelope,
+  decodeSystemMessage,
+} from "../../services/chatCrypto";
 
-// TODO(W4-B): replace the seed data with GET /api/chats (BUILD-PLAN Wave 4 —
-// chat + anti-contact backend). Until then these sample conversations make
-// the flow testable on device: tap a row to open ChatRoom.
-const SAMPLE_CONVERSATIONS = [
-  {
-    id: "c1",
-    name: "Grace Wanjiru",
-    role: "maid",
-    preview: "I can start on Monday next week.",
-    time: "09:42",
-    unread: 2,
-  },
-  {
-    id: "c2",
-    name: "Peter Otieno",
-    role: "employer",
-    preview: "Is the 8am to 1pm schedule okay for you?",
-    time: "Yesterday",
-    unread: 0,
-  },
-  {
-    id: "c3",
-    name: "Mary Achieng",
-    role: "maid",
-    preview: "Thank you! See you on Friday.",
-    time: "Mon",
-    unread: 0,
-  },
-];
-
-// Seed thread used to open ChatRoom with something on screen.
-// TODO(W4-B): ChatRoom will fetch GET /api/chats/:id/messages instead.
-const SAMPLE_THREADS = {
-  c1: [
-    { id: "m1", mine: false, text: "Hi! I saw your profile — do you have experience with toddlers?", time: "09:38" },
-    { id: "m2", mine: false, text: "I live in Kilimani, work would be 3 days a week.", time: "09:39" },
-    { id: "m3", mine: true, text: "Hello! Yes, I have 4 years of experience with children aged 1 to 5.", time: "09:41" },
-    { id: "m4", mine: true, text: "Three days a week works well for me.", time: "09:41" },
-    { id: "m5", mine: false, text: "I can start on Monday next week.", time: "09:42" },
-  ],
-  c2: [
-    { id: "m1", mine: false, text: "Hello, are you available for a housekeeping role in Westlands?", time: "Yesterday" },
-    { id: "m2", mine: true, text: "Yes, I am. What are the working hours?", time: "Yesterday" },
-    { id: "m3", mine: false, text: "Is the 8am to 1pm schedule okay for you?", time: "Yesterday" },
-  ],
-  c3: [
-    { id: "m1", mine: true, text: "Great cleaning last week — I have recommended you to my neighbour.", time: "Mon" },
-    { id: "m2", mine: false, text: "Thank you! See you on Friday.", time: "Mon" },
-  ],
+const STATUS_CHIPS = {
+  limit_reached: { label: "Limit reached", tone: "warn" },
+  expired: { label: "Expired", tone: "warn" },
+  closed: { label: "Closed", tone: "muted" },
+  restricted: { label: "Restricted", tone: "danger" },
 };
 
-const ROLE_LABELS = {
-  maid: "Domestic Worker",
-  employer: "Employer",
-};
+function timeLabel(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
 
-function Avatar({ name, role }) {
+  if (d.toDateString() === now.toDateString()) {
+    const h = d.getHours() % 12 || 12;
+    const m = String(d.getMinutes()).padStart(2, "0");
+    return `${h}:${m} ${d.getHours() < 12 ? "AM" : "PM"}`;
+  }
+
+  const days = Math.floor((now - d) / 86400000);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return d.toLocaleDateString(undefined, { weekday: "short" });
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+function previewFor(item, myId) {
+  if (!item) return "Say hello — the chat is end-to-end encrypted";
+
+  if (item.type === "system") return decodeSystemMessage(item.cipher);
+
+  if (item.type === "contact_card") {
+    return item.senderId === myId ? "You shared a contact" : "Shared a contact with you";
+  }
+
+  if (!item.nonce || !item.cipher) return "Message";
+
+  try {
+    const plain = openEnvelope(item.conversationId || item.__convId, item.peerKey, {
+      nonce: item.nonce,
+      cipher: item.cipher,
+    });
+
+    if (item.flagged) return `🛡 ${plain}`;
+    return plain;
+  } catch (error) {
+    return "Encrypted message";
+  }
+}
+
+function Avatar({ name, verified }) {
   const initial = (name || "?").charAt(0).toUpperCase();
   return (
-    <View style={[styles.avatar, role === "employer" && styles.avatarEmployer]}>
+    <View style={styles.avatar}>
       <Text style={styles.avatarText}>{initial}</Text>
+      {verified ? (
+        <View style={styles.verifiedDot}>
+          <TabBarIcon name="check" color={colors.white} size={8} />
+        </View>
+      ) : null}
     </View>
   );
 }
 
-function ConversationRow({ item, onPress }) {
+function ConversationRow({ item, myId, onPress }) {
   const hasUnread = item.unread > 0;
+  const chip = STATUS_CHIPS[item.status];
+  const preview = item.lastMessage
+    ? previewFor({ ...item.lastMessage, __convId: item.id, peerKey: item.peer?.publicKey }, myId)
+    : "";
 
   return (
     <Pressable
@@ -79,24 +96,34 @@ function ConversationRow({ item, onPress }) {
       android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      <Avatar name={item.name} role={item.role} />
+      <Avatar name={item.peer?.name} verified={item.peer?.verified} />
 
       <View style={styles.rowMain}>
         <View style={styles.rowTopLine}>
           <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
-            {item.name}
+            {item.peer?.name || "HelpNest member"}
           </Text>
-          <Text style={[styles.time, hasUnread && styles.timeUnread]}>{item.time}</Text>
+          <Text style={[styles.time, hasUnread && styles.timeUnread]}>
+            {timeLabel(item.lastMessageAt || item.createdAt)}
+          </Text>
         </View>
 
         <View style={styles.rowBottomLine}>
           <Text style={[styles.preview, hasUnread && styles.previewUnread]} numberOfLines={1}>
-            {item.preview}
+            {preview}
           </Text>
+
+          {chip ? (
+            <View style={[styles.statusChip, styles[`chip_${chip.tone}`]]}>
+              <Text style={[styles.statusChipText, styles[`chipText_${chip.tone}`]]}>
+                {chip.label}
+              </Text>
+            </View>
+          ) : null}
 
           {hasUnread ? (
             <View style={styles.unreadPill}>
-              <Text style={styles.unreadText}>{item.unread}</Text>
+              <Text style={styles.unreadText}>{item.unread > 99 ? "99+" : item.unread}</Text>
             </View>
           ) : null}
         </View>
@@ -105,10 +132,68 @@ function ConversationRow({ item, onPress }) {
   );
 }
 
-// Conversations tab (PRD §8). Lives inside the Chats Material Top Tabs,
-// which owns the top safe area and the tab strip.
+// Conversations tab — live threads from GET /api/chat/conversations with
+// on-device preview decryption (BUILD 2026-10-20.14).
 export default function MessagesScreen({ navigation }) {
-  const conversations = SAMPLE_CONVERSATIONS;
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const mounted = useRef(true);
+
+  const load = useCallback(
+    async ({ showSpinner = false } = {}) => {
+      if (showSpinner) setRefreshing(true);
+
+      try {
+        // Key first: previews need the local identity, and registering the
+        // public half here means peers can open chats with us even if we
+        // never enter a room (idempotent, fail-open).
+        try {
+          const identity = await ensureIdentity();
+          await registerChatKey(identity.pubHex).catch(() => {});
+        } catch (keyError) {
+          // previews will show "Encrypted message" until the key exists
+        }
+
+        const data = await listConversations();
+
+        if (mounted.current) {
+          setConversations((data.conversations || []).map((c) => ({ ...c, peer: { ...c.peer } })));
+        }
+      } catch (error) {
+        // silent — the list refreshes on next focus/poll
+      } finally {
+        if (mounted.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    []
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      mounted.current = true;
+      load();
+
+      const timer = setInterval(() => load(), 30000);
+      return () => {
+        mounted.current = false;
+        clearInterval(timer);
+      };
+    }, [load])
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <ActivityIndicator size="large" color={colors.brand} />
+      </View>
+    );
+  }
 
   if (conversations.length === 0) {
     return (
@@ -119,8 +204,9 @@ export default function MessagesScreen({ navigation }) {
         </View>
         <Text style={styles.emptyTitle}>No conversations yet</Text>
         <Text style={styles.emptyBody}>
-          When an employer or worker messages you, the conversation shows up
-          here. Chats stay inside HelpNest so your number stays private.
+          {user?.role === "employer"
+            ? "Open a worker's profile and tap Chat to start one. Chats are end-to-end encrypted — nobody else can read them."
+            : "When an employer messages you, the conversation shows up here. Replying is always free."}
         </Text>
       </View>
     );
@@ -136,37 +222,38 @@ export default function MessagesScreen({ navigation }) {
         renderItem={({ item }) => (
           <ConversationRow
             item={item}
+            myId={user?.id}
             onPress={() =>
               navigation.navigate("ChatRoom", {
                 conversationId: item.id,
-                name: item.name,
-                role: item.role,
-                thread: SAMPLE_THREADS[item.id] || [],
+                name: item.peer?.name,
+                role: item.peer?.role,
               })
             }
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.list}
+        refreshing={refreshing}
+        onRefresh={() => load({ showSpinner: true })}
         showsVerticalScrollIndicator={false}
       />
 
-      <Text style={styles.safetyNote}>
-        HelpNest keeps chats, numbers and payments protected until a hire is
-        agreed.
-      </Text>
+      <View style={styles.safetyNoteRow}>
+        <TabBarIcon name="lock" color={colors.textFaint} size={12} />
+        <Text style={styles.safetyNote}>
+          Messages are end-to-end encrypted on this device. HelpNest cannot
+          read them.
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  list: {
-    paddingBottom: 12,
-  },
+  container: { flex: 1, backgroundColor: colors.white },
+  center: { alignItems: "center", justifyContent: "center" },
+  list: { paddingBottom: 12 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -174,9 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: colors.white,
   },
-  rowPressed: {
-    backgroundColor: colors.cream,
-  },
+  rowPressed: { backgroundColor: colors.cream },
   avatar: {
     width: 50,
     height: 50,
@@ -186,55 +271,51 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 13,
   },
-  avatarEmployer: {
-    backgroundColor: withAlpha(colors.gold, 0.22),
+  avatarText: { color: colors.brand, fontSize: 20, fontWeight: "800" },
+  verifiedDot: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.white,
   },
-  avatarText: {
-    color: colors.brand,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  rowMain: {
-    flex: 1,
-  },
+  rowMain: { flex: 1 },
   rowTopLine: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  name: {
-    flexShrink: 1,
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  nameUnread: {
-    fontWeight: "800",
-  },
-  time: {
-    color: colors.textFaint,
-    fontSize: 11.5,
-    fontWeight: "600",
-    marginLeft: 10,
-  },
-  timeUnread: {
-    color: colors.brand,
-  },
+  name: { flexShrink: 1, color: colors.ink, fontSize: 15, fontWeight: "700" },
+  nameUnread: { fontWeight: "800" },
+  time: { color: colors.textFaint, fontSize: 11.5, fontWeight: "600", marginLeft: 10 },
+  timeUnread: { color: colors.brand },
   rowBottomLine: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 3,
+    gap: 8,
   },
-  preview: {
-    flexShrink: 1,
-    color: colors.textMuted,
-    fontSize: 13,
+  preview: { flexShrink: 1, color: colors.textMuted, fontSize: 13 },
+  previewUnread: { color: colors.ink, fontWeight: "600" },
+  statusChip: {
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
-  previewUnread: {
-    color: colors.ink,
-    fontWeight: "600",
-  },
+  chip_warn: { backgroundColor: withAlpha(colors.gold, 0.16) },
+  chip_muted: { backgroundColor: withAlpha(colors.cloud, 0.7) },
+  chip_danger: { backgroundColor: withAlpha(colors.danger, 0.12) },
+  statusChipText: { fontSize: 10, fontWeight: "800" },
+  chipText_warn: { color: colors.goldDark },
+  chipText_muted: { color: colors.textMuted },
+  chipText_danger: { color: colors.danger },
   unreadPill: {
     minWidth: 21,
     height: 21,
@@ -243,30 +324,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,
-    marginLeft: 10,
   },
-  unreadText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  separator: {
-    height: 1,
-    backgroundColor: colors.mist,
-    marginLeft: 81,
-  },
-  safetyNote: {
-    color: colors.textFaint,
-    fontSize: 11.5,
-    lineHeight: 16,
-    textAlign: "center",
+  unreadText: { color: colors.white, fontSize: 11, fontWeight: "800" },
+  separator: { height: 1, backgroundColor: colors.mist, marginLeft: 81 },
+  safetyNoteRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: colors.mist,
   },
-
-  /* ---- Empty state ---- */
+  safetyNote: {
+    flex: 1,
+    color: colors.textFaint,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: "center",
+  },
   emptyWrap: {
     flex: 1,
     backgroundColor: colors.white,
@@ -290,10 +367,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
-  emptyBody: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 21,
-    textAlign: "center",
-  },
+  emptyBody: { color: colors.textMuted, fontSize: 13.5, lineHeight: 21, textAlign: "center" },
 });

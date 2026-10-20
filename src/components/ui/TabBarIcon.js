@@ -130,6 +130,44 @@ const ICON_PATHS = {
       <Circle cx="12" cy="10" r="3" />
     </>
   ),
+  // Secure chat (BUILD 2026-10-20.14)
+  lock: (
+    <>
+      <Rect x="3" y="11" width="18" height="11" rx="2" />
+      <Path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </>
+  ),
+  "more-vertical": (
+    <>
+      <Circle cx="12" cy="5" r="1" />
+      <Circle cx="12" cy="12" r="1" />
+      <Circle cx="12" cy="19" r="1" />
+    </>
+  ),
+  flag: (
+    <>
+      <Path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <Line x1="4" y1="22" x2="4" y2="15" />
+    </>
+  ),
+  key: (
+    <Path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+  ),
+  "user-x": (
+    <>
+      <Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <Circle cx="8.5" cy="7" r="4" />
+      <Line x1="18" y1="8" x2="23" y2="13" />
+      <Line x1="23" y1="8" x2="18" y2="13" />
+    </>
+  ),
+  "alert-triangle": (
+    <>
+      <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <Line x1="12" y1="9" x2="12" y2="13" />
+      <Line x1="12" y1="17" x2="12.01" y2="17" />
+    </>
+  ),
 };
 
 export default function TabBarIcon({ name, focused, color, size = 22 }) {

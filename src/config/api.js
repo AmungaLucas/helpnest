@@ -54,10 +54,11 @@ export function setAuthEventHandler(handler) {
   authState.eventHandler = typeof handler === "function" ? handler : null;
 }
 
-function apiError(message, { status, isNetwork } = {}) {
+function apiError(message, { status, isNetwork, body } = {}) {
   const error = new Error(message);
   if (status !== undefined) error.status = status;
   if (isNetwork) error.isNetwork = true;
+  if (body !== undefined) error.body = body;
   return error;
 }
 
@@ -165,7 +166,9 @@ export async function apiRequest(path, options = {}) {
 
     throw apiError(
       data.message || `Request failed: HTTP ${response.status}`,
-      { status: response.status }
+      // body: parsed JSON of error responses — paywalls (402) carry
+      // { reason, details: { options } } the UI branches on.
+      { status: response.status, body: data }
     );
   }
 

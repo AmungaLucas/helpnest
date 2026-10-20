@@ -1,141 +1,104 @@
-import React, { useState } from "react";
-import { FlatList, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { useAuth } from "../../context/AuthContext";
 import { colors, withAlpha } from "../../theme/colors";
+import {
+  listConversations,
+  setNotAcceptingChats,
+  registerChatKey,
+} from "../../services/chatService";
+import {
+  ensureIdentity,
+  decodeSystemMessage,
+  openEnvelope,
+} from "../../services/chatCrypto";
 
-// TODO(W4-B): replace seed data with GET /api/requests and Accept/Decline
-// with POST /api/requests/:id/decision (BUILD-PLAN Wave 4 — chat backend).
-// The two request kinds map to PRD §8/§10:
-//   contact_unlock  — a paid contact reveal initiated by the employer
-//   interview       — a free interview invitation awaiting a reply
-const SAMPLE_REQUESTS = [
-  {
-    id: "r1",
-    kind: "contact_unlock",
-    name: "Peter Otieno",
-    role: "employer",
-    detail:
-      "Unlocked your contact so he can offer you a housekeeping role in Westlands, 8am–1pm on weekdays.",
-    time: "2h ago",
-    status: "pending",
-  },
-  {
-    id: "r2",
-    kind: "interview",
-    name: "Susan Njeri",
-    role: "employer",
-    detail: "Invited you to a short phone interview about a childcare job in Kilimani.",
-    time: "Yesterday",
-    status: "pending",
-  },
-];
-
-const KIND_LABELS = {
-  contact_unlock: "Contact unlocked",
-  interview: "Interview invite",
-};
-
-function RequestCard({ item, onAccept, onDecline }) {
-  const decided = item.status !== "pending";
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{(item.name || "?").charAt(0)}</Text>
-        </View>
-
-        <View style={styles.cardTopMain}>
-          <Text style={styles.kindChip}>{KIND_LABELS[item.kind] || "Request"}</Text>
-          <Text style={styles.cardName}>{item.name}</Text>
-        </View>
-
-        <Text style={styles.cardTime}>{item.time}</Text>
-      </View>
-
-      <Text style={styles.cardDetail}>{item.detail}</Text>
-
-      {decided ? (
-        <View
-          style={[
-            styles.decisionBox,
-            item.status === "accepted" ? styles.decisionOk : styles.decisionNo,
-          ]}
-        >
-          <TabBarIcon
-            name={item.status === "accepted" ? "check" : "x"}
-            color={item.status === "accepted" ? colors.brand : colors.textFaint}
-            size={15}
-          />
-          <Text
-            style={[
-              styles.decisionText,
-              item.status === "accepted" && styles.decisionTextOk,
-            ]}
-          >
-            {item.status === "accepted" ? "Accepted — continue in Chats" : "Declined"}
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.actions}>
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.actionButton,
-              styles.actionPrimary,
-              pressed && styles.actionPressed,
-            ]}
-            onPress={() => onAccept(item.id)}
-          >
-            <Text style={styles.actionPrimaryText}>Accept</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.actionButton,
-              styles.actionSecondary,
-              pressed && styles.actionPressed,
-            ]}
-            onPress={() => onDecline(item.id)}
-          >
-            <Text style={styles.actionSecondaryText}>Decline</Text>
-          </Pressable>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// Requests tab (PRD §8/§10). Lives inside the Chats Material Top Tabs.
-// Decisions are local-only until the Wave 4 chat backend lands.
-export default function RequestsScreen() {
+// "New chats" (maid view, PRD §9.5): employers' authorized initiation
+// creates the conversation directly — there is no accept/decline step.
+// Anything awaiting the maid's FIRST reply shows up here, plus the §9.8
+// "stop chat requests" opt-out.
+export default function RequestsScreen({ navigation }) {
   const { user } = useAuth();
-  const [requests, setRequests] = useState(SAMPLE_REQUESTS);
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notAccepting, setNotAccepting] = useState(false);
+  const [toggleBusy, setToggleBusy] = useState(false);
+  const mounted = useRef(true);
 
-  const isEmployer = user?.role !== "maid";
+  const load = useCallback(async () => {
+    try {
+      // Register our E2EE key (idempotent, fail-open) so employers can
+      // start chats with us even before we open a room.
+      try {
+        const identity = await ensureIdentity();
+        await registerChatKey(identity.pubHex).catch(() => {});
+      } catch (keyError) {
+        // ignore — room open retries
+      }
 
-  function setStatus(id, status) {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
+      const data = await listConversations();
+      if (!mounted.current) return;
+
+      const myId = user?.id;
+      const awaiting = (data.conversations || []).filter(
+        (c) =>
+          c.status === "active" &&
+          c.lastMessage &&
+          c.lastMessage.senderId &&
+          c.lastMessage.senderId !== myId
+      );
+
+      setConversations(awaiting);
+    } catch (error) {
+      // silent
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      mounted.current = true;
+      load();
+      const timer = setInterval(load, 30000);
+      return () => {
+        mounted.current = false;
+        clearInterval(timer);
+      };
+    }, [load])
+  );
+
+  async function handleToggle(value) {
+    setToggleBusy(true);
+    const previous = notAccepting;
+    setNotAccepting(value);
+
+    try {
+      await setNotAcceptingChats(value);
+    } catch (error) {
+      setNotAccepting(previous);
+    } finally {
+      setToggleBusy(false);
+    }
   }
 
-  if (requests.length === 0) {
+  if (loading) {
     return (
-      <View style={styles.emptyWrap}>
+      <View style={[styles.container, styles.center]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-        <View style={styles.emptyBadge}>
-          <TabBarIcon name="shield" color={colors.brand} size={26} />
-        </View>
-        <Text style={styles.emptyTitle}>No requests yet</Text>
-        <Text style={styles.emptyBody}>
-          {isEmployer
-            ? "When a worker replies to your job or contact unlock, the request shows up here."
-            : "When an employer unlocks your contact or invites you to interview, the request shows up here — accept or decline without exposing your number before you're ready."}
-        </Text>
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -144,17 +107,100 @@ export default function RequestsScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
+      <View style={styles.optOutCard}>
+        <View style={styles.optOutMain}>
+          <Text style={styles.optOutTitle}>Stop new chat requests</Text>
+          <Text style={styles.optOutBody}>
+            Employers can't start new chats with you. Existing conversations
+            stay open.
+          </Text>
+        </View>
+        <Switch
+          value={notAccepting}
+          onValueChange={handleToggle}
+          disabled={toggleBusy}
+          trackColor={{ true: colors.brand, false: colors.cloud }}
+          thumbColor={colors.white}
+        />
+      </View>
+
       <FlatList
-        data={requests}
+        data={conversations}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <RequestCard
-            item={item}
-            onAccept={(id) => setStatus(id, "accepted")}
-            onDecline={(id) => setStatus(id, "declined")}
-          />
-        )}
+        renderItem={({ item }) => {
+          let preview = "New chat";
+
+          if (item.lastMessage) {
+            if (item.lastMessage.type === "system") {
+              preview = decodeSystemMessage(item.lastMessage.cipher);
+            } else if (item.lastMessage.nonce && item.peer?.publicKey) {
+              try {
+                preview = openEnvelope(item.id, item.peer.publicKey, item.lastMessage);
+              } catch (error) {
+                preview = "Encrypted message";
+              }
+            }
+          }
+
+          return (
+            <Pressable
+              accessibilityRole="button"
+              android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
+              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+              onPress={() =>
+                navigation.navigate("ChatRoom", {
+                  conversationId: item.id,
+                  name: item.peer?.name,
+                  role: item.peer?.role,
+                })
+              }
+            >
+              <View style={styles.cardAvatar}>
+                <Text style={styles.cardAvatarText}>
+                  {(item.peer?.name || "?").charAt(0).toUpperCase()}
+                </Text>
+              </View>
+
+              <View style={styles.cardMain}>
+                <View style={styles.cardTop}>
+                  <View style={styles.kindChip}>
+                    <Text style={styles.kindChipText}>New chat</Text>
+                  </View>
+                  {item.peer?.verified ? (
+                    <View style={styles.verifiedChip}>
+                      <Text style={styles.verifiedText}>Verified</Text>
+                    </View>
+                  ) : null}
+                  {item.unread > 0 ? (
+                    <View style={styles.unreadPill}>
+                      <Text style={styles.unreadText}>{item.unread}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={styles.cardName}>{item.peer?.name}</Text>
+                <Text style={styles.cardPreview} numberOfLines={2}>
+                  {preview}
+                </Text>
+              </View>
+
+              <TabBarIcon name="chevron-right" color={colors.textFaint} size={18} />
+            </Pressable>
+          );
+        }}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyBadge}>
+              <TabBarIcon name="check-circle" color={colors.brand} size={26} />
+            </View>
+            <Text style={styles.emptyTitle}>All caught up</Text>
+            <Text style={styles.emptyBody}>
+              New chats from employers land here first. Replying is always
+              free and both sides stay end-to-end encrypted.
+            </Text>
+          </View>
+        }
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -162,157 +208,96 @@ export default function RequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  list: {
-    padding: 16,
-    paddingBottom: 24,
-  },
+  container: { flex: 1, backgroundColor: colors.white },
+  center: { alignItems: "center", justifyContent: "center" },
+  list: { paddingBottom: 20 },
 
-  /* ---- Card ---- */
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
+  optOutCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 6,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: colors.cream,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 15,
-    marginBottom: 12,
   },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: withAlpha(colors.gold, 0.22),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    color: colors.goldDark,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  cardTopMain: {
-    flex: 1,
-  },
-  kindChip: {
-    alignSelf: "flex-start",
-    color: colors.brand,
-    backgroundColor: withAlpha(colors.brand, 0.1),
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 7,
-    overflow: "hidden",
-    marginBottom: 4,
-  },
-  cardName: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  cardTime: {
-    color: colors.textFaint,
+  optOutMain: { flex: 1 },
+  optOutTitle: { color: colors.ink, fontSize: 13.5, fontWeight: "800" },
+  optOutBody: {
+    color: colors.textMuted,
     fontSize: 11.5,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  cardDetail: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19.5,
-    marginTop: 10,
+    lineHeight: 16,
+    marginTop: 2,
   },
 
-  /* ---- Actions ---- */
-  actions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 13,
-  },
-  actionButton: {
-    flex: 1,
-    minHeight: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionPressed: {
-    opacity: 0.75,
-  },
-  actionPrimary: {
-    backgroundColor: colors.brand,
-  },
-  actionPrimaryText: {
-    color: colors.white,
-    fontSize: 13.5,
-    fontWeight: "800",
-  },
-  actionSecondary: {
-    borderWidth: 1,
-    borderColor: colors.mistDark,
-  },
-  actionSecondaryText: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    fontWeight: "800",
-  },
-  decisionBox: {
+  card: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    marginTop: 13,
-    paddingTop: 11,
-    borderTopWidth: 1,
-    borderTopColor: colors.mist,
-  },
-  decisionOk: {},
-  decisionNo: {},
-  decisionText: {
-    color: colors.textFaint,
-    fontSize: 12.5,
-    fontWeight: "700",
-  },
-  decisionTextOk: {
-    color: colors.brand,
-  },
-
-  /* ---- Empty state ---- */
-  emptyWrap: {
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: colors.white,
+    gap: 12,
+  },
+  cardPressed: { backgroundColor: colors.cream },
+  cardAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: withAlpha(colors.brand, 0.13),
     alignItems: "center",
     justifyContent: "center",
-    padding: 36,
   },
+  cardAvatarText: { color: colors.brand, fontSize: 19, fontWeight: "800" },
+  cardMain: { flex: 1 },
+  cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  kindChip: {
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  kindChipText: { color: colors.brand, fontSize: 10, fontWeight: "800" },
+  verifiedChip: {
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  verifiedText: { color: colors.goldDark, fontSize: 10, fontWeight: "800" },
+  unreadPill: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    marginLeft: "auto",
+  },
+  unreadText: { color: colors.white, fontSize: 10.5, fontWeight: "800" },
+  cardName: { color: colors.ink, fontSize: 15, fontWeight: "800", marginTop: 4 },
+  cardPreview: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17, marginTop: 2 },
+  separator: { height: 1, backgroundColor: colors.mist, marginLeft: 76 },
+
+  emptyWrap: { alignItems: "center", padding: 36 },
   emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 19,
     backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    marginBottom: 14,
   },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 19,
-    fontWeight: "800",
-    marginBottom: 8,
-    textAlign: "center",
-  },
+  emptyTitle: { color: colors.ink, fontSize: 17, fontWeight: "800", marginBottom: 6 },
   emptyBody: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: "center",
   },
 });

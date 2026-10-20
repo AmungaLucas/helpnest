@@ -17,24 +17,22 @@ import { getWorker } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import SignedImage from "../../components/media/SignedImage";
-import ChatAccessModal from "../../components/ui/ChatAccessModal";
+import { colors, withAlpha } from "../../theme/colors";
 import {
   availabilityLabel,
   serviceLabel,
 } from "../../utils/workerMeta";
 import { formatDistance } from "../../utils/geo";
-import { colors, withAlpha } from "../../theme/colors";
 
 // ---------------------------------------------------------------------------
 // Worker profile — classic card layout (kept per user preference), with two
 // upgrades: a much larger photo (136px ringed circle vs the old 68px) and the
 // monetized "Chat with {name}" CTA inside the profile card.
 //
-// Chat gate: the server computes `worker.chat` (subscription or a paid
-// one-time pass for THIS worker). canChat -> straight into ChatRoom;
-// otherwise the ChatAccessModal offers one-time chat vs subscription plans.
-// After an M-Pesa purchase the focus refetch picks up the entitlement and
-// the chat opens by itself (pendingChatRef).
+// Chat gate (BUILD 2026-10-20.14): tapping Chat jumps straight into ChatRoom,
+// which owns the §13.3 flow end-to-end — it creates/opens the conversation,
+// consumes the entitlement (welcome credit / pass / subscription) and shows
+// the paywall sheet itself when no entitlement applies.
 // ---------------------------------------------------------------------------
 export default function WorkerProfileScreen() {
   const navigation = useNavigation();
@@ -47,11 +45,6 @@ export default function WorkerProfileScreen() {
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [gateOpen, setGateOpen] = useState(false);
-
-  // Set when the paywall is opened; if the purchase succeeds and the user
-  // comes back, the refetched entitlement auto-opens the chat.
-  const pendingChatRef = useRef(false);
 
   // Refetch whenever the screen regains focus — after an M-Pesa unlock or
   // chat purchase succeeds and the user comes back, contacts + chat
@@ -69,13 +62,6 @@ export default function WorkerProfileScreen() {
           if (!active) return;
           setWorker(data.worker);
 
-          if (pendingChatRef.current && data.worker?.chat?.canChat) {
-            pendingChatRef.current = false;
-            navigation.navigate("ChatRoom", {
-              name: data.worker.name,
-              role: "maid",
-            });
-          }
         } catch (err) {
           if (active) setError(err?.message || "Could not load this profile.");
         } finally {
@@ -90,21 +76,19 @@ export default function WorkerProfileScreen() {
   );
 
   const openChat = useCallback(() => {
+    // ChatRoom owns the whole §13.3 flow: it ensures/creates the
+    // conversation, consumes the entitlement and shows the paywall when
+    // none applies (BUILD 2026-10-20.14).
     navigation.navigate("ChatRoom", {
+      workerId: worker.id,
       name: worker.name,
       role: "maid",
     });
   }, [navigation, worker]);
 
   const handleChatPress = useCallback(() => {
-    if (worker?.chat?.canChat) {
-      openChat();
-      return;
-    }
-
-    pendingChatRef.current = true;
-    setGateOpen(true);
-  }, [worker, openChat]);
+    openChat();
+  }, [openChat]);
 
   if (loading) {
     return (
@@ -318,13 +302,6 @@ export default function WorkerProfileScreen() {
           )}
         </View>
       </ScrollView>
-
-      <ChatAccessModal
-        visible={gateOpen}
-        onClose={() => setGateOpen(false)}
-        workerName={worker.name}
-        workerId={worker.id}
-      />
     </SafeAreaView>
   );
 }
