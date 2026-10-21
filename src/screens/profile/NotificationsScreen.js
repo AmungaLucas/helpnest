@@ -10,9 +10,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
-import HamburgerButton from "../../components/ui/HamburgerButton";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import EmptyState from "../../components/ui/EmptyState";
 import { colors, withAlpha } from "../../theme/colors";
@@ -50,6 +49,7 @@ const KIND_ICONS = {
 };
 
 export default function NotificationsScreen() {
+  const navigation = useNavigation();
   const [feed, setFeed] = useState(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -117,9 +117,25 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      {/* Drawer-style header — same anatomy as Referrals / Payments. */}
+      {/* Back header — this screen is pushed on the ROOT stack (opened from
+          the Account bell row), so there is no drawer navigator above it and
+          a hamburger would crash with "OPEN_DRAWER was not handled". Same
+          squircle anatomy as ScreenHeader's back button. */}
       <View style={styles.topBar}>
-        <HamburgerButton />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.backPressed]}
+          android_ripple={{
+            color: withAlpha(colors.brand, 0.1),
+            borderless: false,
+            radius: 22,
+          }}
+        >
+          <TabBarIcon name="chevron-left" color={colors.ink} size={21} />
+        </Pressable>
         <View style={styles.topBarMain} pointerEvents="none">
           <Text style={styles.eyebrow}>Activity</Text>
           <Text style={styles.title}>Notifications</Text>
@@ -211,6 +227,17 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 4,
   },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginRight: 4,
+  },
+  backPressed: { opacity: 0.88 },
   topBarMain: {
     flex: 1,
     marginHorizontal: 10,

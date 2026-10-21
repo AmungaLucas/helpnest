@@ -262,13 +262,19 @@ export default function AccountScreen() {
             onPress={chooseProfileSource}
             disabled={uploadingPhoto}
           >
-            <SignedImage
-              mediaId={user?.profileMediaId}
-              variant="thumb"
-              fallbackText={firstName}
-              style={styles.avatar}
-              textStyle={styles.avatarText}
-            />
+            {/* Elevation lives on this opaque wrapper — Android renders the
+                elevation shadow THROUGH translucent fills (dark silhouette =
+                the "black overlay" over the photo), so the tinted avatar
+                itself must stay elevation-free. */}
+            <View style={styles.avatarShadow}>
+              <SignedImage
+                mediaId={user?.profileMediaId}
+                variant="thumb"
+                fallbackText={firstName}
+                style={styles.avatar}
+                textStyle={styles.avatarText}
+              />
+            </View>
             <View style={styles.avatarBadge}>
               {uploadingPhoto ? (
                 <ActivityIndicator size="small" color={colors.white} />
@@ -503,6 +509,15 @@ const styles = StyleSheet.create({
   avatarWrap: {
     marginRight: 16,
   },
+  // Opaque shadow carrier. elevation over a withAlpha() fill makes Android
+  // draw the silhouette through the fill (dark blob) and skews border
+  // rendering — same wrapper/inner split as the Subscription plan cards.
+  avatarShadow: {
+    borderRadius: 18,
+    backgroundColor: colors.white,
+    alignSelf: "flex-start",
+    ...CARD_SHADOW,
+  },
   avatar: {
     width: 72,
     height: 72,
@@ -510,7 +525,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
-    ...CARD_SHADOW,
+    overflow: "hidden",
   },
   avatarBadge: {
     position: "absolute",
@@ -589,9 +604,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
-  },
-  headIconGold: {
-    backgroundColor: withAlpha(colors.gold, 0.18),
   },
   headMain: {
     flex: 1,
