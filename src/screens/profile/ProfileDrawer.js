@@ -32,63 +32,99 @@ const ROLE_LABELS = {
   admin: "Admin",
 };
 
-function DrawerItem({ icon, label, active, onPress }) {
+function DrawerItem({ icon, label, active, index, onPress }) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
         styles.item,
+        index > 0 && styles.itemDivided,
         active && styles.itemActive,
         pressed && styles.itemPressed,
       ]}
       android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
     >
-      {/* `icon` is the rendered element from the screen's drawerIcon option */}
-      <View style={[styles.itemIconWrap, active && styles.itemIconWrapActive]}>
-        {icon}
-      </View>
-      <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>
+      <Text style={[styles.itemNum, active && styles.itemNumActive]}>
+        {String(index + 1).padStart(2, "0")}
+      </Text>
+      <View style={styles.itemIcon}>{icon}</View>
+      <Text
+        style={[styles.itemLabel, active && styles.itemLabelActive]}
+        numberOfLines={1}
+      >
         {label}
       </Text>
-      {/* Active rows get a quiet trailing chevron (v3 drawer spec). */}
       {active ? (
-        <TabBarIcon name="chevron-right" color={colors.textFaint} size={16} />
+        <TabBarIcon name="chevron-right" color={colors.brand} size={16} />
       ) : null}
     </Pressable>
   );
 }
 
-// Branded drawer: profile header, route list, version footer.
+// Branded drawer: sage hero, numbered editorial item list, version footer.
 function DrawerContent({ state, descriptors, navigation }) {
   const { user } = useAuth();
   const firstName = (user?.name || "").split(" ")[0] || "?";
+  const kycVerified = user?.kycStatus === "verified";
 
   return (
     <DrawerContentScrollView
       contentContainerStyle={styles.drawerScroll}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.drawerHeader}>
-        <View style={styles.drawerAvatar}>
-          <SignedImage
-            mediaId={user?.profileMediaId}
-            variant="thumb"
-            fallbackText={firstName}
-            style={styles.drawerAvatarImage}
-            textStyle={styles.drawerAvatarText}
-          />
-        </View>
-        <View style={styles.drawerHeaderMain}>
-          <Text style={styles.drawerName} numberOfLines={1}>
-            {user?.name || "HelpNest member"}
-          </Text>
-          <Text style={styles.drawerRole}>
-            {ROLE_LABELS[user?.role] || user?.role || "Member"}
-          </Text>
+      {/* ---- Sage hero ---- */}
+      <View style={styles.drawerHero}>
+        <View style={styles.orb1} />
+        <View style={styles.orb2} />
+
+        <View style={styles.heroRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open overview"
+            style={({ pressed }) => [
+              styles.heroAvatarWrap,
+              pressed && styles.itemPressed,
+            ]}
+            onPress={() => {
+              navigation.navigate("Overview");
+              navigation.closeDrawer();
+            }}
+          >
+            <View style={styles.heroAvatarRing}>
+              <SignedImage
+                mediaId={user?.profileMediaId}
+                variant="thumb"
+                fallbackText={firstName}
+                style={styles.heroAvatarImage}
+                textStyle={styles.heroAvatarText}
+              />
+            </View>
+            {kycVerified ? (
+              <View style={styles.heroVerifyDot}>
+                <TabBarIcon name="check" color={colors.white} size={9} />
+              </View>
+            ) : null}
+          </Pressable>
+
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName} numberOfLines={1}>
+              {user?.name || "HelpNest member"}
+            </Text>
+            <Text style={styles.heroRole} numberOfLines={1}>
+              {ROLE_LABELS[user?.role] || user?.role || "Member"}
+            </Text>
+          </View>
         </View>
       </View>
 
+      {/* ---- MENU label ---- */}
+      <View style={styles.menuLabelRow}>
+        <Text style={styles.menuLabel}>MENU</Text>
+        <View style={styles.menuLabelRule} />
+      </View>
+
+      {/* ---- Numbered items ---- */}
       <View style={styles.itemsWrap}>
         {state.routes.map((route, index) => {
           const { title, drawerIcon } = descriptors[route.key].options;
@@ -97,7 +133,14 @@ function DrawerContent({ state, descriptors, navigation }) {
           return (
             <DrawerItem
               key={route.key}
-              icon={drawerIcon ? drawerIcon({ color: focused ? colors.brand : colors.textMuted }) : null}
+              index={index}
+              icon={
+                drawerIcon
+                  ? drawerIcon({
+                      color: focused ? colors.brand : colors.textMuted,
+                    })
+                  : null
+              }
               label={title || route.name}
               active={focused}
               onPress={() => {
@@ -272,101 +315,186 @@ const styles = StyleSheet.create({
   },
   drawerScroll: {
     flexGrow: 1,
-    paddingTop: 8,
+    padding: 0,
   },
-  drawerHeader: {
+
+  /* ============================================================
+     Sage hero header — full-bleed within the drawer.
+     ============================================================ */
+  drawerHero: {
+    backgroundColor: colors.mist,
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 26,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  orb1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: withAlpha(colors.brand, 0.09),
+    top: -110,
+    right: -60,
+  },
+  orb2: {
+    position: "absolute",
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    bottom: -60,
+    left: -40,
+  },
+  heroRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.mist,
-    marginBottom: 12,
+    gap: 14,
+    zIndex: 1,
   },
-  drawerAvatar: {
-    width: 56,
-    height: 56,
+  heroAvatarWrap: {
+    position: "relative",
+  },
+  heroAvatarRing: {
+    padding: 2,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  heroAvatarImage: {
+    width: 60,
+    height: 60,
     borderRadius: 18,
     overflow: "hidden",
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
   },
-  drawerAvatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-  },
-  drawerAvatarText: {
+  heroAvatarText: {
     color: colors.brand,
     fontSize: 22,
     fontWeight: "800",
   },
-  drawerHeaderMain: {
+  heroVerifyDot: {
+    position: "absolute",
+    bottom: -3,
+    right: -3,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  heroInfo: {
     flex: 1,
   },
-  drawerName: {
+  heroName: {
     color: colors.ink,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
-  drawerRole: {
+  heroRole: {
     color: colors.textMuted,
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: "600",
     marginTop: 3,
   },
+
+  /* ============================================================
+     MENU eyebrow with trailing hairline.
+     ============================================================ */
+  menuLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  menuLabel: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+  },
+  menuLabelRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: withAlpha(colors.ink, 0.08),
+  },
+
+  /* ============================================================
+     Numbered editorial items — full-bleed hairlines.
+     ============================================================ */
   itemsWrap: {
     flex: 1,
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
-    marginHorizontal: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    minHeight: 58,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 12,
     overflow: "hidden",
   },
+  itemDivided: {
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(colors.ink, 0.05),
+  },
   itemActive: {
-    backgroundColor: withAlpha(colors.brand, 0.08),
+    backgroundColor: withAlpha(colors.brand, 0.06),
   },
   itemPressed: {
     opacity: 0.88,
   },
-  itemIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    backgroundColor: colors.mist,
+  itemNum: {
+    width: 26,
+    color: colors.cloud,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+  },
+  itemNumActive: {
+    color: colors.brand,
+  },
+  itemIcon: {
+    width: 24,
     alignItems: "center",
     justifyContent: "center",
-  },
-  itemIconWrapActive: {
-    backgroundColor: withAlpha(colors.brand, 0.12),
   },
   itemLabel: {
     flex: 1,
     color: colors.textMuted,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    marginLeft: 13,
+    letterSpacing: -0.1,
   },
   itemLabelActive: {
-    color: colors.brand,
+    color: colors.ink,
     fontWeight: "800",
   },
+
+  /* ============================================================
+     Version footer.
+     ============================================================ */
   drawerVersion: {
     color: colors.textFaint,
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: "600",
     textAlign: "center",
     marginHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.mist,
+    borderTopColor: withAlpha(colors.ink, 0.06),
+    marginTop: 12,
   },
 });

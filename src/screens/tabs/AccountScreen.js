@@ -35,15 +35,6 @@ const ROLE_LABELS = {
   admin: "Admin",
 };
 
-// Soft card lift shared by every white surface on the cream canvas.
-const CARD_SHADOW = {
-  shadowColor: colors.ink,
-  shadowOpacity: 0.06,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 5 },
-  elevation: 1,
-};
-
 export default function AccountScreen() {
   const navigation = useNavigation();
   const { user, clearSession, updateUser } = useAuth();
@@ -82,7 +73,10 @@ export default function AccountScreen() {
       updateUser({ notifyEmail: next });
     } catch (error) {
       setEmailUpdates(prev); // revert on failure
-      Alert.alert("Could not update", error?.message || "Please try again in a moment.");
+      Alert.alert(
+        "Could not update",
+        error?.message || "Please try again in a moment."
+      );
     } finally {
       setEmailPrefBusy(false);
     }
@@ -198,7 +192,9 @@ export default function AccountScreen() {
           onPress: () =>
             navigation.navigate("KYCCamera", {
               docKind: "profile",
-              captureId: registerCaptureCallback((uri) => uploadProfilePhoto(uri)),
+              captureId: registerCaptureCallback((uri) =>
+                uploadProfilePhoto(uri)
+              ),
             }),
         },
         { text: "Choose from gallery", onPress: pickProfileFromGallery },
@@ -218,16 +214,12 @@ export default function AccountScreen() {
       updateUser(coords);
     } catch (error) {
       if (error?.code === "PERMISSION_DENIED") {
-        Alert.alert(
-          "Location permission needed",
-          error.message,
-          [
-            { text: "Not now", style: "cancel" },
-            ...(error.canAskAgain
-              ? []
-              : [{ text: "Open settings", onPress: () => openAppSettings() }]),
-          ]
-        );
+        Alert.alert("Location permission needed", error.message, [
+          { text: "Not now", style: "cancel" },
+          ...(error.canAskAgain
+            ? []
+            : [{ text: "Open settings", onPress: () => openAppSettings() }]),
+        ]);
       } else {
         Alert.alert(
           "Could not get location",
@@ -253,64 +245,94 @@ export default function AccountScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Identity header — avatar squircle, name, role + verified pills. */}
-        <View style={styles.profileRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Change profile photo"
-            style={({ pressed }) => [styles.avatarWrap, pressed && styles.pressed]}
-            onPress={chooseProfileSource}
-            disabled={uploadingPhoto}
-          >
-            {/* Elevation lives on this opaque wrapper — Android renders the
-                elevation shadow THROUGH translucent fills (dark silhouette =
-                the "black overlay" over the photo), so the tinted avatar
-                itself must stay elevation-free. */}
-            <View style={styles.avatarShadow}>
-              <SignedImage
-                mediaId={user?.profileMediaId}
-                variant="thumb"
-                fallbackText={firstName}
-                style={styles.avatar}
-                textStyle={styles.avatarText}
-              />
-            </View>
-            <View style={styles.avatarBadge}>
-              {uploadingPhoto ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <TabBarIcon name="camera" color={colors.white} size={12} />
-              )}
-            </View>
-          </Pressable>
-          <View style={styles.profileMain}>
-            <Text style={styles.name} numberOfLines={1}>
-              {user?.name}
-            </Text>
-            <Text style={styles.roleLine}>
-              {ROLE_LABELS[user?.role] || user?.role || "Member"} ·{" "}
-              {user?.phone}
-            </Text>
-            {verifiedChips.length > 0 ? (
-              <View style={styles.chipRow}>
-                {verifiedChips.map((chip) => (
-                  <View key={chip} style={styles.verifiedChip}>
-                    <TabBarIcon name="check" color={colors.brand} size={11} />
-                    <Text style={styles.verifiedChipText}>{chip}</Text>
-                  </View>
-                ))}
+        {/* =====================================================
+            Sage hero — full-bleed, square edges, orbs glow through.
+            ===================================================== */}
+        <View style={styles.heroPanel}>
+          <View style={styles.orb1} />
+          <View style={styles.orb2} />
+          <View style={styles.orb3} />
+
+          <View style={styles.heroRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              style={({ pressed }) => [
+                styles.heroAvatar,
+                pressed && styles.pressed,
+              ]}
+              onPress={chooseProfileSource}
+              disabled={uploadingPhoto}
+            >
+              {/* Elevation lives on this opaque wrapper — Android renders
+                  elevation THROUGH translucent fills (dark silhouette), so
+                  the tinted avatar itself must stay elevation-free. */}
+              <View style={styles.avatarShadow}>
+                <SignedImage
+                  mediaId={user?.profileMediaId}
+                  variant="thumb"
+                  fallbackText={firstName}
+                  style={styles.avatar}
+                  textStyle={styles.avatarText}
+                />
               </View>
-            ) : null}
+              <View style={styles.avatarBadge}>
+                {uploadingPhoto ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <TabBarIcon name="camera" color={colors.white} size={12} />
+                )}
+              </View>
+            </Pressable>
+
+            <View style={styles.heroInfo}>
+              <Text style={styles.name} numberOfLines={1}>
+                {user?.name}
+              </Text>
+              <Text style={styles.roleLine} numberOfLines={1}>
+                {ROLE_LABELS[user?.role] || user?.role || "Member"} ·{" "}
+                {user?.phone}
+              </Text>
+              {verifiedChips.length > 0 ? (
+                <View style={styles.chipRow}>
+                  {verifiedChips.map((chip) => (
+                    <View key={chip} style={styles.verifiedChip}>
+                      <TabBarIcon
+                        name="check"
+                        color={colors.brand}
+                        size={10}
+                      />
+                      <Text style={styles.verifiedChipText}>{chip}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
 
-        {/* Notifications (§17) — feed of verification, payment, application
-            and account events. Badge shows the unread count. */}
+        {/* =====================================================
+            Chapter 01 — Activity (Notifications)
+            ===================================================== */}
+        <View style={styles.chapterHead}>
+          <Text style={styles.chapterNum}>01</Text>
+          <View style={styles.chapterMain}>
+            <Text style={styles.chapterEyebrow}>ACTIVITY</Text>
+            <Text style={styles.chapterTitle}>Notifications</Text>
+          </View>
+          {unread > 0 ? (
+            <View style={styles.chapterBadge}>
+              <Text style={styles.chapterBadgeText}>
+                {unread > 99 ? "99+" : unread}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         <Pressable
           accessibilityRole="button"
           style={({ pressed }) => [
             styles.card,
-            CARD_SHADOW,
             styles.cardTappable,
             pressed && styles.pressed,
           ]}
@@ -319,86 +341,78 @@ export default function AccountScreen() {
         >
           <View style={styles.notifRow}>
             <View style={styles.menuIcon}>
-              <TabBarIcon name="bell" color={colors.brand} size={20} />
+              <TabBarIcon name="bell" color={colors.brand} size={18} />
             </View>
-            <View style={styles.menuMain}>
-              <Text style={styles.menuTitle}>Notifications</Text>
-              <Text style={styles.menuNote}>
-                {unread > 0
-                  ? `${unread} unread update${unread === 1 ? "" : "s"} — verification, payments and applications.`
-                  : "Verification, payments and account updates land here."}
-              </Text>
-            </View>
-            {unread > 0 ? (
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>
-                  {unread > 99 ? "99+" : unread}
-                </Text>
-              </View>
-            ) : null}
+            <Text style={styles.menuNote} numberOfLines={2}>
+              {unread > 0
+                ? `${unread} unread update${unread === 1 ? "" : "s"} — verification, payments and applications.`
+                : "Verification, payments and account updates land here."}
+            </Text>
             <Text style={styles.menuChevron}>›</Text>
           </View>
         </Pressable>
 
-        {/* §17.2 — email preference. Only meaningful with an email on file. */}
+        {/* =====================================================
+            Chapter 02 — Preferences (Email updates)
+            ===================================================== */}
         {user?.email ? (
-          <View style={[styles.card, CARD_SHADOW]}>
-            <View style={styles.notifRow}>
-              <View style={styles.menuIcon}>
-                {/* "mail" isn't in the TabBarIcon set — "send" carries the
-                    email-fanout semantics on the approved icon list. */}
-                <TabBarIcon name="send" color={colors.brand} size={20} />
+          <>
+            <View style={styles.chapterHead}>
+              <Text style={styles.chapterNum}>02</Text>
+              <View style={styles.chapterMain}>
+                <Text style={styles.chapterEyebrow}>PREFERENCES</Text>
+                <Text style={styles.chapterTitle}>Email updates</Text>
               </View>
-              <View style={styles.menuMain}>
-                <Text style={styles.menuTitle}>Email updates</Text>
-                <Text style={styles.menuNote} numberOfLines={2}>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.notifRow}>
+                <View style={styles.menuIcon}>
+                  {/* "mail" isn't in the TabBarIcon set — "send" carries
+                      the email-fanout semantics on the approved list. */}
+                  <TabBarIcon name="send" color={colors.brand} size={18} />
+                </View>
+                <Text style={styles.menuNote} numberOfLines={3}>
                   Application, job and promotion emails. Security notices
                   always come through.
                 </Text>
+                <Switch
+                  value={emailUpdates}
+                  onValueChange={toggleEmailUpdates}
+                  disabled={emailPrefBusy}
+                  trackColor={{ false: colors.mist, true: colors.brand }}
+                  thumbColor={colors.white}
+                  ios_backgroundColor={colors.mist}
+                />
               </View>
-              <Switch
-                value={emailUpdates}
-                onValueChange={toggleEmailUpdates}
-                disabled={emailPrefBusy}
-                trackColor={{ false: colors.mist, true: colors.brand }}
-                thumbColor={colors.white}
-                ios_backgroundColor={colors.mist}
-              />
             </View>
-          </View>
+          </>
         ) : null}
 
-        <View style={[styles.card, CARD_SHADOW]}>
-          <View style={styles.headRow}>
-            <View style={styles.headIcon}>
-              <TabBarIcon name="map-pin" color={colors.brand} size={20} />
-            </View>
-            <View style={styles.headMain}>
-              <Text style={styles.eyebrow}>Your area</Text>
-              <Text style={styles.cardTitle}>Location</Text>
-            </View>
+        {/* =====================================================
+            Chapter 03 — Your area (Location)
+            ===================================================== */}
+        <View style={styles.chapterHead}>
+          <Text style={styles.chapterNum}>{user?.email ? "03" : "02"}</Text>
+          <View style={styles.chapterMain}>
+            <Text style={styles.chapterEyebrow}>YOUR AREA</Text>
+            <Text style={styles.chapterTitle}>Location</Text>
           </View>
+        </View>
 
+        <View style={styles.card}>
           {hasCoords ? (
-            <>
-              <Text style={styles.locationLine}>
-                {user?.locationLabel
-                  ? `${user.locationLabel} · `
-                  : ""}
-                {Number(user.locationLat).toFixed(4)},{" "}
-                {Number(user.locationLng).toFixed(4)}
-              </Text>
-              <Text style={styles.locationNote}>
-                Used to show you nearby workers and jobs — never your exact
-                address.
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.locationNote}>
-              Add your general location so we can match you with work and
-              workers nearby. Your exact address is never shared.
+            <Text style={styles.locationLine} numberOfLines={2}>
+              {user?.locationLabel ? `${user.locationLabel} · ` : ""}
+              {Number(user.locationLat).toFixed(4)},{" "}
+              {Number(user.locationLng).toFixed(4)}
             </Text>
-          )}
+          ) : null}
+          <Text style={styles.menuNote} numberOfLines={3}>
+            {hasCoords
+              ? "Used to show you nearby workers and jobs — never your exact address."
+              : "Add your general location so we can match you with work and workers nearby. Your exact address is never shared."}
+          </Text>
 
           <Pressable
             accessibilityRole="button"
@@ -420,23 +434,25 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* Profile boost (PRD §5.1/§18.4) now lives on the maid HOME screen
-            as a Featured promo card — moved there 2026-10-21 for relevance. */}
-
-        <View style={[styles.card, CARD_SHADOW]}>
-          <View style={styles.headRow}>
-            <View style={styles.headIcon}>
-              <TabBarIcon name="credit-card" color={colors.brand} size={20} />
-            </View>
-            <View style={styles.headMain}>
-              <Text style={styles.eyebrow}>M-Pesa</Text>
-              <Text style={styles.cardTitle}>Payments</Text>
-            </View>
+        {/* =====================================================
+            Chapter 04 — Payments (M-Pesa)
+            ===================================================== */}
+        <View style={styles.chapterHead}>
+          <Text style={styles.chapterNum}>
+            {user?.email ? "04" : "03"}
+          </Text>
+          <View style={styles.chapterMain}>
+            <Text style={styles.chapterEyebrow}>PAYMENTS</Text>
+            <Text style={styles.chapterTitle}>M-Pesa</Text>
           </View>
-          <Text style={styles.locationNote}>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.menuNote} numberOfLines={3}>
             M-Pesa is wired up. Try a KES 1 test payment to confirm STK push
             works on your phone before real pricing goes live.
           </Text>
+
           <Pressable
             accessibilityRole="button"
             style={({ pressed }) => [
@@ -451,15 +467,16 @@ export default function AccountScreen() {
             }
             android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
           >
-            <Text style={styles.secondaryButtonText}>Try a KES 1 test payment</Text>
+            <Text style={styles.secondaryButtonText}>
+              Try a KES 1 test payment
+            </Text>
           </Pressable>
         </View>
 
         <Text style={styles.versionText}>HelpNest v1.0.0</Text>
       </ScrollView>
 
-      {/* Sticky sign-out bar — the screen's single primary action, kept
-          anchored above the tab bar. */}
+      {/* Sticky sign-out bar — soft ghost-destructive, cream footer. */}
       <View style={styles.signOutBar}>
         <Pressable
           accessibilityRole="button"
@@ -471,25 +488,27 @@ export default function AccountScreen() {
           disabled={signingOut}
           android_ripple={{ color: withAlpha(colors.danger, 0.08) }}
         >
-          <TabBarIcon name="user-x" color={colors.danger} size={16} />
+          <View style={styles.signOutIcon}>
+            <TabBarIcon name="user-x" color={colors.danger} size={13} />
+          </View>
           <Text style={styles.signOutText}>
             {signingOut ? "Signing out…" : "Sign out"}
           </Text>
         </Pressable>
       </View>
-
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  /* ---- Shell ---- */
   safeArea: {
     flex: 1,
     backgroundColor: colors.cream,
   },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 0,
     paddingBottom: 28,
   },
   pressed: {
@@ -501,27 +520,69 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: colors.cream,
   },
-  profileRow: {
+
+  /* ============================================================
+     Sage hero panel — full-bleed, square edges, no shadow.
+     ============================================================ */
+  heroPanel: {
+    backgroundColor: colors.mist,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+    marginBottom: 24,
+    overflow: "hidden",
+  },
+  orb1: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: withAlpha(colors.brand, 0.09),
+    top: -110,
+    right: -70,
+  },
+  orb2: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    bottom: -60,
+    left: -50,
+  },
+  orb3: {
+    position: "absolute",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: withAlpha(colors.brand, 0.06),
+    bottom: 30,
+    right: 30,
+  },
+  heroRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    gap: 16,
+    zIndex: 1,
   },
-  avatarWrap: {
-    marginRight: 16,
+  heroAvatar: {
+    position: "relative",
   },
-  // Opaque shadow carrier. elevation over a withAlpha() fill makes Android
-  // draw the silhouette through the fill (dark blob) and skews border
-  // rendering — same wrapper/inner split as the Subscription plan cards.
   avatarShadow: {
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: colors.white,
     alignSelf: "flex-start",
-    ...CARD_SHADOW,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 18,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
@@ -531,26 +592,26 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: -3,
     bottom: -3,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.brand,
     borderWidth: 2.5,
-    borderColor: colors.cream,
+    borderColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
     color: colors.brand,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
   },
-  profileMain: {
+  heroInfo: {
     flex: 1,
   },
   name: {
     color: colors.ink,
-    fontSize: 23,
+    fontSize: 22,
     fontWeight: "800",
     letterSpacing: -0.4,
   },
@@ -569,165 +630,182 @@ const styles = StyleSheet.create({
   verifiedChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     backgroundColor: withAlpha(colors.brand, 0.1),
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   verifiedChipText: {
     color: colors.brand,
+    fontSize: 10.5,
+    fontWeight: "800",
+  },
+
+  /* ============================================================
+     Chapter heads — numbered like the Home "How it works" step list.
+     ============================================================ */
+  chapterHead: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  chapterNum: {
+    color: colors.cloud,
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -1,
+    width: 44,
+    lineHeight: 32,
+  },
+  chapterMain: {
+    flex: 1,
+    paddingBottom: 2,
+  },
+  chapterEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.3,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  chapterTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  chapterBadge: {
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 3,
+  },
+  chapterBadgeText: {
+    color: colors.white,
     fontSize: 11,
     fontWeight: "800",
   },
+
+  /* ============================================================
+     Cards — content-only (title lives in the chapter head).
+     ============================================================ */
   card: {
     backgroundColor: colors.white,
-    borderRadius: 22,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 20,
-    marginBottom: 24,
+    borderColor: withAlpha(colors.ink, 0.05),
+    padding: 16,
+    marginBottom: 22,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   cardTappable: {
     overflow: "hidden",
   },
-  headRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  headIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.brand, 0.1),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  headMain: {
-    flex: 1,
-  },
-  eyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  cardTitle: {
-    color: colors.ink,
-    fontSize: 17.5,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-  },
   notifRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   menuIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: withAlpha(colors.brand, 0.1),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
-  },
-  menuMain: {
-    flex: 1,
-    marginRight: 10,
-  },
-  menuTitle: {
-    color: colors.ink,
-    fontSize: 15.5,
-    fontWeight: "700",
   },
   menuNote: {
+    flex: 1,
     color: colors.textMuted,
     fontSize: 12.5,
-    lineHeight: 17,
+    lineHeight: 18,
     fontWeight: "600",
-    marginTop: 2,
   },
   menuChevron: {
     color: colors.textFaint,
     fontSize: 22,
     fontWeight: "700",
-    marginLeft: 4,
+    marginLeft: 2,
   },
-  notifBadge: {
-    backgroundColor: colors.gold,
-    borderRadius: 999,
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 6,
-  },
-  notifBadgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "800",
-  },
+
+  /* ---- Location + Payments cards ---- */
   locationLine: {
     color: colors.ink,
     fontSize: 13.5,
-    fontWeight: "700",
+    fontWeight: "800",
     marginBottom: 6,
-  },
-  locationNote: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 14,
   },
   secondaryButton: {
     borderWidth: 1,
     borderColor: colors.brand,
-    borderRadius: 16,
-    minHeight: 50,
+    borderRadius: 14,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
     overflow: "hidden",
+    marginTop: 12,
   },
   secondaryButtonText: {
     color: colors.brand,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "800",
   },
+
+  /* ---- Version ---- */
+  versionText: {
+    color: colors.textFaint,
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: -4,
+  },
+
+  /* ============================================================
+     Sticky sign-out bar — cream footer, ghost-destructive pill.
+     ============================================================ */
   signOutBar: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cream,
     borderTopWidth: 1,
-    borderTopColor: colors.mist,
+    borderTopColor: withAlpha(colors.ink, 0.06),
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 16,
+    paddingBottom: 14,
   },
   signOutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 10,
+    backgroundColor: withAlpha(colors.danger, 0.06),
     borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: 16,
-    minHeight: 54,
+    borderColor: withAlpha(colors.danger, 0.22),
+    borderRadius: 14,
+    minHeight: 50,
     overflow: "hidden",
+  },
+  signOutIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.danger, 0.14),
+    alignItems: "center",
+    justifyContent: "center",
   },
   signOutText: {
     color: colors.danger,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
-  },
-  versionText: {
-    color: colors.textFaint,
-    fontSize: 11.5,
-    fontWeight: "600",
-    textAlign: "center",
-    marginTop: 2,
   },
 });

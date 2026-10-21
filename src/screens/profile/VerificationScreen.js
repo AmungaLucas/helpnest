@@ -228,7 +228,9 @@ export default function VerificationScreen() {
         applyStatus(data);
       } catch (err) {
         if (!silent) {
-          setLoadError(err?.message || "Could not load your verification status.");
+          setLoadError(
+            err?.message || "Could not load your verification status."
+          );
         }
       } finally {
         if (!silent) setLoading(false);
@@ -377,7 +379,9 @@ export default function VerificationScreen() {
       setMode("status");
       await refresh();
     } catch (err) {
-      setFormError(err?.message || "Could not submit your documents. Try again.");
+      setFormError(
+        err?.message || "Could not submit your documents. Try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -428,7 +432,9 @@ export default function VerificationScreen() {
   // approved need a retake. Approved ones render locked in the form.
   const resubmitMode = kycStatus === "rejected";
   const editableKeys = resubmitMode
-    ? SLOTS.filter((s) => documents[s.key]?.status !== "approved").map((s) => s.key)
+    ? SLOTS.filter((s) => documents[s.key]?.status !== "approved").map(
+        (s) => s.key
+      )
     : SLOTS.map((s) => s.key);
 
   // --- STATUS VIEW --------------------------------------------------------
@@ -455,28 +461,149 @@ export default function VerificationScreen() {
             />
           }
         >
-          <Text style={styles.subtitle}>{roleCopy.intro}</Text>
+          {/* ---- Sage hero: status ---- */}
+          <View style={styles.heroPanel}>
+            <View style={styles.orb1} />
+            <View style={styles.orb2} />
 
-          {loadError ? (
-            <EmptyState
-              icon="alert-triangle"
-              tone="danger"
-              title="Something went wrong"
-              body={loadError}
-            />
-          ) : null}
-{/* ---------- Household verification Banner---------- */} 
-          {/* Account & verification — phone/email status sits next to the ID
-              flow here. (Moved from the profile overview's Trust & safety
-              card; email verification opens the VerifyEmail flow.) */}
-          <View style={[styles.statusCard, styles.contactCard]}>
-            <View style={styles.statusHead}>
-              <TabBarIcon name="check-circle" color={colors.brand} size={22} />
-              <Text style={[styles.statusTitle, styles.contactTitle]}>
-                Contact details
-              </Text>
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroIconChip}>
+                <TabBarIcon
+                  name={
+                    kycStatus === "verified"
+                      ? "shield"
+                      : kycStatus === "pending"
+                      ? "clock"
+                      : kycStatus === "rejected"
+                      ? "alert-triangle"
+                      : "user"
+                  }
+                  color={theme.text}
+                  size={20}
+                />
+              </View>
+              <View
+                style={[
+                  styles.heroStatusPill,
+                  { backgroundColor: theme.bg, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.heroStatusPillText, { color: theme.text }]}>
+                  {kycStatus === "verified" && "VERIFIED"}
+                  {kycStatus === "pending" && "UNDER REVIEW"}
+                  {kycStatus === "rejected" && "NEEDS ATTENTION"}
+                  {kycStatus === "unverified" && "NOT VERIFIED"}
+                  {kycStatus === "suspended" && "SUSPENDED"}
+                </Text>
+              </View>
             </View>
 
+            <Text style={styles.heroTitle}>
+              {kycStatus === "verified" && "You're verified"}
+              {kycStatus === "pending" && "Under review"}
+              {kycStatus === "rejected" && "More info needed"}
+              {kycStatus === "unverified" && "Not verified yet"}
+              {kycStatus === "suspended" && "Account suspended"}
+            </Text>
+
+            <Text style={styles.heroBody}>
+              {kycStatus === "verified" && roleCopy.verifiedBlurb}
+              {kycStatus === "pending" &&
+                "Our team is reviewing your documents right now. This usually takes less than 24 hours — this screen updates by itself the moment a decision is made."}
+              {kycStatus === "rejected" &&
+                "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Tap a flagged document to retake it, then resubmit."}
+              {kycStatus === "unverified" &&
+                "Upload your national ID (both sides) and a clear selfie. We review every submission within 24 hours, and your documents stay private — only HelpNest reviewers can see them."}
+              {kycStatus === "suspended" &&
+                "Your account is currently suspended. Contact support to resolve this."}
+            </Text>
+          </View>
+
+          {loadError ? (
+            <View style={styles.loadErrorBox}>
+              <EmptyState
+                icon="alert-triangle"
+                tone="danger"
+                title="Something went wrong"
+                body={loadError}
+              />
+            </View>
+          ) : null}
+
+          {/* ---- Fast-track promo (pending only) ---- */}
+          {kycStatus === "pending" ? (
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.promoCard,
+                styles.promoGold,
+                pressed && styles.pressed,
+              ]}
+              onPress={() =>
+                navigation.navigate("MpesaCheckout", {
+                  plan: "verification_fast_track",
+                  label: "Fast-track review (6 hours)",
+                })
+              }
+              android_ripple={{ color: withAlpha(colors.gold, 0.12) }}
+            >
+              <View style={styles.promoIconGold}>
+                <TabBarIcon name="zap" color={colors.goldDark} size={18} />
+              </View>
+              <View style={styles.promoMain}>
+                <Text style={styles.promoTitle}>In a hurry?</Text>
+                <Text style={styles.promoBody}>
+                  Fast-track moves your review to the front of the queue —
+                  target 6 hours instead of 48–72. Payment does not change the
+                  outcome, only the speed.
+                </Text>
+              </View>
+              <View style={styles.promoPricePill}>
+                <Text style={styles.promoPriceText}>KES 100</Text>
+              </View>
+            </Pressable>
+          ) : null}
+
+          {/* ---- Appeal promo (rejected only) ---- */}
+          {kycStatus === "rejected" ? (
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.promoCard,
+                styles.promoDanger,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => setAppealOpen(true)}
+              android_ripple={{ color: withAlpha(colors.danger, 0.1) }}
+            >
+              <View style={styles.promoIconDanger}>
+                <TabBarIcon name="flag" color={colors.danger} size={18} />
+              </View>
+              <View style={styles.promoMain}>
+                <Text style={styles.promoTitle}>Think this was a mistake?</Text>
+                <Text style={styles.promoBody}>
+                  File an appeal and a second reviewer — not the original one —
+                  re-examines your documents within 72 hours.
+                </Text>
+              </View>
+              <TabBarIcon
+                name="chevron-right"
+                color={colors.danger}
+                size={18}
+              />
+            </Pressable>
+          ) : null}
+
+          {/* ---- Chapter 01: Contact details ---- */}
+          <View style={styles.chapterHead}>
+            <Text style={styles.chapterNum}>01</Text>
+            <View style={styles.chapterMain}>
+              <Text style={styles.chapterEyebrow}>TRUST</Text>
+              <Text style={styles.chapterTitle}>Contact details</Text>
+            </View>
+          </View>
+
+          <View style={styles.card}>
             <View style={styles.contactRow}>
               <View
                 style={[
@@ -510,7 +637,9 @@ export default function VerificationScreen() {
                 >
                   <View style={styles.contactRow}>
                     <View style={[styles.contactDot, styles.contactDotIdle]} />
-                    <Text style={[styles.contactText, styles.contactActionText]}>
+                    <Text
+                      style={[styles.contactText, styles.contactActionText]}
+                    >
                       Email not verified — tap to verify
                     </Text>
                   </View>
@@ -524,194 +653,112 @@ export default function VerificationScreen() {
             )}
           </View>
 
-          {/* Elevation lives on the OPAQUE statusShadow wrapper — Android
-              paints the elevation silhouette through translucent fills, so
-              the alpha theme.bg fill + alpha border stay on the elevation-
-              free inner card (same fix family as the Task 49 promo cards). */}
-          <View style={styles.statusShadow}>
-            <View
-              style={[
-                styles.statusCard,
-                { backgroundColor: theme.bg, borderColor: theme.border },
-              ]}
-            >
-              <View style={styles.statusHead}>
-                <TabBarIcon
-                  name={kycStatus === "verified" ? "shield" : kycStatus === "pending" ? "clock" : "user"}
-                  color={theme.text}
-                  size={22}
-                />
-                <Text style={[styles.statusTitle, { color: theme.text }]}>
-                  {kycStatus === "verified" && "You're verified"}
-                  {kycStatus === "pending" && "Under review"}
-                  {kycStatus === "rejected" && "More info needed"}
-                  {kycStatus === "unverified" && "Not verified yet"}
-                  {kycStatus === "suspended" && "Account suspended"}
-                </Text>
-              </View>
-
-              <Text style={[styles.statusBody, { color: theme.text }]}>
-                {kycStatus === "verified" && roleCopy.verifiedBlurb}
-                {kycStatus === "pending" &&
-                  "Our team is reviewing your documents right now. This usually takes less than 24 hours — this screen updates by itself the moment a decision is made."
-                }
-                {kycStatus === "rejected" &&
-                  "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Tap a flagged document to retake it, then resubmit."
-                }
-                {kycStatus === "unverified" &&
-                  "Upload your national ID (both sides) and a clear selfie. We review every submission within 24 hours, and your documents stay private — only HelpNest reviewers can see them."
-                }
-                {kycStatus === "suspended" &&
-                  "Your account is currently suspended. Contact support to resolve this."
-                }
-              </Text>
-            </View>
-          </View>
-
-          {/* Fast-track (PRD §4.8) — optional 6-hour priority review, offered
-              only while a submission is actually pending. */}
-          {kycStatus === "pending" ? (
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.fastTrackCard,
-                pressed && styles.pressed,
-              ]}
-              onPress={() =>
-                navigation.navigate("MpesaCheckout", {
-                  plan: "verification_fast_track",
-                  label: "Fast-track review (6 hours)",
-                })
-              }
-              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-            >
-              <View style={styles.fastTrackIcon}>
-                <TabBarIcon name="zap" color={colors.goldDark} size={20} />
-              </View>
-              <View style={styles.fastTrackMain}>
-                <Text style={styles.fastTrackTitle}>In a hurry?</Text>
-                <Text style={styles.fastTrackText}>
-                  Fast-track moves your review to the front of the queue —
-                  target 6 hours instead of 48–72. Payment does not change
-                  the outcome, only the speed.
-                </Text>
-              </View>
-              <View style={styles.pricePill}>
-                <Text style={styles.fastTrackPrice}>KES 100</Text>
-              </View>
-            </Pressable>
-          ) : null}
-
-          {/* Appeal (PRD §4.7 — within 14 days of rejection a second
-              reviewer re-examines the decision, target 72h). */}
-          {kycStatus === "rejected" ? (
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.appealCard,
-                pressed && styles.pressed,
-              ]}
-              onPress={() => setAppealOpen(true)}
-              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-            >
-              <View style={styles.appealIcon}>
-                <TabBarIcon name="flag" color={colors.danger} size={20} />
-              </View>
-              <View style={styles.fastTrackMain}>
-                <Text style={styles.fastTrackTitle}>
-                  Think this was a mistake?
-                </Text>
-                <Text style={styles.fastTrackText}>
-                  File an appeal and a second reviewer — not the original one
-                  — re-examines your documents within 72 hours.
-                </Text>
-              </View>
-              <Text style={styles.appealArrow}>›</Text>
-            </Pressable>
-          ) : null}
-          {/* Document outcomes — shown whenever any document exists, so the
-              user can see exactly what the reviewer decided per photo. */}
+          {/* ---- Chapter 02: Documents ---- */}
           {hasDocs ? (
-            <View style={styles.docsCard}>
-              {SLOTS.map((slot, slotIndex) => {
-                const doc = documents[slot.key];
+            <>
+              <View style={styles.chapterHead}>
+                <Text style={styles.chapterNum}>02</Text>
+                <View style={styles.chapterMain}>
+                  <Text style={styles.chapterEyebrow}>EVIDENCE</Text>
+                  <Text style={styles.chapterTitle}>Documents</Text>
+                </View>
+              </View>
 
-                if (!doc) return null;
+              <View style={styles.docsCard}>
+                {SLOTS.map((slot, slotIndex) => {
+                  const doc = documents[slot.key];
 
-                const rejected = doc.status === "rejected";
+                  if (!doc) return null;
 
-                const rowInner = (
-                  <>
-                    <View style={styles.docMain}>
-                      <Text style={styles.docLabel}>{slot.label}</Text>
-                      {rejected && doc.rejectionReason ? (
-                        <Text style={styles.docReason}>
-                          Reviewer: {doc.rejectionReason}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.docSide}>
-                      <View
-                        style={[
-                          styles.docPill,
-                          doc.status === "approved" && styles.docPillOk,
-                          doc.status === "pending" && styles.docPillPending,
-                          rejected && styles.docPillBad,
-                        ]}
-                      >
-                        <Text
+                  const rejected = doc.status === "rejected";
+
+                  const rowInner = (
+                    <>
+                      <View style={styles.docMain}>
+                        <Text style={styles.docLabel}>{slot.label}</Text>
+                        {rejected && doc.rejectionReason ? (
+                          <Text style={styles.docReason}>
+                            Reviewer: {doc.rejectionReason}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.docSide}>
+                        <View
                           style={[
-                            styles.docPillText,
-                            doc.status === "approved" && styles.docPillTextOk,
-                            doc.status === "pending" && styles.docPillTextPending,
-                            rejected && styles.docPillTextBad,
+                            styles.docPill,
+                            doc.status === "approved" && styles.docPillOk,
+                            doc.status === "pending" && styles.docPillPending,
+                            rejected && styles.docPillBad,
                           ]}
                         >
-                          {DOC_STATUS_LABELS[doc.status] || doc.status}
-                        </Text>
+                          <Text
+                            style={[
+                              styles.docPillText,
+                              doc.status === "approved" &&
+                                styles.docPillTextOk,
+                              doc.status === "pending" &&
+                                styles.docPillTextPending,
+                              rejected && styles.docPillTextBad,
+                            ]}
+                          >
+                            {DOC_STATUS_LABELS[doc.status] || doc.status}
+                          </Text>
+                        </View>
+                        {rejected ? (
+                          <Text style={styles.docRetake}>Tap to retake</Text>
+                        ) : null}
                       </View>
-                      {rejected ? (
-                        <Text style={styles.docRetake}>Tap to retake</Text>
-                      ) : null}
-                    </View>
-                  </>
-                );
+                    </>
+                  );
 
-                // A rejected document IS the retake entry point — tapping the
-                // row jumps straight into the resubmission form for it.
-                return rejected ? (
-                  <Pressable
-                    key={slot.key}
-                    style={[styles.docRow, slotIndex > 0 && styles.docRowDivided]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Retake ${slot.label}`}
-                    onPress={openResubmitForm}
-                  >
-                    {rowInner}
-                  </Pressable>
-                ) : (
-                  <View
-                    key={slot.key}
-                    style={[styles.docRow, slotIndex > 0 && styles.docRowDivided]}
-                  >
-                    {rowInner}
-                  </View>
-                );
-              })}
-            </View>
+                  return rejected ? (
+                    <Pressable
+                      key={slot.key}
+                      style={[
+                        styles.docRow,
+                        slotIndex > 0 && styles.docRowDivided,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Retake ${slot.label}`}
+                      onPress={openResubmitForm}
+                    >
+                      {rowInner}
+                    </Pressable>
+                  ) : (
+                    <View
+                      key={slot.key}
+                      style={[
+                        styles.docRow,
+                        slotIndex > 0 && styles.docRowDivided,
+                      ]}
+                    >
+                      {rowInner}
+                    </View>
+                  );
+                })}
+              </View>
+            </>
           ) : null}
 
+          {/* ---- Primary CTA ---- */}
           {(kycStatus === "unverified" || kycStatus === "rejected") && (
-            <PrimaryButton
-              label={resubmitMode ? "Retake rejected photos" : "Start verification"}
-              onPress={openResubmitForm}
-            />
+            <View style={styles.ctaBlock}>
+              <PrimaryButton
+                label={
+                  resubmitMode
+                    ? "Retake rejected photos"
+                    : "Start verification"
+                }
+                onPress={openResubmitForm}
+              />
+            </View>
           )}
 
+          {/* ---- Trust strip (verified) ---- */}
           {kycStatus === "verified" ? (
             <View style={styles.trustStrip}>
               <View style={styles.trustIcon}>
-                <TabBarIcon name="star" color={colors.goldDark} size={16} />
+                <TabBarIcon name="star" color={colors.goldDark} size={15} />
               </View>
               <Text style={styles.trustText}>
                 Verified members are 3x more likely to be contacted. Keep your
@@ -720,6 +767,100 @@ export default function VerificationScreen() {
             </View>
           ) : null}
         </ScrollView>
+
+        {/* ---- Appeal sheet (PRD §4.7) ---- */}
+        <Modal
+          visible={appealOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setAppealOpen(false)}
+        >
+          <View style={styles.appealSheetWrap}>
+            <Pressable
+              style={styles.appealSheetBackdrop}
+              onPress={() => setAppealOpen(false)}
+            />
+            <View style={styles.appealSheet}>
+              <View style={styles.appealGrabber} />
+              <Text style={styles.appealSheetTitle}>Appeal this decision</Text>
+              <Text style={styles.appealSheetHint}>
+                Tell the second reviewer why you believe the rejection was a
+                mistake (at least 20 characters). You will get the outcome on
+                this screen and by SMS.
+              </Text>
+              <TextInput
+                style={styles.appealSheetInput}
+                value={appealMsg}
+                onChangeText={setAppealMsg}
+                multiline
+                numberOfLines={4}
+                maxLength={2000}
+                placeholder="e.g. The photo was taken in daylight and every detail of my ID is readable..."
+                placeholderTextColor={colors.textFaint}
+              />
+              <View style={styles.appealSheetActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={[styles.appealSheetBtn, styles.appealSheetBtnGhost]}
+                  onPress={() => setAppealOpen(false)}
+                  disabled={appealBusy}
+                >
+                  <Text style={styles.appealSheetBtnGhostText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  style={[
+                    styles.appealSheetBtn,
+                    (appealBusy || appealMsg.trim().length < 20) &&
+                      styles.appealSheetBtnDisabled,
+                  ]}
+                  onPress={async () => {
+                    const rejectedDoc = SLOTS.map(
+                      (s) => documents[s.key]
+                    ).find((d) => d && d.status === "rejected");
+
+                    if (!rejectedDoc) {
+                      Alert.alert(
+                        "Nothing to appeal",
+                        "No rejected document was found on this account."
+                      );
+                      return;
+                    }
+
+                    setAppealBusy(true);
+                    try {
+                      const d = await fileAppeal({
+                        kind: "kyc_rejection",
+                        targetId: rejectedDoc.id,
+                        message: appealMsg.trim(),
+                      });
+                      setAppealOpen(false);
+                      setAppealMsg("");
+                      Alert.alert(
+                        "Appeal sent",
+                        d.message || "A second reviewer will take a look."
+                      );
+                    } catch (e) {
+                      Alert.alert(
+                        "Could not send",
+                        e?.message || "Try again in a minute."
+                      );
+                    } finally {
+                      setAppealBusy(false);
+                    }
+                  }}
+                  disabled={appealBusy || appealMsg.trim().length < 20}
+                >
+                  {appealBusy ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.appealSheetBtnText}>Send appeal</Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -740,11 +881,41 @@ export default function VerificationScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.subtitle}>
-          {resubmitMode
-            ? "Only the flagged photos need a retake — the approved ones stay as they are. Tap a box to shoot with the guided camera or pick from your gallery."
-            : "Three quick photos. Tap a box to shoot with the guided camera or pick from your gallery — each one is checked by you before it uploads."}
-        </Text>
+        {/* ---- Compact sage info banner ---- */}
+        <View style={styles.heroPanel}>
+          <View style={styles.orb1} />
+          <View style={styles.orb2} />
+
+          <View style={styles.formHeroRow}>
+            <View style={styles.heroIconChip}>
+              <TabBarIcon
+                name={resubmitMode ? "refresh-cw" : "camera"}
+                color={colors.brand}
+                size={20}
+              />
+            </View>
+            <Text style={styles.formHeroTitle}>
+              {resubmitMode
+                ? "Resubmit flagged documents"
+                : "Three quick photos"}
+            </Text>
+          </View>
+
+          <Text style={styles.heroBody}>
+            {resubmitMode
+              ? "Only the flagged photos need a retake — the approved ones stay as they are. Tap a box to shoot with the guided camera or pick from your gallery."
+              : "Tap a box to shoot with the guided camera or pick from your gallery — each one is checked by you before it uploads."}
+          </Text>
+        </View>
+
+        {/* ---- Chapter 01: Photos ---- */}
+        <View style={styles.chapterHead}>
+          <Text style={styles.chapterNum}>01</Text>
+          <View style={styles.chapterMain}>
+            <Text style={styles.chapterEyebrow}>PHOTOS</Text>
+            <Text style={styles.chapterTitle}>Documents needed</Text>
+          </View>
+        </View>
 
         <View style={styles.card}>
           {SLOTS.map((slot) => {
@@ -761,42 +932,64 @@ export default function VerificationScreen() {
                 hint={slot.hint}
                 state={docs[slot.key]}
                 disabled={submitting}
-                onPick={() => chooseSource(slot.key, `kyc_${slot.key}`, slot.label)}
+                onPick={() =>
+                  chooseSource(slot.key, `kyc_${slot.key}`, slot.label)
+                }
               />
             );
           })}
+        </View>
 
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: consent }}
-            onPress={() => setConsent((v) => !v)}
-            style={styles.consentRow}
-            disabled={submitting}
-          >
-            <View style={[styles.consentBox, consent && styles.consentBoxOn]}>
-              {consent ? <TabBarIcon name="check" color={colors.white} size={13} /> : null}
-            </View>
-            <Text style={styles.consentText}>
-              I agree that HelpNest may process my ID photos and selfie for
-              identity verification under the Data Protection Act, 2019. Only
-              HelpNest reviewers can view them — they never appear on my
-              profile or in search.
-            </Text>
-          </Pressable>
+        {/* ---- Chapter 02: Consent ---- */}
+        <View style={styles.chapterHead}>
+          <Text style={styles.chapterNum}>02</Text>
+          <View style={styles.chapterMain}>
+            <Text style={styles.chapterEyebrow}>AGREEMENT</Text>
+            <Text style={styles.chapterTitle}>Data consent</Text>
+          </View>
+        </View>
 
-          {formError ? (
-            <View style={styles.errorBox}>
-              <TabBarIcon
-                name="alert-triangle"
-                color={colors.danger}
-                size={15}
-              />
-              <Text style={styles.errorText}>{formError}</Text>
-            </View>
-          ) : null}
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}
+          onPress={() => setConsent((v) => !v)}
+          style={({ pressed }) => [
+            styles.consentCard,
+            pressed && styles.pressed,
+          ]}
+          disabled={submitting}
+        >
+          <View style={[styles.consentBox, consent && styles.consentBoxOn]}>
+            {consent ? (
+              <TabBarIcon name="check" color={colors.white} size={13} />
+            ) : null}
+          </View>
+          <Text style={styles.consentText}>
+            I agree that HelpNest may process my ID photos and selfie for
+            identity verification under the Data Protection Act, 2019. Only
+            HelpNest reviewers can view them — they never appear on my profile
+            or in search.
+          </Text>
+        </Pressable>
 
+        {/* ---- Error box ---- */}
+        {formError ? (
+          <View style={styles.errorBox}>
+            <TabBarIcon
+              name="alert-triangle"
+              color={colors.danger}
+              size={15}
+            />
+            <Text style={styles.errorText}>{formError}</Text>
+          </View>
+        ) : null}
+
+        {/* ---- CTA ---- */}
+        <View style={styles.ctaBlock}>
           <PrimaryButton
-            label={resubmitMode ? "Resubmit for review" : "Submit for review"}
+            label={
+              resubmitMode ? "Resubmit for review" : "Submit for review"
+            }
             onPress={() => handleSubmit(editableKeys)}
             loading={submitting}
             disabled={!allUploaded}
@@ -816,8 +1009,7 @@ export default function VerificationScreen() {
         </View>
       </ScrollView>
 
-      {/* Appeal sheet (PRD §4.7) — one message is all the second reviewer
-          needs; the target document is filed automatically. */}
+      {/* ---- Appeal sheet ---- */}
       <Modal
         visible={appealOpen}
         transparent
@@ -885,9 +1077,15 @@ export default function VerificationScreen() {
                     });
                     setAppealOpen(false);
                     setAppealMsg("");
-                    Alert.alert("Appeal sent", d.message || "A second reviewer will take a look.");
+                    Alert.alert(
+                      "Appeal sent",
+                      d.message || "A second reviewer will take a look."
+                    );
                   } catch (e) {
-                    Alert.alert("Could not send", e?.message || "Try again in a minute.");
+                    Alert.alert(
+                      "Could not send",
+                      e?.message || "Try again in a minute."
+                    );
                   } finally {
                     setAppealBusy(false);
                   }
@@ -913,212 +1111,238 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  pressed: {
-    opacity: 0.88,
-  },
-  fastTrackCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
-    overflow: "hidden",
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
-  },
-  fastTrackIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.gold, 0.18),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  fastTrackMain: { flex: 1, marginRight: 12 },
-  fastTrackTitle: {
-    color: colors.ink,
-    fontSize: 15.5,
-    fontWeight: "800",
-  },
-  fastTrackText: {
-    color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: 3,
-  },
-  pricePill: {
-    backgroundColor: withAlpha(colors.gold, 0.16),
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  fastTrackPrice: {
-    color: colors.goldDark,
-    fontSize: 12.5,
-    fontWeight: "800",
-  },
-  appealCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
-    overflow: "hidden",
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
-  },
-  appealIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.danger, 0.1),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  appealArrow: {
-    color: colors.textFaint,
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  appealSheetWrap: { flex: 1, justifyContent: "flex-end" },
-  appealSheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: withAlpha(colors.ink, 0.45),
-  },
-  appealSheet: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  appealGrabber: {
-    alignSelf: "center",
-    width: 44,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: colors.cloud,
-    marginBottom: 16,
-  },
-  appealSheetTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-  },
-  appealSheetHint: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  appealSheetInput: {
-    borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 16,
-    backgroundColor: colors.cream,
-    padding: 14,
-    minHeight: 100,
-    textAlignVertical: "top",
-    color: colors.ink,
-    fontSize: 14,
-  },
-  appealSheetActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 14,
-  },
-  appealSheetBtn: {
-    backgroundColor: colors.brand,
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 13,
-    minHeight: 48,
-    minWidth: 110,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  appealSheetBtnText: { color: colors.white, fontWeight: "800", fontSize: 14 },
-  appealSheetBtnGhost: { backgroundColor: colors.mist },
-  appealSheetBtnGhostText: { color: colors.ink, fontWeight: "700", fontSize: 14 },
-  appealSheetBtnDisabled: { opacity: 0.45 },
   center: {
     alignItems: "center",
     justifyContent: "center",
   },
+  pressed: {
+    opacity: 0.88,
+  },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 48,
   },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
+
+  /* ============================================================
+     Sage hero panel — status / info banner.
+     ============================================================ */
+  heroPanel: {
+    backgroundColor: colors.mist,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 22,
     marginBottom: 18,
+    overflow: "hidden",
   },
-  /* ---- Status card ("You're verified" / "Under review" / ...) ----
-     statusShadow owns the elevation on an OPAQUE white fill; statusCard
-     keeps the translucent theme.bg + alpha border elevation-free so the
-     border renders at its true 1px and no dark silhouette bleeds through
-     the tint (Android draws elevation through translucent fills). */
-  statusShadow: {
-    borderRadius: 20,
-    marginBottom: 16,
-    backgroundColor: colors.white,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+  orb1: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: withAlpha(colors.brand, 0.09),
+    top: -110,
+    right: -70,
   },
-  statusCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 20,
+  orb2: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    bottom: -60,
+    left: -50,
   },
-  statusHead: {
+  heroTopRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 12,
+  },
+  heroIconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  heroStatusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  heroStatusPillText: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+  },
+  heroTitle: {
+    color: colors.ink,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    lineHeight: 28,
     marginBottom: 8,
   },
-  statusTitle: {
-    fontSize: 17.5,
+  heroBody: {
+    color: colors.textMuted,
+    fontSize: 13.5,
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+
+  formHeroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  formHeroTitle: {
+    color: colors.ink,
+    fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.3,
-    marginLeft: 10,
+    flex: 1,
   },
-  statusBody: {
-    fontSize: 14,
-    lineHeight: 21,
+
+  loadErrorBox: {
+    marginBottom: 14,
   },
-  contactCard: {
-    backgroundColor: colors.white,
-    borderColor: colors.mist,
+
+  /* ============================================================
+     Insight promos — fast-track (gold) & appeal (danger).
+     ============================================================ */
+  promoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 18,
+    overflow: "hidden",
+    gap: 12,
   },
-  contactTitle: {
+  promoGold: {
+    backgroundColor: withAlpha(colors.gold, 0.08),
+    borderColor: withAlpha(colors.gold, 0.28),
+  },
+  promoDanger: {
+    backgroundColor: withAlpha(colors.danger, 0.05),
+    borderColor: withAlpha(colors.danger, 0.22),
+  },
+  promoIconGold: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.gold, 0.2),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoIconDanger: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.danger, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoMain: {
+    flex: 1,
+  },
+  promoTitle: {
     color: colors.ink,
+    fontSize: 14.5,
+    fontWeight: "800",
+    letterSpacing: -0.2,
   },
+  promoBody: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "500",
+    marginTop: 3,
+  },
+  promoPricePill: {
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  promoPriceText: {
+    color: colors.ink,
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
+
+  /* ============================================================
+     Chapter heads.
+     ============================================================ */
+  chapterHead: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  chapterNum: {
+    color: colors.cloud,
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -1,
+    width: 44,
+    lineHeight: 32,
+  },
+  chapterMain: {
+    flex: 1,
+    paddingBottom: 2,
+  },
+  chapterEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.3,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  chapterTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+
+  /* ============================================================
+     Cards.
+     ============================================================ */
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.05),
+    padding: 16,
+    marginBottom: 22,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+
   contactRow: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 40,
+    minHeight: 36,
     paddingVertical: 6,
   },
   contactDot: {
@@ -1135,26 +1359,27 @@ const styles = StyleSheet.create({
   },
   contactText: {
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "600",
     flex: 1,
   },
   contactActionText: {
     color: colors.brand,
-    fontWeight: "700",
-    textDecorationLine: "underline",
+    fontWeight: "800",
   },
+
+  /* ---- Documents list ---- */
   docsCard: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.mist,
+    borderColor: withAlpha(colors.ink, 0.05),
     padding: 6,
-    marginBottom: 14,
+    marginBottom: 18,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   docRow: {
@@ -1167,7 +1392,7 @@ const styles = StyleSheet.create({
   },
   docRowDivided: {
     borderTopWidth: 1,
-    borderTopColor: colors.mist,
+    borderTopColor: withAlpha(colors.ink, 0.06),
   },
   docMain: {
     flex: 1,
@@ -1219,65 +1444,59 @@ const styles = StyleSheet.create({
   },
   docRetake: {
     color: colors.brand,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: "800",
+    letterSpacing: 0.1,
   },
+
+  /* ---- CTA block ---- */
+  ctaBlock: {
+    marginTop: 4,
+  },
+
+  /* ---- Trust strip ---- */
   trustStrip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: withAlpha(colors.brand, 0.05),
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.mist,
     padding: 14,
     marginTop: 4,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    gap: 10,
   },
   trustIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: withAlpha(colors.gold, 0.18),
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    backgroundColor: withAlpha(colors.gold, 0.2),
     alignItems: "center",
     justifyContent: "center",
   },
   trustText: {
     flex: 1,
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginLeft: 12,
+    color: colors.brand,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: "600",
   },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 18,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
-  },
+
+  /* ============================================================
+     Doc slots (form view).
+     ============================================================ */
   slot: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   slotLocked: {
     opacity: 0.92,
   },
   slotPress: {
-    width: 84,
-    height: 84,
+    width: 80,
+    height: 80,
   },
   slotLockedThumb: {
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
@@ -1287,25 +1506,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   slotThumb: {
-    width: 84,
-    height: 84,
-    borderRadius: 18,
+    width: 80,
+    height: 80,
+    borderRadius: 16,
     backgroundColor: colors.mist,
   },
   slotEmpty: {
-    width: 84,
-    height: 84,
-    borderRadius: 18,
+    width: 80,
+    height: 80,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.mistDark,
-    backgroundColor: colors.cream,
+    backgroundColor: withAlpha(colors.brand, 0.03),
     alignItems: "center",
     justifyContent: "center",
   },
   slotPlus: {
     color: colors.textFaint,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "400",
     marginTop: -4,
   },
@@ -1347,15 +1566,24 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontWeight: "600",
   },
-  consentRow: {
+
+  /* ============================================================
+     Consent card.
+     ============================================================ */
+  consentCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: colors.cream,
-    borderRadius: 16,
+    backgroundColor: colors.white,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 14,
+    borderColor: withAlpha(colors.ink, 0.05),
+    padding: 16,
     marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   consentBox: {
     width: 22,
@@ -1366,7 +1594,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 11,
+    marginRight: 12,
     marginTop: 1,
   },
   consentBoxOn: {
@@ -1380,6 +1608,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "600",
   },
+
+  /* ---- Error box ---- */
   errorBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1398,10 +1628,85 @@ const styles = StyleSheet.create({
   backLink: {
     alignItems: "center",
     paddingVertical: 12,
+    marginTop: 4,
   },
   backLinkText: {
     color: colors.brand,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "800",
   },
+
+  /* ============================================================
+     Appeal sheet.
+     ============================================================ */
+  appealSheetWrap: { flex: 1, justifyContent: "flex-end" },
+  appealSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: withAlpha(colors.ink, 0.45),
+  },
+  appealSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  appealGrabber: {
+    alignSelf: "center",
+    width: 44,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.cloud,
+    marginBottom: 16,
+  },
+  appealSheetTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  appealSheetHint: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+    marginBottom: 14,
+  },
+  appealSheetInput: {
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.08),
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.ink, 0.04),
+    padding: 14,
+    minHeight: 100,
+    textAlignVertical: "top",
+    color: colors.ink,
+    fontSize: 14,
+  },
+  appealSheetActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 14,
+  },
+  appealSheetBtn: {
+    backgroundColor: colors.brand,
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    minHeight: 48,
+    minWidth: 110,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  appealSheetBtnText: { color: colors.white, fontWeight: "800", fontSize: 14 },
+  appealSheetBtnGhost: {
+    backgroundColor: withAlpha(colors.ink, 0.06),
+  },
+  appealSheetBtnGhostText: {
+    color: colors.ink,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  appealSheetBtnDisabled: { opacity: 0.45 },
 });

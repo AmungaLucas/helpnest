@@ -129,60 +129,132 @@ export default function PaymentHubScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.subtitle}>
-          Pay via M-Pesa STK push — the request goes straight to your phone.
-        </Text>
+        {/* =====================================================
+            Sage hero — compact, with M-Pesa badge.
+            ===================================================== */}
+        <View style={styles.heroPanel}>
+          <View style={styles.orb1} />
+          <View style={styles.orb2} />
+
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIconChip}>
+              <TabBarIcon
+                name="credit-card"
+                color={colors.brand}
+                size={20}
+              />
+            </View>
+            <View style={styles.mpesaBadge}>
+              <View style={styles.mpesaDot} />
+              <Text style={styles.mpesaBadgeText}>M-PESA · STK</Text>
+            </View>
+          </View>
+
+          <Text style={styles.heroTitle}>Wallet & payments</Text>
+          <Text style={styles.heroBody}>
+            Tap a plan below and the request goes straight to your phone as an
+            M-Pesa STK push. No card numbers, no PINs typed here.
+          </Text>
+        </View>
+
+        {/* =====================================================
+            Chapter 01 — PAY: available plans.
+            ===================================================== */}
+        <View style={styles.chapterHead}>
+          <Text style={styles.chapterNum}>01</Text>
+          <View style={styles.chapterMain}>
+            <Text style={styles.chapterEyebrow}>PAY</Text>
+            <Text style={styles.chapterTitle}>Available plans</Text>
+          </View>
+        </View>
 
         {plans.map((plan) => (
-          <View
-            key={plan.id}
-            style={[styles.planCard, plan.highlight && styles.planCardHighlight]}
-          >
-            <View style={styles.planHead}>
-              <View
-                style={[
-                  styles.planIcon,
-                  plan.highlight && styles.planIconGold,
-                ]}
-              >
-                <TabBarIcon
-                  name={plan.icon}
-                  color={plan.highlight ? colors.goldDark : colors.brand}
-                  size={20}
-                />
-              </View>
-              <Text style={styles.planLabel}>{plan.label}</Text>
-              <Text style={styles.planAmount}>KES {plan.amountKes}</Text>
-            </View>
-            <Text style={styles.planBlurb}>{plan.blurb}</Text>
-
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.planButton,
-                plan.highlight && styles.planButtonPrimary,
-                pressed && styles.pressed,
+          <View key={plan.id} style={styles.planCard}>
+            <View
+              style={[
+                styles.planAccent,
+                plan.highlight && styles.planAccentGold,
               ]}
-              onPress={() =>
-                navigation.navigate("MpesaCheckout", {
-                  plan: plan.id,
-                  label: plan.label,
-                })
-              }
-              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-            >
-              <Text
-                style={[
-                  styles.planButtonText,
-                  plan.highlight && styles.planButtonTextPrimary,
+            />
+            <View style={styles.planBody}>
+              <View style={styles.planHeadRow}>
+                <View
+                  style={[
+                    styles.planIcon,
+                    plan.highlight && styles.planIconGold,
+                  ]}
+                >
+                  <TabBarIcon
+                    name={plan.icon}
+                    color={plan.highlight ? colors.goldDark : colors.brand}
+                    size={18}
+                  />
+                </View>
+                <View style={styles.planTitleBlock}>
+                  <Text style={styles.planLabel} numberOfLines={1}>
+                    {plan.label}
+                  </Text>
+                  <Text style={styles.planAmount}>
+                    KES {plan.amountKes}
+                  </Text>
+                </View>
+                {plan.highlight ? (
+                  <View style={styles.planPill}>
+                    <Text style={styles.planPillText}>TEST</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text style={styles.planBlurb}>{plan.blurb}</Text>
+
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.planCta,
+                  plan.highlight && styles.planCtaGold,
+                  pressed && styles.pressed,
                 ]}
+                onPress={() =>
+                  navigation.navigate("MpesaCheckout", {
+                    plan: plan.id,
+                    label: plan.label,
+                  })
+                }
+                android_ripple={{
+                  color: plan.highlight
+                    ? withAlpha(colors.ink, 0.08)
+                    : withAlpha(colors.white, 0.14),
+                }}
               >
-                {plan.cta}
-              </Text>
-            </Pressable>
+                <Text
+                  style={[
+                    styles.planCtaText,
+                    plan.highlight && styles.planCtaTextGold,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {plan.cta}
+                </Text>
+                <View
+                  style={[
+                    styles.planCtaArrow,
+                    plan.highlight && styles.planCtaArrowGold,
+                  ]}
+                >
+                  <TabBarIcon
+                    name="arrow-right"
+                    color={plan.highlight ? colors.ink : colors.white}
+                    size={13}
+                  />
+                </View>
+              </Pressable>
+            </View>
           </View>
         ))}
 
+        {/* =====================================================
+            Chapter 02 — STATEMENT: purchases & refunds.
+            ===================================================== */}
         <PurchasesCard
           history={history}
           onRefresh={loadHistory}
@@ -206,13 +278,17 @@ export default function PaymentHubScreen() {
         onRequestClose={() => setRefundFor(null)}
       >
         <View style={styles.refundSheetWrap}>
-          <Pressable style={styles.refundSheetBackdrop} onPress={() => setRefundFor(null)} />
+          <Pressable
+            style={styles.refundSheetBackdrop}
+            onPress={() => setRefundFor(null)}
+          />
           <View style={styles.refundSheet}>
             <View style={styles.refundGrabber} />
             <Text style={styles.refundSheetTitle}>Request a refund</Text>
             {refundFor ? (
               <Text style={styles.refundSheetSub}>
-                {refundFor.planLabel || refundFor.plan} · KES {refundFor.amountKes}
+                {refundFor.planLabel || refundFor.plan} · KES{" "}
+                {refundFor.amountKes}
               </Text>
             ) : null}
             <Text style={styles.refundSheetHint}>
@@ -273,14 +349,12 @@ function PurchasesCard({ history, onRefresh, onRequestRefund }) {
   if (!history || history.length === 0) return null;
 
   return (
-    <View style={[styles.planCard, styles.purchasesCard]}>
-      <View style={styles.planHead}>
-        <View style={styles.planIcon}>
-          <TabBarIcon name="file-text" color={colors.brand} size={20} />
-        </View>
-        <View style={styles.purchasesMain}>
-          <Text style={styles.purchasesEyebrow}>Purchases</Text>
-          <Text style={styles.purchasesTitle}>Purchases & refunds</Text>
+    <>
+      <View style={styles.chapterHead}>
+        <Text style={styles.chapterNum}>02</Text>
+        <View style={styles.chapterMain}>
+          <Text style={styles.chapterEyebrow}>STATEMENT</Text>
+          <Text style={styles.chapterTitle}>Purchases & refunds</Text>
         </View>
         <Pressable
           onPress={onRefresh}
@@ -290,47 +364,73 @@ function PurchasesCard({ history, onRefresh, onRequestRefund }) {
             pressed && styles.pressed,
           ]}
         >
+          <TabBarIcon name="refresh-cw" color={colors.brand} size={11} />
           <Text style={styles.refreshText}>Refresh</Text>
         </Pressable>
       </View>
 
-      {history.slice(0, 8).map((t) => {
-        const refundLabel = REFUND_LABEL[t.refundStatus || "none"];
-        return (
-          <View key={t.id} style={styles.purchaseRow}>
-            <View style={styles.purchaseMain}>
-              <Text style={styles.purchaseTitle} numberOfLines={1}>
-                {t.planLabel || t.plan} · KES {t.amountKes}
-              </Text>
-              <Text style={styles.purchaseSub} numberOfLines={1}>
-                {t.status === "success"
-                  ? `Paid · ${t.unitsGranted > 0 ? `${t.unitsGranted} credit${t.unitsGranted === 1 ? "" : "s"}` : "recorded"}`
-                  : t.status === "pending"
-                    ? "Awaiting payment"
-                    : t.status === "timeout"
-                      ? "Outcome unknown"
-                      : "Payment failed"}
-                {refundLabel ? ` · ${refundLabel}` : ""}
-              </Text>
-            </View>
-            {t.status === "success" &&
-              (t.refundStatus || "none") === "none" ? (
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.refundBtn,
-                  pressed && styles.pressed,
+      <View style={styles.statementCard}>
+        {history.slice(0, 8).map((t) => {
+          const refundLabel = REFUND_LABEL[t.refundStatus || "none"];
+          const success = t.status === "success";
+          const failed = t.status === "failed";
+          const pending =
+            t.status === "pending" || t.status === "timeout";
+          const canRefund = success && (t.refundStatus || "none") === "none";
+
+          const sub =
+            success
+              ? `Paid · ${t.unitsGranted > 0 ? `${t.unitsGranted} credit${t.unitsGranted === 1 ? "" : "s"}` : "recorded"}`
+              : pending
+              ? t.status === "timeout"
+                ? "Outcome unknown"
+                : "Awaiting payment"
+              : "Payment failed";
+
+          return (
+            <View key={t.id} style={styles.statementRow}>
+              <View
+                style={[
+                  styles.statementDot,
+                  success && styles.statementDotOk,
+                  pending && styles.statementDotPending,
+                  failed && styles.statementDotFail,
                 ]}
-                onPress={() => onRequestRefund(t)}
-                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-              >
-                <Text style={styles.refundBtnText}>Get help</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        );
-      })}
-    </View>
+              />
+              <View style={styles.statementMain}>
+                <Text style={styles.statementTitle} numberOfLines={1}>
+                  {t.planLabel || t.plan}
+                </Text>
+                <Text style={styles.statementSub} numberOfLines={1}>
+                  {sub}
+                  {refundLabel ? ` · ${refundLabel}` : ""}
+                </Text>
+              </View>
+              <View style={styles.statementRight}>
+                <Text style={styles.statementAmount}>
+                  KES {t.amountKes}
+                </Text>
+                {canRefund ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.helpLink,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => onRequestRefund(t)}
+                    android_ripple={{
+                      color: withAlpha(colors.brand, 0.08),
+                    }}
+                  >
+                    <Text style={styles.helpLinkText}>Get help</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </>
   );
 }
 
@@ -342,156 +442,356 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 2,
-    paddingBottom: 28,
+    paddingBottom: 32,
   },
   pressed: {
     opacity: 0.88,
   },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
+
+  /* ============================================================
+     Sage hero — compact with M-Pesa badge.
+     ============================================================ */
+  heroPanel: {
+    backgroundColor: colors.mist,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 20,
     marginBottom: 20,
+    overflow: "hidden",
   },
-  planCard: {
+  orb1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: withAlpha(colors.brand, 0.09),
+    top: -100,
+    right: -60,
+  },
+  orb2: {
+    position: "absolute",
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    bottom: -50,
+    left: -50,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  heroIconChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     backgroundColor: colors.white,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 20,
-    marginBottom: 16,
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
-  planCardHighlight: {
-    borderColor: withAlpha(colors.gold, 0.55),
+  mpesaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.white,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.06),
   },
-  planHead: {
+  mpesaDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.brandSoft,
+  },
+  mpesaBadgeText: {
+    color: colors.ink,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+  },
+  heroTitle: {
+    color: colors.ink,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    lineHeight: 28,
+    marginBottom: 6,
+  },
+  heroBody: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "500",
+  },
+
+  /* ============================================================
+     Chapter heads.
+     ============================================================ */
+  chapterHead: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  chapterNum: {
+    color: colors.cloud,
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -1,
+    width: 44,
+    lineHeight: 32,
+  },
+  chapterMain: {
+    flex: 1,
+    paddingBottom: 2,
+  },
+  chapterEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.3,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  chapterTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+
+  /* ============================================================
+     Plan cards — bookmark-ribbon accent bar on the left.
+     ============================================================ */
+  planCard: {
+    flexDirection: "row",
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    overflow: "hidden",
+    marginBottom: 12,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  planAccent: {
+    width: 3,
+    backgroundColor: colors.brand,
+  },
+  planAccentGold: {
+    backgroundColor: colors.gold,
+  },
+  planBody: {
+    flex: 1,
+    padding: 16,
+  },
+  planHeadRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
+    gap: 10,
   },
   planIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     backgroundColor: withAlpha(colors.brand, 0.1),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
   planIconGold: {
     backgroundColor: withAlpha(colors.gold, 0.18),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.gold, 0.45),
+  },
+  planTitleBlock: {
+    flex: 1,
   },
   planLabel: {
     color: colors.ink,
-    fontSize: 17.5,
-    fontWeight: "800",
-    flex: 1,
-    marginRight: 10,
-  },
-  planAmount: {
-    color: colors.brand,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  planBlurb: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 16,
-  },
-  planButton: {
-    borderWidth: 1,
-    borderColor: colors.brand,
-    borderRadius: 14,
-    minHeight: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    overflow: "hidden",
-  },
-  planButtonPrimary: {
-    backgroundColor: colors.brand,
-  },
-  planButtonText: {
-    color: colors.brand,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  planButtonTextPrimary: {
-    color: colors.white,
-  },
-  purchasesCard: {
-    marginTop: 8,
-  },
-  purchasesMain: {
-    flex: 1,
-    marginRight: 10,
-  },
-  purchasesEyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  purchasesTitle: {
-    color: colors.ink,
-    fontSize: 17.5,
+    fontSize: 14.5,
     fontWeight: "800",
     letterSpacing: -0.2,
   },
-  refreshBtn: {
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    overflow: "hidden",
+  planAmount: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 2,
+    letterSpacing: 0.1,
   },
-  refreshText: {
-    color: colors.brand,
-    fontSize: 11.5,
+  planPill: {
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  planPillText: {
+    color: colors.goldDark,
+    fontSize: 9,
     fontWeight: "800",
+    letterSpacing: 0.8,
   },
-  purchaseRow: {
+  planBlurb: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: "500",
+    marginBottom: 14,
+  },
+
+  /* ---- Plan CTA ---- */
+  planCta: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
-    paddingVertical: 9,
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    minHeight: 44,
+    paddingLeft: 14,
+    paddingRight: 5,
+    paddingVertical: 5,
+    overflow: "hidden",
   },
-  purchaseMain: {
+  planCtaGold: {
+    backgroundColor: colors.gold,
+  },
+  planCtaText: {
     flex: 1,
-    marginRight: 10,
+    color: colors.white,
+    fontSize: 13.5,
+    fontWeight: "800",
+    letterSpacing: -0.1,
   },
-  purchaseTitle: {
+  planCtaTextGold: {
+    color: colors.ink,
+  },
+  planCtaArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: withAlpha(colors.white, 0.16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planCtaArrowGold: {
+    backgroundColor: withAlpha(colors.ink, 0.12),
+  },
+
+  /* ============================================================
+     Statement card — bank-statement layout with status dots.
+     ============================================================ */
+  statementCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.05),
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  statementRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(colors.ink, 0.05),
+  },
+  statementRow_first: {
+    borderTopWidth: 0,
+  },
+  statementDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.mistDark,
+  },
+  statementDotOk: {
+    backgroundColor: colors.brandSoft,
+  },
+  statementDotPending: {
+    backgroundColor: colors.gold,
+  },
+  statementDotFail: {
+    backgroundColor: colors.danger,
+  },
+  statementMain: {
+    flex: 1,
+  },
+  statementTitle: {
     color: colors.ink,
     fontSize: 13.5,
     fontWeight: "700",
+    letterSpacing: -0.1,
   },
-  purchaseSub: {
+  statementSub: {
     color: colors.textMuted,
     fontSize: 11.5,
-    marginTop: 3,
+    fontWeight: "500",
+    marginTop: 2,
   },
-  refundBtn: {
+  statementRight: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  statementAmount: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  helpLink: {
     backgroundColor: withAlpha(colors.gold, 0.16),
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     overflow: "hidden",
   },
-  refundBtnText: {
+  helpLinkText: {
     color: colors.goldDark,
-    fontSize: 11.5,
+    fontSize: 10,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
+
+  refreshBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  refreshText: {
+    color: colors.brand,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+
+  /* ============================================================
+     Refund sheet.
+     ============================================================ */
   refundSheetWrap: {
     flex: 1,
     justifyContent: "flex-end",
@@ -517,15 +817,16 @@ const styles = StyleSheet.create({
   },
   refundSheetTitle: {
     color: colors.ink,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
   refundSheetSub: {
     color: colors.brand,
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: "700",
     marginTop: 4,
+    letterSpacing: 0.1,
   },
   refundSheetHint: {
     color: colors.textMuted,
@@ -536,9 +837,9 @@ const styles = StyleSheet.create({
   },
   refundSheetInput: {
     borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 16,
-    backgroundColor: colors.cream,
+    borderColor: withAlpha(colors.ink, 0.08),
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.ink, 0.04),
     padding: 14,
     minHeight: 90,
     textAlignVertical: "top",
@@ -563,10 +864,10 @@ const styles = StyleSheet.create({
   refundSheetBtnText: {
     color: colors.white,
     fontWeight: "800",
-    fontSize: 15,
+    fontSize: 14,
   },
   refundSheetBtnGhost: {
-    backgroundColor: colors.mist,
+    backgroundColor: withAlpha(colors.ink, 0.06),
   },
   refundSheetBtnGhostText: {
     color: colors.ink,
@@ -578,9 +879,10 @@ const styles = StyleSheet.create({
   },
   footnote: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 6,
+    lineHeight: 16,
   },
 });
