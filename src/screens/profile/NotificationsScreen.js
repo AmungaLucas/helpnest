@@ -13,7 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 
 import HamburgerButton from "../../components/ui/HamburgerButton";
-import { colors } from "../../theme/colors";
+import TabBarIcon from "../../components/ui/TabBarIcon";
+import { colors, withAlpha } from "../../theme/colors";
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -22,6 +23,7 @@ import {
 
 // Notifications feed (PRD §17). Simple, readable, low-chrome: unread rows
 // carry a dot and bold title; opening the screen marks items read.
+// Icon names are limited to the Feather set drawn by TabBarIcon.
 const KIND_ICONS = {
   "kyc.approved": "shield",
   "kyc.rejected": "alert-triangle",
@@ -29,14 +31,14 @@ const KIND_ICONS = {
   "payment.failed": "alert-triangle",
   "refund.approved": "check-circle",
   "refund.completed": "check-circle",
-  "refund.rejected": "x-circle",
-  "application.received": "briefcase",
+  "refund.rejected": "x",
+  "application.received": "work",
   "application.shortlisted": "star",
   "application.accepted": "check-circle",
-  "application.rejected": "x-circle",
-  "job.published": "briefcase",
+  "application.rejected": "x",
+  "job.published": "work",
   "promotion.active": "zap",
-  "chat.limit": "message-square",
+  "chat.limit": "message-circle",
   "appeal.decided": "shield",
   "account.restricted": "alert-triangle",
   "account.suspended": "alert-triangle",
@@ -127,7 +129,13 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.brand}
+            colors={[colors.brand]}
+            progressBackgroundColor={colors.white}
+          />
         }
       >
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -140,6 +148,9 @@ export default function NotificationsScreen() {
           />
         ) : feed.length === 0 ? (
           <View style={styles.empty}>
+            <View style={styles.emptyBadge}>
+              <TabBarIcon name="bell" color={colors.brand} size={26} />
+            </View>
             <Text style={styles.emptyTitle}>Nothing yet</Text>
             <Text style={styles.emptyBody}>
               Updates about your verification, payments, applications and
@@ -157,16 +168,26 @@ export default function NotificationsScreen() {
                 pressed && styles.rowPressed,
               ]}
               onPress={() => tapItem(n)}
+              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             >
-              <View style={styles.rowHead}>
-                {!n.read ? <View style={styles.dot} /> : null}
-                <Text
-                  style={[styles.rowTitle, !n.read && styles.rowTitleUnread]}
-                  numberOfLines={2}
-                >
-                  {n.title}
-                </Text>
-                <Text style={styles.rowTime}>{timeLabel(n.createdAt)}</Text>
+              <View style={styles.rowTop}>
+                <View style={[styles.rowIcon, !n.read && styles.rowIconUnread]}>
+                  <TabBarIcon
+                    name={KIND_ICONS[n.kind] || "bell"}
+                    color={!n.read ? colors.brand : colors.textFaint}
+                    size={18}
+                  />
+                </View>
+                <View style={styles.rowHead}>
+                  {!n.read ? <View style={styles.dot} /> : null}
+                  <Text
+                    style={[styles.rowTitle, !n.read && styles.rowTitleUnread]}
+                    numberOfLines={2}
+                  >
+                    {n.title}
+                  </Text>
+                  <Text style={styles.rowTime}>{timeLabel(n.createdAt)}</Text>
+                </View>
               </View>
               {n.body ? (
                 <Text style={styles.rowBody} numberOfLines={4}>
@@ -183,24 +204,46 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
-  menuRow: { paddingHorizontal: 14, paddingTop: 6 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { color: colors.ink, fontSize: 24, fontWeight: "800" },
+  menuRow: { paddingHorizontal: 20, paddingTop: 6 },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  title: {
+    color: colors.ink,
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: "600",
-    marginTop: 3,
+    marginTop: 4,
   },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40, gap: 10 },
-  error: { color: colors.danger, fontSize: 13, fontWeight: "600" },
+  content: { paddingHorizontal: 20, paddingBottom: 40, gap: 12 },
+  error: { color: colors.danger, fontSize: 13.5, fontWeight: "600" },
   empty: { alignItems: "center", marginTop: 60, paddingHorizontal: 30 },
-  emptyTitle: { color: colors.ink, fontSize: 16, fontWeight: "800" },
+  emptyBadge: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: "800",
+  },
   emptyBody: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 13.5,
+    lineHeight: 20,
     textAlign: "center",
     marginTop: 6,
   },
@@ -208,12 +251,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
+    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   rowUnread: { borderColor: colors.brand, borderWidth: 1.2 },
-  rowPressed: { opacity: 0.85 },
+  rowPressed: { opacity: 0.88 },
+  rowTop: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  rowIconUnread: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
   rowHead: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
@@ -227,15 +293,15 @@ const styles = StyleSheet.create({
   rowTitle: {
     flex: 1,
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "600",
   },
   rowTitleUnread: { fontWeight: "800" },
-  rowTime: { color: colors.textFaint, fontSize: 10.5, fontWeight: "600" },
+  rowTime: { color: colors.textFaint, fontSize: 11, fontWeight: "600" },
   rowBody: {
     color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 17.5,
-    marginTop: 5,
+    fontSize: 13,
+    lineHeight: 18.5,
+    marginTop: 8,
   },
 });

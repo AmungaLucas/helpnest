@@ -1,5 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../context/AuthContext";
 import EmployerHomeScreen from "../screens/home/EmployerHomeScreen";
@@ -19,13 +20,9 @@ const TAB_BAR_OPTIONS = {
   headerShown: false,
   tabBarActiveTintColor: colors.brand,
   tabBarInactiveTintColor: colors.textMuted,
-  tabBarStyle: {
-    backgroundColor: colors.white,
-    borderTopColor: colors.mist,
-  },
   tabBarLabelStyle: {
-    fontSize: 10.5,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "800",
   },
 };
 
@@ -45,9 +42,27 @@ const icon = (name) => ({ focused, color }) => (
 export default function MainTabs() {
   const { user } = useAuth();
   const isEmployer = user?.role !== "maid";
+  const insets = useSafeAreaInsets();
+
+  // Modern v2 tab bar: slightly taller than UIKit default, hairline mist
+  // border and a soft upward lift. Height is explicit so the safe-area
+  // inset (edge-to-edge Android gesture bar) is preserved via paddingBottom.
+  const tabBarStyle = {
+    backgroundColor: colors.white,
+    borderTopColor: colors.mist,
+    borderTopWidth: 1,
+    height: 58 + insets.bottom,
+    paddingTop: 8,
+    paddingBottom: insets.bottom + 8,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 2,
+  };
 
   return (
-    <Tab.Navigator screenOptions={TAB_BAR_OPTIONS}>
+    <Tab.Navigator screenOptions={{ ...TAB_BAR_OPTIONS, tabBarStyle }}>
       <Tab.Screen
         name="HomeTab"
         component={isEmployer ? EmployerHomeScreen : MaidHomeScreen}

@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 12,
     gap: 12,
@@ -420,8 +420,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.ink,
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: colors.textMuted,
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     marginBottom: 6,
     textAlign: "center",
@@ -488,7 +489,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
     textAlign: "center",
@@ -501,25 +502,30 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   listError: {
-    color: "#B3403A",
+    color: colors.danger,
     fontSize: 12.5,
     marginBottom: 10,
   },
   list: {
-    padding: 22,
+    padding: 20,
     paddingTop: 4,
     paddingBottom: 40,
   },
   jobCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
     marginBottom: 12,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   cardPressed: {
-    opacity: 0.92,
+    opacity: 0.88,
   },
   footerInfo: {
     flex: 1,
@@ -548,9 +554,9 @@ const styles = StyleSheet.create({
   jobTitle: {
     flex: 1,
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
-    lineHeight: 20,
+    lineHeight: 21,
   },
   statusPill: {
     borderRadius: 999,
@@ -633,12 +639,12 @@ const styles = StyleSheet.create({
   boostSheetWrap: { flex: 1, justifyContent: "flex-end" },
   boostSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(38, 49, 43, 0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
   },
   boostSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: 30,
     gap: 10,
@@ -720,6 +726,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   pressed: {
-    opacity: 0.9,
+    opacity: 0.88,
   },
 });

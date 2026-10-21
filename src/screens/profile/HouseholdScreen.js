@@ -14,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
 import HamburgerButton from "../../components/ui/HamburgerButton";
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import {
   getMyEmployerProfile,
   updateMyEmployerProfile,
@@ -123,6 +124,7 @@ export default function HouseholdScreen() {
             <HamburgerButton />
           </View>
 
+          <Text style={styles.eyebrow}>Your home</Text>
           <Text style={styles.title}>Household details</Text>
           <Text style={styles.subtitle}>
             This helps maids know what to expect in your home before they
@@ -176,6 +178,7 @@ export default function HouseholdScreen() {
 
             {saved ? (
               <View style={styles.savedBox}>
+                <TabBarIcon name="check" color={colors.brand} size={14} />
                 <Text style={styles.savedText}>Details saved</Text>
               </View>
             ) : null}
@@ -205,24 +208,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scroll: {
-    padding: 22,
-    paddingBottom: 60,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 48,
   },
   menuRow: {
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
-    marginTop: 4,
-    marginBottom: 16,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+    marginBottom: 20,
   },
   card: {
     backgroundColor: colors.white,
@@ -230,6 +242,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   row: {
     flexDirection: "row",
@@ -240,19 +257,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   errorBox: {
-    backgroundColor: "#FFF0EE",
-    borderRadius: 12,
+    backgroundColor: withAlpha(colors.danger, 0.07),
+    borderRadius: 14,
     padding: 12,
     marginBottom: 14,
   },
   errorText: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
   },
   savedBox: {
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    borderRadius: 14,
     padding: 12,
     marginBottom: 14,
   },
@@ -260,6 +281,5 @@ const styles = StyleSheet.create({
     color: colors.brand,
     fontSize: 13,
     fontWeight: "800",
-    textAlign: "center",
   },
 });

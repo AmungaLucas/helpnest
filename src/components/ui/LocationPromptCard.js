@@ -92,18 +92,23 @@ export default function LocationPromptCard() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
     marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   textWrap: {
     marginBottom: 12,
   },
   title: {
     color: colors.ink,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
     marginBottom: 4,
   },
@@ -114,8 +119,8 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
+    borderRadius: 14,
+    minHeight: 46,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
 import HamburgerButton from "../../components/ui/HamburgerButton";
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Subscription & payments hub for employers (PRD §7/§11). Real plan
@@ -17,6 +18,7 @@ const PLANS = [
     blurb:
       "One-shilling end-to-end check of the STK flow — nothing is billed to anyone when testing.",
     cta: "Send test STK push",
+    icon: "zap",
     highlight: true,
   },
   {
@@ -26,6 +28,7 @@ const PLANS = [
     blurb:
       "Reveal a worker's phone number to arrange interviews directly. One unlock reveals contacts across HelpNest while this MVP pricing holds.",
     cta: "Unlock contacts",
+    icon: "key",
     highlight: false,
   },
 ];
@@ -42,14 +45,30 @@ export default function PaymentHubScreen() {
       </View>
 
       <View style={styles.body}>
+        <Text style={styles.eyebrow}>Billing</Text>
         <Text style={styles.title}>Payments</Text>
         <Text style={styles.subtitle}>
           Pay via M-Pesa STK push — the request goes straight to your phone.
         </Text>
 
         {PLANS.map((plan) => (
-          <View key={plan.id} style={styles.planCard}>
+          <View
+            key={plan.id}
+            style={[styles.planCard, plan.highlight && styles.planCardHighlight]}
+          >
             <View style={styles.planHead}>
+              <View
+                style={[
+                  styles.planIcon,
+                  plan.highlight && styles.planIconGold,
+                ]}
+              >
+                <TabBarIcon
+                  name={plan.icon}
+                  color={plan.highlight ? colors.goldDark : colors.brand}
+                  size={20}
+                />
+              </View>
               <Text style={styles.planLabel}>{plan.label}</Text>
               <Text style={styles.planAmount}>KES {plan.amountKes}</Text>
             </View>
@@ -57,9 +76,10 @@ export default function PaymentHubScreen() {
 
             <Pressable
               accessibilityRole="button"
-              style={[
+              style={({ pressed }) => [
                 styles.planButton,
                 plan.highlight && styles.planButtonPrimary,
+                pressed && styles.pressed,
               ]}
               onPress={() =>
                 navigation.navigate("MpesaCheckout", {
@@ -67,6 +87,7 @@ export default function PaymentHubScreen() {
                   label: plan.label,
                 })
               }
+              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             >
               <Text
                 style={[
@@ -94,73 +115,106 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   menuRow: {
-    paddingHorizontal: 16,
-    paddingTop: 2,
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
   body: {
     flex: 1,
-    padding: 22,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 24,
+  },
+  pressed: {
+    opacity: 0.88,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   title: {
     color: colors.ink,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
     marginTop: 6,
-    marginBottom: 18,
+    marginBottom: 22,
   },
   planCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
-    marginBottom: 14,
+    marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  planCardHighlight: {
+    borderColor: withAlpha(colors.gold, 0.55),
   },
   planHead: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  planIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  planIconGold: {
+    backgroundColor: withAlpha(colors.gold, 0.18),
   },
   planLabel: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
     flex: 1,
     marginRight: 10,
   },
   planAmount: {
     color: colors.brand,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
   },
   planBlurb: {
     color: colors.textMuted,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 19,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   planButton: {
     borderWidth: 1,
     borderColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
+    borderRadius: 14,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
+    overflow: "hidden",
   },
   planButtonPrimary: {
     backgroundColor: colors.brand,
   },
   planButtonText: {
     color: colors.brand,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "800",
   },
   planButtonTextPrimary: {
@@ -171,6 +225,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 10,
   },
 });

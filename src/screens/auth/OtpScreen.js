@@ -14,10 +14,12 @@ import {
 } from "@react-navigation/native";
 
 import PrimaryButton from "../../components/ui/PrimaryButton";
+import TabBarIcon from "../../components/ui/TabBarIcon";
+import HelpNestLogo from "../../components/Logo";
 import { useAuth } from "../../context/AuthContext";
 import { sendOtp, verifyOtp } from "../../services/authService";
 import { formatPhoneDisplay } from "../../utils/phone";
-import { colors } from "../../theme/colors";
+import { colors, withAlpha } from "../../theme/colors";
 
 const RESEND_SECONDS = 60;
 
@@ -109,56 +111,72 @@ export default function OtpScreen() {
 
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <View style={styles.inner}>
-          <Text style={styles.eyebrow}>PHONE VERIFICATION</Text>
-          <Text style={styles.title}>Enter your code</Text>
-          <Text style={styles.subtitle}>{info}</Text>
+          <View style={styles.topBlock}>
+            <HelpNestLogo size={54} style={styles.brandLogo} />
 
-          {devOtp ? (
-            <View style={styles.devBox}>
-              <Text style={styles.devText}>DEV CODE: {devOtp}</Text>
-            </View>
-          ) : null}
+            <Text style={styles.eyebrow}>PHONE VERIFICATION</Text>
+            <Text style={styles.title}>Enter your code</Text>
+            <Text style={styles.subtitle}>{info}</Text>
 
-          <TextInput
-            ref={inputRef}
-            style={styles.codeInput}
-            keyboardType="number-pad"
-            maxLength={6}
-            autoFocus
-            value={code}
-            onChangeText={(value) => setCode(value.replace(/\D/g, ""))}
-            placeholder="• • • • • •"
-            placeholderTextColor={colors.cloud}
-          />
+            {devOtp ? (
+              <View style={styles.devBox}>
+                <Text style={styles.devText}>DEV CODE: {devOtp}</Text>
+              </View>
+            ) : null}
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+            <TextInput
+              ref={inputRef}
+              style={styles.codeInput}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+              value={code}
+              onChangeText={(value) => setCode(value.replace(/\D/g, ""))}
+              placeholder="• • • • • •"
+              placeholderTextColor={colors.cloud}
+            />
 
-          <PrimaryButton
-            label="Verify and continue"
-            onPress={handleVerify}
-            loading={loading}
-          />
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+          </View>
 
-          {secondsLeft > 0 ? (
-            <Text style={styles.resendIdle}>
-              Resend code in {secondsLeft}s
+          <View style={styles.bottomBlock}>
+            <PrimaryButton
+              label="Verify and continue"
+              onPress={handleVerify}
+              loading={loading}
+            />
+
+            {secondsLeft > 0 ? (
+              <View style={styles.resendRow}>
+                <TabBarIcon name="clock" color={colors.textFaint} size={13} />
+                <Text style={styles.resendIdle}>
+                  Resend code in {secondsLeft}s
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.resendRow}>
+                <TabBarIcon
+                  name="refresh-cw"
+                  color={colors.brand}
+                  size={13}
+                />
+                <Text
+                  style={styles.resendLink}
+                  onPress={resending ? undefined : handleResend}
+                >
+                  {resending ? "Sending…" : "Didn't get it? Resend code"}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.backLink} onPress={() => navigation.goBack()}>
+              Use a different number
             </Text>
-          ) : (
-            <Text
-              style={styles.resendLink}
-              onPress={resending ? undefined : handleResend}
-            >
-              {resending ? "Sending…" : "Didn't get it? Resend code"}
-            </Text>
-          )}
-
-          <Text style={styles.backLink} onPress={() => navigation.goBack()}>
-            Use a different number
-          </Text>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -175,85 +193,120 @@ const styles = StyleSheet.create({
   },
   inner: {
     flex: 1,
-    padding: 22,
-    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 28,
+  },
+  topBlock: {
+    marginTop: "auto",
+  },
+  bottomBlock: {
+    marginTop: "auto",
+    paddingTop: 26,
+  },
+
+  /* ---- Brand + header ---- */
+  brandLogo: {
+    alignSelf: "center",
+    marginBottom: 20,
   },
   eyebrow: {
     color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     marginBottom: 10,
+    textAlign: "center",
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
+    fontSize: 27,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     marginBottom: 8,
+    textAlign: "center",
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 24,
+    marginBottom: 22,
+    textAlign: "center",
   },
+
+  /* ---- Dev + code ---- */
   devBox: {
-    backgroundColor: "#FFF7E0",
+    backgroundColor: withAlpha(colors.gold, 0.12),
     borderWidth: 1,
-    borderColor: colors.gold,
+    borderColor: withAlpha(colors.gold, 0.5),
     borderRadius: 12,
     padding: 12,
     marginBottom: 18,
+    alignItems: "center",
   },
   devText: {
     color: colors.goldDark,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   codeInput: {
     backgroundColor: colors.white,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.mistDark,
-    borderRadius: 14,
-    minHeight: 60,
-    fontSize: 26,
+    borderRadius: 16,
+    minHeight: 66,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: 12,
+    letterSpacing: 14,
     textAlign: "center",
     color: colors.ink,
     marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
+
+  /* ---- Error ---- */
   errorBox: {
-    backgroundColor: "#FFF0EE",
+    backgroundColor: withAlpha(colors.danger, 0.08),
     borderRadius: 12,
     padding: 12,
-    marginBottom: 14,
+    marginBottom: 6,
   },
   errorText: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+
+  /* ---- Resend ---- */
+  resendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 18,
   },
   resendIdle: {
     color: colors.textFaint,
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 18,
+    fontSize: 12.5,
+    fontWeight: "600",
   },
   resendLink: {
     color: colors.brand,
     fontSize: 13,
     fontWeight: "800",
-    textAlign: "center",
-    marginTop: 18,
   },
   backLink: {
     color: colors.textMuted,
     fontSize: 12.5,
     textAlign: "center",
-    marginTop: 26,
+    marginTop: 24,
     textDecorationLine: "underline",
   },
 });

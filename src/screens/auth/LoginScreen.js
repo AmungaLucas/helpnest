@@ -12,10 +12,12 @@ import { useNavigation } from "@react-navigation/native";
 
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
+import TabBarIcon from "../../components/ui/TabBarIcon";
+import HelpNestLogo from "../../components/Logo";
 import { useAuth } from "../../context/AuthContext";
 import { login } from "../../services/authService";
 import { isValidEmail, normalizePhone } from "../../utils/phone";
-import { colors } from "../../theme/colors";
+import { colors, withAlpha } from "../../theme/colors";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -98,62 +100,84 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.eyebrow}>WELCOME BACK</Text>
-          <Text style={styles.title}>Log in to HelpNest</Text>
+          {/* ---- Brand moment ---- */}
+          <View style={styles.brandBlock}>
+            <HelpNestLogo size={62} style={styles.brandLogo} />
+            <Text style={styles.eyebrow}>WELCOME BACK</Text>
+            <Text style={styles.title}>Log in to HelpNest</Text>
+            <Text style={styles.subtitle}>
+              Pick up right where you left off.
+            </Text>
+          </View>
 
-          <View style={styles.card}>
-            <TextField
-              label="Phone number or email"
-              placeholder="0712 345 678 or you@example.com"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={identifier}
-              onChangeText={setIdentifier}
-              error={errors.identifier}
-            />
+          {/* ---- Form card ---- */}
+          <View style={[styles.card, styles.cardShadow]}>
+            <View style={styles.fields}>
+              <TextField
+                label="Phone number or email"
+                placeholder="0712 345 678 or you@example.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={identifier}
+                onChangeText={setIdentifier}
+                error={errors.identifier}
+              />
 
-            <TextField
-              label="Password"
-              placeholder="Your password"
-              secureTextEntry
-              autoCapitalize="none"
-              value={password}
-              onChangeText={setPassword}
-              error={errors.password}
-            />
+              <TextField
+                label="Password"
+                placeholder="Your password"
+                secureTextEntry
+                autoCapitalize="none"
+                value={password}
+                onChangeText={setPassword}
+                error={errors.password}
+              />
+            </View>
 
             {formError ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{formError}</Text>
               </View>
             ) : null}
+          </View>
 
+          {/* ---- CTA pinned toward the bottom ---- */}
+          <View style={styles.ctaBlock}>
             <PrimaryButton
               label="Log in"
               onPress={handleSubmit}
               loading={loading}
             />
+
+            <View style={styles.trustRow}>
+              <TabBarIcon name="lock" color={colors.textFaint} size={13} />
+              <Text style={styles.trustText}>
+                Private and secure — only you can access your account.
+              </Text>
+            </View>
           </View>
 
-          <Text style={styles.signupLink}>
-            New to HelpNest?{" "}
-            <Text
-              style={styles.signupLinkBold}
-              onPress={() => navigation.navigate("RoleSelector")}
-            >
-              Create an account
+          <View style={styles.linksBlock}>
+            <Text style={styles.signupLink}>
+              New to HelpNest?{" "}
+              <Text
+                style={styles.signupLinkBold}
+                onPress={() => navigation.navigate("RoleSelector")}
+              >
+                Create an account
+              </Text>
             </Text>
-          </Text>
 
-          <Text style={styles.changeRoleLink}>
-            Picked the wrong role?{" "}
-            <Text
-              style={styles.changeRoleBold}
-              onPress={() => navigation.navigate("RoleSelector")}
-            >
-              Change role
+            <Text style={styles.changeRoleLink}>
+              Picked the wrong role?{" "}
+              <Text
+                style={styles.changeRoleBold}
+                onPress={() => navigation.navigate("RoleSelector")}
+              >
+                Change role
+              </Text>
             </Text>
-          </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -169,47 +193,98 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 22,
-    paddingBottom: 60,
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 32,
+  },
+
+  /* ---- Brand moment ---- */
+  brandBlock: {
+    alignItems: "center",
+    marginBottom: 26,
+  },
+  brandLogo: {
+    marginBottom: 18,
   },
   eyebrow: {
     color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
-    lineHeight: 31,
+    fontSize: 27,
+    lineHeight: 33,
     fontWeight: "800",
-    letterSpacing: -0.3,
-    marginBottom: 18,
+    letterSpacing: -0.4,
+    marginBottom: 8,
   },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+
+  /* ---- Card ---- */
   card: {
     backgroundColor: colors.white,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 18,
+    padding: 20,
+  },
+  cardShadow: {
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  fields: {
+    gap: 6,
   },
   errorBox: {
-    backgroundColor: "#FFF0EE",
+    backgroundColor: withAlpha(colors.danger, 0.08),
     borderRadius: 12,
     padding: 12,
-    marginBottom: 14,
+    marginTop: 14,
   },
   errorText: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
+    fontWeight: "600",
+  },
+
+  /* ---- CTA ---- */
+  ctaBlock: {
+    marginTop: "auto",
+    paddingTop: 24,
+  },
+  trustRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 14,
+  },
+  trustText: {
+    color: colors.textFaint,
+    fontSize: 11.5,
+    fontWeight: "600",
+  },
+
+  /* ---- Links ---- */
+  linksBlock: {
+    marginTop: 24,
   },
   signupLink: {
     color: colors.textMuted,
     fontSize: 13.5,
     textAlign: "center",
-    marginTop: 20,
   },
   signupLinkBold: {
     color: colors.brand,

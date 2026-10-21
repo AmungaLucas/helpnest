@@ -145,6 +145,10 @@ export default function SplashScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
 
+      {/* Decorative depth — static, purely visual */}
+      <View style={styles.orbGold} />
+      <View style={styles.orbCream} />
+
       <View style={styles.content}>
         {/* ---- Logo stage ---- */}
         <View style={styles.logoStage}>
@@ -188,6 +192,9 @@ export default function SplashScreen({ navigation }) {
           HelpNest
         </Animated.Text>
 
+        {/* ---- Gold accent bar (fades in with the brand name) ---- */}
+        <Animated.View style={[styles.accentBar, { opacity: brandOpacity }]} />
+
         {/* ---- Tagline ---- */}
         <Animated.Text
           style={[
@@ -216,7 +223,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
+
+  /* ---- Ambient orbs ---- */
+  orbGold: {
+    position: "absolute",
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    top: -90,
+    right: -70,
+  },
+  orbCream: {
+    position: "absolute",
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: withAlpha(colors.cream, 0.05),
+    bottom: -50,
+    left: -55,
+  },
+
   content: {
     alignItems: "center",
   },
@@ -227,7 +256,7 @@ const styles = StyleSheet.create({
     height: 88,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 22,
+    marginBottom: 26,
   },
   halo: {
     position: "absolute",
@@ -237,7 +266,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: 44,
     borderWidth: 2,
-    borderColor: withAlpha(colors.gold, 0.55),
+    borderColor: withAlpha(colors.gold, 0.5),
   },
   logoBadge: {
     width: 88,
@@ -246,25 +275,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
 
   /* ---- Text ---- */
   brand: {
     color: colors.white,
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+  },
+  accentBar: {
+    width: 30,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.gold,
+    marginTop: 14,
+    marginBottom: 12,
   },
   tagline: {
     color: colors.mist,
-    fontSize: 14,
-    marginTop: 9,
+    fontSize: 14.5,
+    fontWeight: "500",
+    letterSpacing: 0.4,
   },
   footer: {
     position: "absolute",
     bottom: 32,
     color: colors.gold,
     fontSize: 12,
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
 });

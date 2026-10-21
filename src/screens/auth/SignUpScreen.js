@@ -12,9 +12,11 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
+import TabBarIcon from "../../components/ui/TabBarIcon";
+import HelpNestLogo from "../../components/Logo";
 import { signUp } from "../../services/authService";
 import { isValidEmail, normalizePhone } from "../../utils/phone";
-import { colors } from "../../theme/colors";
+import { colors, withAlpha } from "../../theme/colors";
 
 const ROLE_LABELS = {
   employer: "Employer",
@@ -115,106 +117,124 @@ export default function SignUpScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.eyebrow}>STEP 2 OF 2 · CREATE ACCOUNT</Text>
-          <Text style={styles.title}>
-            Join HelpNest as a {roleLabel}
-          </Text>
+          {/* ---- Brand moment ---- */}
+          <View style={styles.brandBlock}>
+            <HelpNestLogo size={56} style={styles.brandLogo} />
+            <Text style={styles.eyebrow}>STEP 2 OF 2 · CREATE ACCOUNT</Text>
+            <Text style={styles.title}>
+              Join HelpNest as a {roleLabel}
+            </Text>
+            <Text style={styles.subtitle}>
+              A few details and your account is ready.
+            </Text>
+          </View>
 
-          <View style={styles.card}>
-            <TextField
-              label="Full name"
-              placeholder="e.g. Grace Wanjiku"
-              autoCapitalize="words"
-              value={name}
-              onChangeText={setName}
-              error={errors.name}
-            />
+          {/* ---- Form card ---- */}
+          <View style={[styles.card, styles.cardShadow]}>
+            <View style={styles.fields}>
+              <TextField
+                label="Full name"
+                placeholder="e.g. Grace Wanjiku"
+                autoCapitalize="words"
+                value={name}
+                onChangeText={setName}
+                error={errors.name}
+              />
 
-            <TextField
-              label="Email"
-              placeholder="you@example.com"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              error={errors.email}
-            />
+              <TextField
+                label="Email"
+                placeholder="you@example.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                error={errors.email}
+              />
 
-            <TextField
-              label="Phone number"
-              placeholder="0712 345 678"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-              error={errors.phone}
-              hint="We'll send a 6-digit code to verify it."
-            />
+              <TextField
+                label="Phone number"
+                placeholder="0712 345 678"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+                error={errors.phone}
+                hint="We'll send a 6-digit code to verify it."
+              />
 
-            <TextField
-              label="Location (area you live or work)"
-              placeholder="e.g. Kilimani, Nairobi"
-              autoCapitalize="words"
-              value={locationLabel}
-              onChangeText={setLocationLabel}
-              hint="Approximate area only — never your exact address."
-            />
+              <TextField
+                label="Location (area you live or work)"
+                placeholder="e.g. Kilimani, Nairobi"
+                autoCapitalize="words"
+                value={locationLabel}
+                onChangeText={setLocationLabel}
+                hint="Approximate area only — never your exact address."
+              />
 
-            <TextField
-              label="Password"
-              placeholder="At least 8 characters"
-              secureTextEntry
-              autoCapitalize="none"
-              value={password}
-              onChangeText={setPassword}
-              error={errors.password}
-            />
+              <TextField
+                label="Password"
+                placeholder="At least 8 characters"
+                secureTextEntry
+                autoCapitalize="none"
+                value={password}
+                onChangeText={setPassword}
+                error={errors.password}
+              />
 
-            <TextField
-              label="Referral code (optional)"
-              placeholder="e.g. K7QW2M"
-              autoCapitalize="characters"
-              value={referralCode}
-              onChangeText={(v) => setReferralCode(v.toUpperCase())}
-              hint="Got a code from a friend? They earn a cash reward when you pay."
-            />
+              <TextField
+                label="Referral code (optional)"
+                placeholder="e.g. K7QW2M"
+                autoCapitalize="characters"
+                value={referralCode}
+                onChangeText={(v) => setReferralCode(v.toUpperCase())}
+                hint="Got a code from a friend? They earn a cash reward when you pay."
+              />
+            </View>
 
             {formError ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{formError}</Text>
               </View>
             ) : null}
+          </View>
 
+          {/* ---- CTA pinned toward the bottom ---- */}
+          <View style={styles.ctaBlock}>
             <PrimaryButton
               label="Create account"
               onPress={handleSubmit}
               loading={loading}
             />
 
-            <Text style={styles.terms}>
-              By creating an account you agree to our Terms of Service and
-              Privacy Policy.
-            </Text>
+            <View style={styles.termsRow}>
+              <TabBarIcon name="lock" color={colors.textFaint} size={12} />
+              <Text style={styles.terms}>
+                By creating an account you agree to our Terms of Service and
+                Privacy Policy.
+              </Text>
+            </View>
           </View>
 
-          <Text style={styles.loginLink}>
-            Already have an account?{" "}
-            <Text
-              style={styles.loginLinkBold}
-              onPress={() => navigation.navigate("Login")}
-            >
-              Log in
+          <View style={styles.linksBlock}>
+            <Text style={styles.loginLink}>
+              Already have an account?{" "}
+              <Text
+                style={styles.loginLinkBold}
+                onPress={() => navigation.navigate("Login")}
+              >
+                Log in
+              </Text>
             </Text>
-          </Text>
 
-          <Text style={styles.changeRoleLink}>
-            Not this role?{" "}
-            <Text
-              style={styles.changeRoleBold}
-              onPress={() => navigation.navigate("RoleSelector")}
-            >
-              Change role
+            <Text style={styles.changeRoleLink}>
+              Not this role?{" "}
+              <Text
+                style={styles.changeRoleBold}
+                onPress={() => navigation.navigate("RoleSelector")}
+              >
+                Change role
+              </Text>
             </Text>
-          </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -230,54 +250,103 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 22,
-    paddingBottom: 60,
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+  },
+
+  /* ---- Brand moment ---- */
+  brandBlock: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  brandLogo: {
+    marginBottom: 16,
   },
   eyebrow: {
     color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
-    lineHeight: 31,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: "800",
-    letterSpacing: -0.3,
-    marginBottom: 18,
+    letterSpacing: -0.4,
+    marginBottom: 8,
+    textAlign: "center",
   },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+
+  /* ---- Card ---- */
   card: {
     backgroundColor: colors.white,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 18,
+    padding: 20,
+  },
+  cardShadow: {
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  fields: {
+    gap: 6,
   },
   errorBox: {
-    backgroundColor: "#FFF0EE",
+    backgroundColor: withAlpha(colors.danger, 0.08),
     borderRadius: 12,
     padding: 12,
-    marginBottom: 14,
+    marginTop: 14,
   },
   errorText: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
+    fontWeight: "600",
+  },
+
+  /* ---- CTA ---- */
+  ctaBlock: {
+    marginTop: "auto",
+    paddingTop: 24,
+  },
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 8,
   },
   terms: {
-    color: colors.textMuted,
+    color: colors.textFaint,
     fontSize: 11.5,
     lineHeight: 17,
-    textAlign: "center",
-    marginTop: 14,
+    fontWeight: "600",
+    flexShrink: 1,
+  },
+
+  /* ---- Links ---- */
+  linksBlock: {
+    marginTop: 24,
   },
   loginLink: {
     color: colors.textMuted,
     fontSize: 13.5,
     textAlign: "center",
-    marginTop: 20,
   },
   loginLinkBold: {
     color: colors.brand,

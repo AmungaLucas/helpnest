@@ -281,18 +281,18 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   center: { alignItems: "center", justifyContent: "center" },
-  list: { paddingBottom: 12 },
+  list: { paddingBottom: 16 },
   row: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingVertical: 13,
     backgroundColor: colors.white,
   },
   rowPressed: { backgroundColor: colors.cream },
   avatar: {
-    width: 50,
-    height: 50,
+    width: 52,
+    height: 52,
     borderRadius: 17,
     backgroundColor: withAlpha(colors.brand, 0.13),
     alignItems: "center",
@@ -327,10 +327,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 3,
+    marginTop: 4,
     gap: 8,
   },
-  preview: { flexShrink: 1, color: colors.textMuted, fontSize: 13 },
+  preview: { flexShrink: 1, color: colors.textMuted, fontSize: 13.5, lineHeight: 18 },
   previewUnread: { color: colors.ink, fontWeight: "600" },
   statusChip: {
     borderRadius: 8,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadText: { color: colors.white, fontSize: 11, fontWeight: "800" },
-  separator: { height: 1, backgroundColor: colors.mist, marginLeft: 81 },
+  separator: { height: 1, backgroundColor: colors.mist, marginLeft: 83 },
   safetyNoteRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    marginBottom: 16,
   },
   emptyTitle: {
     color: colors.ink,

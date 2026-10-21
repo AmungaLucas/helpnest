@@ -36,10 +36,17 @@ function DrawerItem({ icon, label, active, onPress }) {
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.item, active && styles.itemActive]}
+      style={({ pressed }) => [
+        styles.item,
+        active && styles.itemActive,
+        pressed && styles.itemPressed,
+      ]}
+      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
     >
       {/* `icon` is the rendered element from the screen's drawerIcon option */}
-      {icon}
+      <View style={[styles.itemIconWrap, active && styles.itemIconWrapActive]}>
+        {icon}
+      </View>
       <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>
         {label}
       </Text>
@@ -111,7 +118,7 @@ function MaidProfileNavigator() {
         headerShown: false,
         drawerType: "front",
         drawerStyle: { backgroundColor: colors.white, width: 300 },
-        overlayColor: "rgba(23, 20, 16, 0.45)",
+        overlayColor: withAlpha(colors.ink, 0.45),
         swipeEdgeWidth: 48,
       }}
     >
@@ -160,7 +167,7 @@ function EmployerProfileNavigator() {
         headerShown: false,
         drawerType: "front",
         drawerStyle: { backgroundColor: colors.white, width: 300 },
-        overlayColor: "rgba(23, 20, 16, 0.45)",
+        overlayColor: withAlpha(colors.ink, 0.45),
         swipeEdgeWidth: 48,
       }}
     >
@@ -259,25 +266,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.mist,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   drawerAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 17,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     overflow: "hidden",
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 13,
+    marginRight: 14,
   },
   drawerAvatarImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 17,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
   },
   drawerAvatarText: {
     color: colors.brand,
@@ -289,14 +296,15 @@ const styles = StyleSheet.create({
   },
   drawerName: {
     color: colors.ink,
-    fontSize: 16.5,
+    fontSize: 18,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   drawerRole: {
     color: colors.textMuted,
     fontSize: 12.5,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
   },
   itemsWrap: {
     flex: 1,
@@ -304,28 +312,45 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 56,
     marginHorizontal: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    overflow: "hidden",
   },
   itemActive: {
-    backgroundColor: withAlpha(colors.brand, 0.1),
+    backgroundColor: withAlpha(colors.brand, 0.08),
+  },
+  itemPressed: {
+    opacity: 0.88,
+  },
+  itemIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemIconWrapActive: {
+    backgroundColor: withAlpha(colors.brand, 0.12),
   },
   itemLabel: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "700",
     marginLeft: 13,
   },
   itemLabelActive: {
     color: colors.brand,
+    fontWeight: "800",
   },
   drawerVersion: {
     color: colors.textFaint,
     fontSize: 11.5,
     fontWeight: "600",
     textAlign: "center",
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
 });

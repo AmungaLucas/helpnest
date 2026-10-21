@@ -153,16 +153,19 @@ export default function FindHelpScreen() {
           Trusted domestic workers near you, verified by their community.
         </Text>
 
-        <TextInput
-          style={styles.search}
-          placeholder="Search name, skill or area…"
-          placeholderTextColor={colors.textMuted}
-          value={query}
-          onChangeText={setQuery}
-          onSubmitEditing={() => load()}
-          returnKeyType="search"
-          autoCapitalize="none"
-        />
+        <View style={styles.searchWrap}>
+          <TabBarIcon name="search" color={colors.textFaint} size={17} />
+          <TextInput
+            style={styles.search}
+            placeholder="Search name, skill or area…"
+            placeholderTextColor={colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => load()}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
+        </View>
 
         <ScrollView
           horizontal
@@ -198,11 +201,17 @@ export default function FindHelpScreen() {
         </View>
       ) : error ? (
         <View style={styles.center}>
+          <View style={styles.emptyBadge}>
+            <TabBarIcon name="alert-triangle" color={colors.brand} size={24} />
+          </View>
           <Text style={styles.emptyTitle}>Something went wrong</Text>
           <Text style={styles.emptyText}>{error}</Text>
         </View>
       ) : workers.length === 0 ? (
         <View style={styles.center}>
+          <View style={styles.emptyBadge}>
+            <TabBarIcon name="users" color={colors.brand} size={24} />
+          </View>
           <Text style={styles.emptyTitle}>No workers yet</Text>
           <Text style={styles.emptyText}>
             Worker profiles will appear here as domestic workers complete them.
@@ -253,7 +262,11 @@ const WorkerCard = React.memo(function WorkerCard({ worker }) {
   );
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+      onPress={onPress}
+    >
       <SignedImage
         url={worker.avatarUrl}
         mediaId={worker.avatarMediaId}
@@ -329,12 +342,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   headerBlock: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingTop: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
+    fontSize: 23,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
@@ -345,38 +358,52 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 14,
   },
-  search: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 12,
-    minHeight: 46,
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.mist,
+    borderRadius: 16,
+    minHeight: 48,
     paddingHorizontal: 14,
-    fontSize: 14.5,
-    color: colors.ink,
+    gap: 9,
     marginBottom: 12,
   },
+  search: {
+    flex: 1,
+    minHeight: 48,
+    fontSize: 14.5,
+    color: colors.ink,
+    paddingVertical: 0,
+  },
   chipsRow: {
-    paddingRight: 22,
+    paddingRight: 20,
   },
   list: {
-    padding: 22,
+    padding: 20,
     paddingTop: 8,
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 14,
     marginBottom: 12,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  cardPressed: {
+    backgroundColor: colors.mist,
   },
   avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
@@ -404,10 +431,10 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   featuredBadge: {
-    backgroundColor: "#FBF3E1",
+    backgroundColor: withAlpha(colors.gold, 0.16),
     borderWidth: 1,
-    borderColor: "#E7D2A8",
-    borderRadius: 999,
+    borderColor: withAlpha(colors.gold, 0.45),
+    borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
@@ -418,7 +445,7 @@ const styles = StyleSheet.create({
   },
   verifiedBadge: {
     backgroundColor: withAlpha(colors.brand, 0.14),
-    borderRadius: 999,
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
@@ -455,17 +482,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   rateBox: {
-    alignItems: "flex-end",
+    alignItems: "center",
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   rateValue: {
     color: colors.brand,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: "800",
   },
   rateUnit: {
-    color: colors.textMuted,
-    fontSize: 11,
+    color: colors.brand,
+    fontSize: 10.5,
     fontWeight: "700",
+    opacity: 0.8,
   },
   center: {
     flex: 1,
@@ -476,9 +508,18 @@ const styles = StyleSheet.create({
   footerSpinner: {
     paddingVertical: 18,
   },
+  emptyBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
   emptyTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     marginBottom: 6,
     textAlign: "center",

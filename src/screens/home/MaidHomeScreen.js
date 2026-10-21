@@ -115,7 +115,11 @@ export default function MaidHomeScreen() {
         {/* ---------- Profile completeness ---------- */}
         <Pressable
           accessibilityRole="button"
-          style={styles.progressCard}
+          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+          style={({ pressed }) => [
+            styles.progressCard,
+            pressed && styles.cardPressed,
+          ]}
           onPress={() => navigation.navigate("ProfileTab", { screen: "Skills" })}
         >
           <View style={styles.progressTopRow}>
@@ -179,6 +183,7 @@ export default function MaidHomeScreen() {
         <View style={styles.actionsRow}>
           <Pressable
             accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.white, 0.16) }}
             style={({ pressed }) => [
               styles.actionCard,
               styles.actionPrimary,
@@ -197,6 +202,7 @@ export default function MaidHomeScreen() {
 
           <Pressable
             accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             style={({ pressed }) => [
               styles.actionCard,
               pressed && styles.cardPressed,
@@ -244,6 +250,7 @@ export default function MaidHomeScreen() {
               <View style={styles.planRow}>
                 <Pressable
                   accessibilityRole="button"
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
                   style={({ pressed }) => [
                     styles.planTile,
                     pressed && styles.tilePressed,
@@ -262,6 +269,7 @@ export default function MaidHomeScreen() {
 
                 <Pressable
                   accessibilityRole="button"
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
                   style={({ pressed }) => [
                     styles.planTile,
                     styles.planTileBest,
@@ -312,11 +320,16 @@ const styles = StyleSheet.create({
   /* ---- Application plans ---- */
   planCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
     marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   planHead: {
     flexDirection: "row",
@@ -326,7 +339,7 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
   },
   planActivePill: {
@@ -410,7 +423,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   tilePressed: {
-    opacity: 0.9,
+    opacity: 0.88,
   },
   safeArea: {
     flex: 1,
@@ -418,7 +431,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: colors.brand,
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -458,13 +471,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   body: {
-    padding: 22,
+    padding: 20,
     paddingBottom: 36,
   },
   karibu: {
     color: colors.ink,
     fontSize: 26,
     fontWeight: "800",
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
   lede: {
@@ -482,6 +496,11 @@ const styles = StyleSheet.create({
     borderColor: colors.mist,
     padding: 18,
     marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   progressTopRow: {
     flexDirection: "row",
@@ -496,7 +515,7 @@ const styles = StyleSheet.create({
   },
   progressValue: {
     color: colors.brand,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
   },
   track: {
@@ -550,7 +569,7 @@ const styles = StyleSheet.create({
   readyCard: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     gap: 10,
     marginBottom: 18,
@@ -583,18 +602,23 @@ const styles = StyleSheet.create({
   actionCard: {
     width: "48.5%",
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 15,
     minHeight: 112,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   actionPrimary: {
     backgroundColor: colors.brand,
     borderColor: colors.brand,
   },
   cardPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
   actionTitle: {
     color: colors.ink,
@@ -619,15 +643,20 @@ const styles = StyleSheet.create({
   /* ---- Tips ---- */
   tipsCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
     marginTop: 4,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   tipsTitle: {
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
     marginBottom: 8,
   },

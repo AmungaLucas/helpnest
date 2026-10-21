@@ -25,9 +25,9 @@ import {
 import { formatDistance } from "../../utils/geo";
 
 // ---------------------------------------------------------------------------
-// Worker profile — classic card layout (kept per user preference), with two
-// upgrades: a much larger photo (136px ringed circle vs the old 68px) and the
-// monetized "Chat with {name}" CTA inside the profile card.
+// Worker profile — large photo header (136px ringed portrait on a tinted
+// backdrop), verified chip, white stat cards, tinted status pills and the
+// monetized "Chat with {name}" CTA pinned as a sticky bottom bar.
 //
 // Chat gate (BUILD 2026-10-20.14): tapping Chat jumps straight into ChatRoom,
 // which owns the §13.3 flow end-to-end — it creates/opens the conversation,
@@ -103,9 +103,15 @@ export default function WorkerProfileScreen() {
     return (
       <SafeAreaView style={[styles.safeArea, styles.center]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+        <View style={styles.emptyBadge}>
+          <TabBarIcon name="alert-triangle" color={colors.danger} size={20} />
+        </View>
         <Text style={styles.emptyTitle}>Profile unavailable</Text>
         <Text style={styles.emptyText}>{error || "Worker not found."}</Text>
-        <Pressable style={styles.linkButton} onPress={() => navigation.goBack()}>
+        <Pressable
+          style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.linkText}>Go back</Text>
         </Pressable>
       </SafeAreaView>
@@ -125,9 +131,9 @@ export default function WorkerProfileScreen() {
           accessibilityLabel="Go back"
           onPress={() => navigation.goBack()}
           hitSlop={10}
-          style={styles.backButton}
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         >
-          <TabBarIcon name="chevron-left" color={colors.ink} size={23} />
+          <TabBarIcon name="chevron-left" color={colors.ink} size={22} />
         </Pressable>
         <Text style={styles.headerTitle}>Profile</Text>
         <View style={styles.headerSpacer} />
@@ -137,7 +143,10 @@ export default function WorkerProfileScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroCard}>
+        {/* ---- Photo header ---- */}
+        <View style={[styles.heroCard, styles.cardShadow]}>
+          <View style={styles.heroBackdrop} />
+
           <SignedImage
             url={worker?.avatarDisplayUrl || worker?.avatarUrl}
             mediaId={worker?.avatarMediaId}
@@ -155,10 +164,16 @@ export default function WorkerProfileScreen() {
           <View style={styles.badgeRow}>
             {kycVerified ? (
               <View style={styles.verifiedBadge}>
+                <TabBarIcon
+                  name="shield-check"
+                  color={colors.brand}
+                  size={12}
+                />
                 <Text style={styles.verifiedText}>ID verified</Text>
               </View>
             ) : (
               <View style={styles.pendingBadge}>
+                <TabBarIcon name="clock" color={colors.goldDark} size={12} />
                 <Text style={styles.pendingText}>
                   Verification in progress
                 </Text>
@@ -176,24 +191,9 @@ export default function WorkerProfileScreen() {
               </Text>
             ) : null}
           </View>
-
-          {isEmployer ? (
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.chatButton,
-                pressed && styles.pressedDark,
-              ]}
-              onPress={handleChatPress}
-            >
-              <TabBarIcon name="message-circle" color={colors.white} size={17} />
-              <Text style={styles.chatButtonText} numberOfLines={1}>
-                Chat with {firstName}
-              </Text>
-            </Pressable>
-          ) : null}
         </View>
 
+        {/* ---- Stats ---- */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>
@@ -235,9 +235,27 @@ export default function WorkerProfileScreen() {
           </View>
         ) : null}
 
-        <View style={styles.contactCard}>
+        {/* ---- Contact (gated) ---- */}
+        <View
+          style={[
+            styles.contactCard,
+            !worker.contactUnlocked && styles.contactCardLocked,
+          ]}
+        >
           {worker.contactUnlocked && worker.phone ? (
             <>
+              <View
+                style={[
+                  styles.contactBadge,
+                  { backgroundColor: withAlpha(colors.brand, 0.12) },
+                ]}
+              >
+                <TabBarIcon
+                  name="shield-check"
+                  color={colors.brand}
+                  size={17}
+                />
+              </View>
               <Text style={styles.contactTitle}>Contact unlocked</Text>
               <Text style={styles.contactPhone}>
                 {formatKenyanPhone(worker.phone)}
@@ -251,7 +269,12 @@ export default function WorkerProfileScreen() {
               <View style={styles.contactActions}>
                 <Pressable
                   accessibilityRole="button"
-                  style={[styles.contactButton, styles.contactButtonPrimary]}
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                  style={({ pressed }) => [
+                    styles.contactButton,
+                    styles.contactButtonPrimary,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() =>
                     Linking.openURL(`tel:${normalizeDialNumber(worker.phone)}`)
                   }
@@ -261,7 +284,11 @@ export default function WorkerProfileScreen() {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  style={styles.contactButton}
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                  style={({ pressed }) => [
+                    styles.contactButton,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() =>
                     Linking.openURL(
                       `sms:${normalizeDialNumber(worker.phone)}`
@@ -275,6 +302,14 @@ export default function WorkerProfileScreen() {
             </>
           ) : (
             <>
+              <View
+                style={[
+                  styles.contactBadge,
+                  { backgroundColor: withAlpha(colors.gold, 0.16) },
+                ]}
+              >
+                <TabBarIcon name="lock" color={colors.goldDark} size={17} />
+              </View>
               <Text style={styles.contactTitle}>Contact is private</Text>
               <Text style={styles.contactNote}>
                 Unlock {worker.name.split(" ")[0]}'s phone number to arrange
@@ -282,9 +317,10 @@ export default function WorkerProfileScreen() {
               </Text>
               <Pressable
                 accessibilityRole="button"
+                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
                 style={({ pressed }) => [
                   styles.unlockButton,
-                  pressed && styles.pressedDark,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() =>
                   navigation.navigate("MpesaCheckout", {
@@ -302,6 +338,26 @@ export default function WorkerProfileScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* ---- Sticky gated chat CTA (employers only) ---- */}
+      {isEmployer ? (
+        <View style={styles.ctaBar}>
+          <Pressable
+            accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+            style={({ pressed }) => [
+              styles.chatButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={handleChatPress}
+          >
+            <TabBarIcon name="message-circle" color={colors.white} size={17} />
+            <Text style={styles.chatButtonText} numberOfLines={1}>
+              Chat with {firstName}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -341,38 +397,70 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 32,
   },
+  pressed: {
+    opacity: 0.88,
+  },
+
+  /* ---- Header ---- */
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 22,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   backButton: {
-    width: 60,
-    alignItems: "flex-start",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
   },
   headerSpacer: {
-    width: 60,
+    width: 42,
   },
+
+  /* ---- Scroll ---- */
   scroll: {
-    padding: 22,
+    paddingHorizontal: 20,
     paddingTop: 4,
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
+  cardShadow: {
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+
+  /* ---- Photo header ---- */
   heroCard: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 20,
+    padding: 22,
+    paddingTop: 30,
     alignItems: "center",
+    overflow: "hidden",
+  },
+  heroBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 96,
+    backgroundColor: withAlpha(colors.brand, 0.06),
   },
   avatar: {
     width: 136,
@@ -383,7 +471,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: 16,
     overflow: "hidden",
   },
   avatarText: {
@@ -393,25 +481,29 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.ink,
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   headline: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    fontWeight: "700",
-    marginTop: 2,
+    fontSize: 14,
+    fontWeight: "500",
+    marginTop: 3,
   },
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 12,
   },
   verifiedBadge: {
-    backgroundColor: withAlpha(colors.brand, 0.14),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: withAlpha(colors.brand, 0.12),
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     marginRight: 8,
   },
   verifiedText: {
@@ -420,10 +512,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   pendingBadge: {
-    backgroundColor: withAlpha(colors.gold, 0.18),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: withAlpha(colors.gold, 0.16),
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     marginRight: 8,
   },
   pendingText: {
@@ -437,89 +532,95 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flexShrink: 1,
   },
-  chatButton: {
-    alignSelf: "stretch",
-    minHeight: 50,
-    borderRadius: 14,
-    backgroundColor: colors.brand,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 16,
-  },
-  chatButtonText: {
-    color: colors.white,
-    fontSize: 14.5,
-    fontWeight: "800",
-    flexShrink: 1,
-  },
+
+  /* ---- Stats ---- */
   statsRow: {
     flexDirection: "row",
-    marginTop: 14,
+    gap: 10,
+    marginTop: 16,
   },
   statBox: {
     flex: 1,
-    backgroundColor: colors.mist,
-    borderRadius: 16,
-    padding: 12,
-    alignItems: "center",
-    marginHorizontal: 4,
-  },
-  statValue: {
-    color: colors.ink,
-    fontSize: 13.5,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  statLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 3,
-    textAlign: "center",
-  },
-  sectionCard: {
     backgroundColor: colors.white,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 16,
-    marginTop: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: "center",
+  },
+  statValue: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  statLabel: {
+    color: colors.textFaint,
+    fontSize: 11.5,
+    fontWeight: "600",
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  /* ---- Sections ---- */
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 18,
+    marginTop: 16,
   },
   sectionTitle: {
-    color: colors.ink,
-    fontSize: 14,
+    color: colors.goldDark,
+    fontSize: 11,
     fontWeight: "800",
-    marginBottom: 8,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 10,
   },
   bioText: {
     color: colors.textMuted,
-    fontSize: 13.5,
+    fontSize: 14,
     lineHeight: 21,
   },
   chipsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
   },
+
+  /* ---- Contact (gated) ---- */
   contactCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 16,
-    marginTop: 14,
+    padding: 18,
+    marginTop: 16,
     alignItems: "center",
+  },
+  contactCardLocked: {
+    borderStyle: "dashed",
+    borderColor: colors.mistDark,
+  },
+  contactBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
   },
   contactTitle: {
     color: colors.ink,
-    fontSize: 14.5,
+    fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   contactPhone: {
     color: colors.brand,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     letterSpacing: 0.5,
     marginBottom: 8,
@@ -532,29 +633,35 @@ const styles = StyleSheet.create({
   },
   unlockButton: {
     backgroundColor: colors.brand,
-    borderRadius: 14,
-    minHeight: 48,
+    borderRadius: 16,
+    minHeight: 52,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 22,
-    marginTop: 14,
+    marginTop: 16,
+    alignSelf: "stretch",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   unlockText: {
     color: colors.white,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
   },
   contactActions: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 14,
+    marginTop: 16,
     alignSelf: "stretch",
   },
   contactButton: {
     flex: 1,
-    minHeight: 46,
-    borderRadius: 13,
-    borderWidth: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: colors.brand,
     flexDirection: "row",
     alignItems: "center",
@@ -574,12 +681,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
-  pressedDark: {
-    opacity: 0.92,
+
+  /* ---- Sticky chat CTA ---- */
+  ctaBar: {
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  chatButton: {
+    alignSelf: "stretch",
+    minHeight: 54,
+    borderRadius: 16,
+    backgroundColor: colors.brand,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  chatButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: "800",
+    flexShrink: 1,
+  },
+
+  /* ---- Empty / error ---- */
+  emptyBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: withAlpha(colors.danger, 0.08),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
   },
   emptyTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
     textAlign: "center",
@@ -591,7 +736,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   linkButton: {
-    marginTop: 14,
+    marginTop: 16,
     paddingVertical: 10,
     paddingHorizontal: 18,
   },

@@ -111,6 +111,7 @@ const NearbyMaidCard = React.memo(function NearbyMaidCard({ worker }) {
   return (
     <Pressable
       accessibilityRole="button"
+      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
       style={({ pressed }) => [styles.nearCard, pressed && styles.tilePressed]}
       onPress={onPress}
     >
@@ -169,6 +170,7 @@ const MiniMaidCard = React.memo(function MiniMaidCard({ worker, shield }) {
   return (
     <Pressable
       accessibilityRole="button"
+      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
       style={({ pressed }) => [styles.miniCard, pressed && styles.tilePressed]}
       onPress={onPress}
     >
@@ -444,7 +446,8 @@ export default function EmployerHomeScreen() {
 
         <Pressable
           accessibilityRole="button"
-          style={styles.locationChip}
+          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+          style={({ pressed }) => [styles.locationChip, pressed && styles.pressedDim]}
           onPress={() => setPickerOpen(true)}
         >
           <TabBarIcon name="map-pin" color={colors.brand} size={14} />
@@ -457,7 +460,8 @@ export default function EmployerHomeScreen() {
         {/* ---------- Search ---------- */}
         <Pressable
           accessibilityRole="button"
-          style={styles.searchCard}
+          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+          style={({ pressed }) => [styles.searchCard, pressed && styles.pressedDim]}
           onPress={() => navigation.navigate("MaidsTab")}
         >
           <TabBarIcon name="search" color={colors.textMuted} size={19} />
@@ -468,10 +472,11 @@ export default function EmployerHomeScreen() {
         <View style={styles.ctaRow}>
           <Pressable
             accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.white, 0.16) }}
             style={({ pressed }) => [
               styles.postJob,
               styles.ctaPrimary,
-              pressed && styles.tilePressedDark,
+              pressed && styles.pressedDim,
             ]}
             onPress={() => navigation.navigate("PostJob")}
           >
@@ -480,10 +485,11 @@ export default function EmployerHomeScreen() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             style={({ pressed }) => [
               styles.findMaid,
               styles.ctaSecondary,
-              pressed && styles.tilePressed,
+              pressed && styles.pressedDim,
             ]}
             onPress={() => navigation.navigate("MaidsTab")}
           >
@@ -493,7 +499,9 @@ export default function EmployerHomeScreen() {
         </View>
 
         {/* ---------- Categories ---------- */}
-        <Text style={styles.sectionTitle}>What do you need help with?</Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>
+          What do you need help with?
+        </Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -503,9 +511,10 @@ export default function EmployerHomeScreen() {
             <Pressable
               key={option.value}
               accessibilityRole="button"
+              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
               style={({ pressed }) => [
                 styles.categoryChip,
-                pressed && styles.tilePressed,
+                pressed && styles.categoryChipPressed,
               ]}
               onPress={() =>
                 navigation.navigate("MaidsTab", { service: option.value })
@@ -526,6 +535,16 @@ export default function EmployerHomeScreen() {
           </View>
         ) : workers.length === 0 ? (
           <View style={styles.emptyBox}>
+            <View style={styles.emptyBadge}>
+              <TabBarIcon
+                name={loadError ? "alert-triangle" : "users"}
+                color={colors.brand}
+                size={24}
+              />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {loadError ? "Connection hiccup" : "No workers yet"}
+            </Text>
             <Text style={styles.emptyText}>
               {loadError
                 ? "Couldn't load workers just now. Check your connection and try again."
@@ -534,7 +553,8 @@ export default function EmployerHomeScreen() {
             {loadError ? (
               <Pressable
                 accessibilityRole="button"
-                style={styles.retryButton}
+                android_ripple={{ color: withAlpha(colors.white, 0.16) }}
+                style={({ pressed }) => [styles.retryButton, pressed && styles.pressedDim]}
                 onPress={() => {
                   setLoading(true);
                   fetchWorkers();
@@ -547,9 +567,13 @@ export default function EmployerHomeScreen() {
         ) : (
           <>
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>{nearTitle}</Text>
+              <View style={styles.sectionHeadLeft}>
+                <Text style={styles.eyebrow}>Around you</Text>
+                <Text style={styles.sectionTitle}>{nearTitle}</Text>
+              </View>
               <Pressable
                 accessibilityRole="button"
+                style={({ pressed }) => pressed && styles.pressedDim}
                 onPress={() => navigation.navigate("MaidsTab")}
               >
                 <Text style={styles.seeAll}>See all</Text>
@@ -569,15 +593,20 @@ export default function EmployerHomeScreen() {
             />
 
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>Top rated</Text>
+              <View style={styles.sectionHeadLeft}>
+                <Text style={styles.eyebrow}>Top picks</Text>
+                <Text style={styles.sectionTitle}>Top rated</Text>
+              </View>
               <View style={styles.sectionHeadRight}>
                 {hasCoords ? (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ selected: topNearOnly }}
-                    style={[
+                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                    style={({ pressed }) => [
                       styles.filterChip,
                       topNearOnly && styles.filterChipOn,
+                      pressed && styles.pressedDim,
                     ]}
                     onPress={() => setTopNearOnly((v) => !v)}
                   >
@@ -620,11 +649,15 @@ export default function EmployerHomeScreen() {
             {verified.length >= 3 ? (
               <>
                 <View style={styles.sectionHead}>
-                  <Text style={styles.sectionTitle}>
-                    Verified &amp; background-checked
-                  </Text>
+                  <View style={styles.sectionHeadLeft}>
+                    <Text style={styles.eyebrow}>Trusted profiles</Text>
+                    <Text style={styles.sectionTitle}>
+                      Verified &amp; background-checked
+                    </Text>
+                  </View>
                   <Pressable
                     accessibilityRole="button"
+                    style={({ pressed }) => pressed && styles.pressedDim}
                     onPress={() => navigation.navigate("MaidsTab")}
                   >
                     <Text style={styles.seeAll}>See all</Text>
@@ -648,13 +681,16 @@ export default function EmployerHomeScreen() {
         )}
 
         {/* ---------- How it works ---------- */}
-        <Text style={styles.sectionTitle}>How it works</Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>
+          How it works
+        </Text>
         <View style={styles.stepsCard}>
           {HOW_IT_WORKS.map((step, index) => (
-            <View key={step.title} style={styles.stepRow}>
-              <View style={styles.stepBadge}>
-                <Text style={styles.stepBadgeText}>{index + 1}</Text>
-              </View>
+            <View
+              key={step.title}
+              style={[styles.stepRow, index > 0 && styles.stepDivided]}
+            >
+              <Text style={styles.stepNum}>{index + 1}</Text>
               <View style={styles.stepMain}>
                 <Text style={styles.stepTitle}>{step.title}</Text>
                 <Text style={styles.stepBody}>{step.body}</Text>
@@ -703,10 +739,11 @@ export default function EmployerHomeScreen() {
                   <Pressable
                     key={plan.id}
                     accessibilityRole="button"
+                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
                     style={({ pressed }) => [
                       styles.planTile,
                       plan.best && styles.planTileBest,
-                      pressed && styles.tilePressed,
+                      pressed && styles.pressedDim,
                     ]}
                     onPress={() =>
                       navigation.navigate("MpesaCheckout", {
@@ -759,8 +796,9 @@ const styles = StyleSheet.create({
   /* ---- Header: greeting + location chip ---- */
   karibu: {
     color: colors.ink,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "800",
+    letterSpacing: -0.4,
     marginBottom: 10,
   },
   locationChip: {
@@ -769,8 +807,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 999,
+    borderColor: colors.mist,
+    borderRadius: 12,
     paddingLeft: 12,
     paddingRight: 8,
     paddingVertical: 7,
@@ -795,14 +833,12 @@ const styles = StyleSheet.create({
   searchCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 14,
-    minHeight: 50,
-    paddingHorizontal: 15,
+    backgroundColor: colors.mist,
+    borderRadius: 16,
+    minHeight: 52,
+    paddingHorizontal: 16,
     gap: 10,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   searchText: {
     color: colors.textMuted,
@@ -815,7 +851,7 @@ const styles = StyleSheet.create({
   ctaRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   postJob: {
     flexDirection: "row",
@@ -832,7 +868,7 @@ const styles = StyleSheet.create({
   },
   postJobText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
   },
   findMaid: {
@@ -852,26 +888,42 @@ const styles = StyleSheet.create({
   },
   findMaidText: {
     color: colors.brand,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
   },
   tilePressed: {
     backgroundColor: colors.mist,
   },
-  tilePressedDark: {
-    backgroundColor: "#1A3D2E",
+  pressedDim: {
+    opacity: 0.88,
   },
 
   /* ---- Sections ---- */
+  sectionHeadLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
   sectionTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  sectionTitleGap: {
+    marginTop: 6,
     marginBottom: 12,
   },
   sectionHead: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     marginBottom: 12,
     marginTop: 4,
@@ -880,10 +932,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    paddingBottom: 1,
   },
   seeAll: {
     color: colors.brand,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "800",
   },
   filterChip: {
@@ -892,7 +945,7 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1,
     borderColor: colors.brand,
-    borderRadius: 999,
+    borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 4,
     backgroundColor: colors.white,
@@ -910,7 +963,7 @@ const styles = StyleSheet.create({
   },
   chipsRow: {
     paddingRight: 20,
-    marginBottom: 18,
+    marginBottom: 22,
     gap: 8,
   },
 
@@ -918,14 +971,15 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    borderRadius: 999,
+    backgroundColor: withAlpha(colors.brand, 0.07),
+    borderRadius: 12,
     paddingLeft: 12,
     paddingRight: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     gap: 7,
+  },
+  categoryChipPressed: {
+    backgroundColor: withAlpha(colors.brand, 0.14),
   },
   categoryEmoji: {
     fontSize: 14,
@@ -939,25 +993,30 @@ const styles = StyleSheet.create({
   /* ---- Rails ---- */
   rail: {
     paddingRight: 20,
-    marginBottom: 18,
-    gap: 10,
+    marginBottom: 22,
+    gap: 12,
   },
 
   /* ---- Nearby card (photo top) ---- */
   nearCard: {
-    width: 196,
+    width: 204,
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.mist,
     overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   nearPhotoWrap: {
     position: "relative",
   },
   nearPhoto: {
     width: "100%",
-    height: 108,
+    height: 112,
     backgroundColor: withAlpha(colors.brand, 0.14),
   },
   nearPhotoText: {
@@ -980,8 +1039,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     right: 8,
-    backgroundColor: "rgba(38, 49, 43, 0.78)",
-    borderRadius: 999,
+    backgroundColor: withAlpha(colors.ink, 0.78),
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
@@ -991,11 +1050,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   nearBody: {
-    padding: 11,
+    padding: 12,
   },
   nearName: {
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "800",
   },
   nearServices: {
@@ -1013,19 +1072,24 @@ const styles = StyleSheet.create({
 
   /* ---- Mini card (Top rated / Verified) ---- */
   miniCard: {
-    width: 128,
+    width: 136,
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.mist,
     paddingVertical: 14,
     paddingHorizontal: 10,
     alignItems: "center",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   miniAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     backgroundColor: withAlpha(colors.brand, 0.14),
     marginBottom: 8,
     overflow: "hidden",
@@ -1083,31 +1147,33 @@ const styles = StyleSheet.create({
   /* ---- How it works ---- */
   stepsCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 6,
-    marginBottom: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 14,
   },
-  stepBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+  stepDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
   },
-  stepBadgeText: {
-    color: colors.brand,
-    fontSize: 12.5,
+  stepNum: {
+    width: 34,
+    color: colors.cloud,
+    fontSize: 30,
     fontWeight: "800",
+    marginRight: 14,
   },
   stepMain: {
     flex: 1,
@@ -1132,22 +1198,40 @@ const styles = StyleSheet.create({
   },
   emptyBox: {
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 16,
+    padding: 22,
+    alignItems: "center",
+    marginBottom: 22,
+  },
+  emptyBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+    textAlign: "center",
   },
   emptyText: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19.5,
+    fontSize: 13.5,
+    lineHeight: 20,
     textAlign: "center",
   },
   retryButton: {
     alignSelf: "center",
-    marginTop: 12,
+    marginTop: 14,
     backgroundColor: colors.brand,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 18,
     minHeight: 42,
     alignItems: "center",
@@ -1164,7 +1248,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: withAlpha(colors.gold, 0.13),
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     gap: 10,
     marginTop: 4,
@@ -1184,7 +1268,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
-    marginTop: 12,
+    marginTop: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   planHead: {
     flexDirection: "row",
@@ -1228,7 +1317,7 @@ const styles = StyleSheet.create({
   planTile: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.mist,
     paddingVertical: 14,

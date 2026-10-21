@@ -1362,7 +1362,7 @@ const styles = StyleSheet.create({
   composerUnlockText: { color: colors.white, fontWeight: "800", fontSize: 12.5 },
 
   /* ---- Consent sheet ---- */
-  sheetBackdrop: { flex: 1, backgroundColor: "rgba(38,49,43,0.45)" },
+  sheetBackdrop: { flex: 1, backgroundColor: withAlpha(colors.ink, 0.45) },
   sheet: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,
@@ -1408,7 +1408,7 @@ const styles = StyleSheet.create({
   /* ---- Menu ---- */
   menuBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(38,49,43,0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
     justifyContent: "flex-end",
   },
   menuSheet: {

@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import { colors, withAlpha } from "../../theme/colors";
 import {
   confirmEmailVerification,
@@ -101,24 +102,35 @@ export default function VerifyEmailScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          style={styles.backBtn}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <TabBarIcon name="chevron-left" color={colors.brand} size={20} />
         </Pressable>
         <Text style={styles.headerTitle}>Verify your email</Text>
         <View style={styles.backSpace} />
       </View>
 
       <View style={styles.body}>
+        <View style={styles.heroBadge}>
+          <TabBarIcon name="send" color={colors.brand} size={26} />
+        </View>
         <Text style={styles.lede}>
           {email
             ? `We sent a 6-digit code to ${email}. Enter it below to verify your email address.`
             : "Enter the 6-digit code we emailed you."}
         </Text>
 
-        {msg ? <Text style={styles.msg}>{msg}</Text> : null}
-        {err ? <Text style={styles.err}>{err}</Text> : null}
+        {msg ? (
+          <View style={styles.msgBox}>
+            <Text style={styles.msg}>{msg}</Text>
+          </View>
+        ) : null}
+        {err ? (
+          <View style={styles.errBox}>
+            <Text style={styles.err}>{err}</Text>
+          </View>
+        ) : null}
 
         <TextInput
           style={styles.codeInput}
@@ -133,9 +145,14 @@ export default function VerifyEmailScreen() {
 
         <Pressable
           accessibilityRole="button"
-          style={[styles.primaryBtn, (busy || code.length !== 6) && styles.btnDisabled]}
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            (busy || code.length !== 6) && styles.btnDisabled,
+            pressed && !busy && code.length === 6 && styles.pressed,
+          ]}
           onPress={submit}
           disabled={busy || code.length !== 6}
+          android_ripple={{ color: withAlpha(colors.white, 0.18) }}
         >
           {busy ? (
             <ActivityIndicator color={colors.white} />
@@ -146,7 +163,7 @@ export default function VerifyEmailScreen() {
 
         <Pressable
           accessibilityRole="button"
-          style={styles.resendBtn}
+          style={({ pressed }) => [styles.resendBtn, pressed && styles.pressed]}
           onPress={send}
           disabled={sending || cooldown > 0}
         >
@@ -171,42 +188,87 @@ export default function VerifyEmailScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
+  pressed: { opacity: 0.88 },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  backText: { fontSize: 30, color: colors.brand, fontWeight: "700", marginTop: -4 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   backSpace: { width: 40 },
-  headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", color: colors.brand },
-  body: { flex: 1, paddingHorizontal: 24, paddingTop: 18 },
-  lede: { fontSize: 15, color: colors.ink, lineHeight: 22, marginBottom: 14 },
-  msg: { fontSize: 13, color: colors.brand, marginBottom: 6, fontWeight: "600" },
-  err: { fontSize: 13, color: colors.danger, marginBottom: 6, fontWeight: "600" },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 14 },
+  heroBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 18,
+  },
+  lede: {
+    fontSize: 15,
+    color: colors.ink,
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  msgBox: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+  msg: { fontSize: 13, color: colors.brand, fontWeight: "700" },
+  errBox: {
+    backgroundColor: withAlpha(colors.danger, 0.07),
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+  err: { fontSize: 13, color: colors.danger, fontWeight: "700" },
   codeInput: {
     borderWidth: 1.5,
     borderColor: withAlpha(colors.brand, 0.35),
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.white,
     fontSize: 28,
-    letterSpacing: 12,
+    fontWeight: "700",
+    letterSpacing: 10,
     textAlign: "center",
-    paddingVertical: 14,
+    paddingVertical: 16,
     color: colors.ink,
+    marginTop: 4,
     marginBottom: 18,
   },
   primaryBtn: {
     backgroundColor: colors.brand,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 54,
     paddingVertical: 15,
+    overflow: "hidden",
   },
   btnDisabled: { opacity: 0.45 },
   primaryBtnText: { color: colors.white, fontWeight: "800", fontSize: 16 },
   resendBtn: { alignItems: "center", paddingVertical: 16 },
-  resendText: { color: colors.brand, fontWeight: "700", fontSize: 14 },
+  resendText: { color: colors.brand, fontWeight: "800", fontSize: 14 },
   resendWait: { color: colors.textMuted, opacity: 0.6 },
   note: {
     fontSize: 12,

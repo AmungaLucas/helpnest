@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import HelpNestLogo, { HelpNestLogoMark } from "../components/Logo";
+import TabBarIcon from "../components/ui/TabBarIcon";
 import { colors, withAlpha } from "../theme/colors";
 
 const ROLES = [
@@ -32,6 +33,16 @@ const ROLES = [
     tags: ["Build profile", "Get discovered", "Grow your work"],
   },
 ];
+
+// Tinted icon badge per role (visual only).
+const ROLE_ICONS = {
+  employer: { icon: "work", tint: colors.brand, bg: withAlpha(colors.brand, 0.1) },
+  domestic_worker: {
+    icon: "user",
+    tint: colors.goldDark,
+    bg: withAlpha(colors.gold, 0.16),
+  },
+};
 
 export default function RoleSelectorScreen() {
   const navigation = useNavigation();
@@ -96,62 +107,57 @@ export default function RoleSelectorScreen() {
           </Message>
 
           <View style={styles.options}>
-            <View style={styles.divider} />
-
             {ROLES.map((role) => {
               const isSelected = selectedRole === role.id;
+              const badge = ROLE_ICONS[role.id];
 
               return (
-                <View key={role.id}>
-                  <Pressable
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: isSelected }}
-                    onPress={() => chooseRole(role.id)}
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.number,
-                        isSelected && styles.numberSelected,
-                      ]}
-                    >
-                      {role.number}
+                <Pressable
+                  key={role.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: isSelected }}
+                  onPress={() => chooseRole(role.id)}
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                  style={({ pressed }) => [
+                    styles.roleCard,
+                    isSelected && styles.roleCardSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={[styles.roleBadge, { backgroundColor: badge.bg }]}>
+                    <TabBarIcon name={badge.icon} color={badge.tint} size={20} />
+                  </View>
+
+                  <View style={styles.roleBody}>
+                    <Text style={styles.roleTitle}>{role.title}</Text>
+                    <Text style={styles.roleDescription}>
+                      {role.description}
                     </Text>
 
-                    <View style={styles.rowBody}>
-                      <Text style={styles.rowTitle}>{role.title}</Text>
-                      <Text style={styles.rowDescription}>
-                        {role.description}
-                      </Text>
+                    {isSelected ? (
+                      <View style={styles.tags}>
+                        {role.tags.map((tag) => (
+                          <View key={tag} style={styles.tag}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
 
-                      {isSelected ? (
-                        <View style={styles.tags}>
-                          {role.tags.map((tag) => (
-                            <View key={tag} style={styles.tag}>
-                              <Text style={styles.tagText}>{tag}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
-
-                    <View
-                      style={[
-                        styles.marker,
-                        isSelected && styles.markerSelected,
-                      ]}
-                    >
-                      {isSelected ? (
-                        <Text style={styles.markerCheck}>✓</Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-
-                  <View style={styles.divider} />
-                </View>
+                  <View
+                    style={[
+                      styles.trailing,
+                      isSelected && styles.trailingSelected,
+                    ]}
+                  >
+                    <TabBarIcon
+                      name={isSelected ? "check" : "chevron-right"}
+                      color={isSelected ? colors.cream : colors.textFaint}
+                      size={isSelected ? 15 : 17}
+                    />
+                  </View>
+                </Pressable>
               );
             })}
           </View>
@@ -177,6 +183,7 @@ export default function RoleSelectorScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={handleContinue}
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
                   style={({ pressed }) => [
                     styles.button,
                     pressed && styles.pressed,
@@ -208,6 +215,9 @@ export default function RoleSelectorScreen() {
             </View>
           ) : null}
 
+          <View style={styles.footnoteRow}>
+            <TabBarIcon name="shield-check" color={colors.textFaint} size={14} />
+          </View>
           <Text style={styles.footnote}>
             Everyone is welcome. Verification helps build trust
             across the HelpNest community.
@@ -255,7 +265,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   heroSafe: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 4,
   },
   heroRow: {
@@ -336,24 +346,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   scroll: {
-    paddingHorizontal: 24,
-    paddingTop: 14,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   eyebrow: {
     color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
-    lineHeight: 31,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: "800",
-    letterSpacing: -0.3,
-    marginBottom: 18,
+    letterSpacing: -0.4,
+    marginBottom: 20,
   },
 
   /* ---------- MESSAGES ---------- */
@@ -368,9 +378,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
@@ -413,49 +423,53 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ---------- OPTIONS ---------- */
+  /* ---------- ROLE CARDS ---------- */
   options: {
     marginTop: 4,
+    gap: 14,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.mist,
-  },
-  row: {
+  roleCard: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 20,
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 18,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  roleCardSelected: {
+    borderColor: colors.brand,
+    backgroundColor: colors.white,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.88,
   },
-  number: {
-    width: 52,
-    fontSize: 34,
-    lineHeight: 40,
-    fontWeight: "300",
-    letterSpacing: -1,
-    color: colors.cloud,
-    marginRight: 10,
+  roleBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
   },
-  numberSelected: {
-    color: colors.brand,
-    fontWeight: "400",
-  },
-  rowBody: {
+  roleBody: {
     flex: 1,
-    paddingTop: 2,
   },
-  rowTitle: {
+  roleTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "800",
-    marginBottom: 5,
+    marginBottom: 4,
   },
-  rowDescription: {
+  roleDescription: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 13.5,
+    lineHeight: 20,
   },
   tags: {
     flexDirection: "row",
@@ -466,41 +480,33 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: colors.mist,
+    borderRadius: 10,
+    backgroundColor: withAlpha(colors.brand, 0.08),
   },
   tagText: {
     color: colors.brand,
     fontSize: 11,
     fontWeight: "700",
   },
-  marker: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.mistDark,
+  trailing: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 10,
-    marginTop: 6,
+    marginLeft: 12,
   },
-  markerSelected: {
+  trailingSelected: {
     backgroundColor: colors.brand,
-    borderColor: colors.brand,
-  },
-  markerCheck: {
-    color: colors.cream,
-    fontSize: 13,
-    fontWeight: "900",
   },
 
   /* ---------- REPLY + CTA ---------- */
   replyBlock: {
-    marginTop: 22,
+    marginTop: 24,
   },
   ctaWrap: {
-    marginTop: 18,
+    marginTop: 20,
   },
   button: {
     flexDirection: "row",
@@ -509,11 +515,16 @@ const styles = StyleSheet.create({
     minHeight: 56,
     borderRadius: 16,
     backgroundColor: colors.brand,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   buttonText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15.5,
+    fontWeight: "800",
   },
   buttonArrow: {
     color: colors.white,
@@ -532,12 +543,17 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 
+  footnoteRow: {
+    alignItems: "center",
+    marginTop: 26,
+    marginBottom: 8,
+  },
   footnote: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: 11.5,
     lineHeight: 17,
+    fontWeight: "600",
     textAlign: "center",
-    marginTop: 26,
     paddingHorizontal: 12,
   },
 });

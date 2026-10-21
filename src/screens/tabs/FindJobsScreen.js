@@ -343,7 +343,13 @@ export default function FindJobsScreen() {
                           job.promoted === "spotlight" && styles.promoPillSpotlight,
                         ]}
                       >
-                        <Text style={styles.promoPillText}>
+                        <Text
+                          style={[
+                            styles.promoPillText,
+                            job.promoted === "spotlight" &&
+                              styles.promoPillTextSpotlight,
+                          ]}
+                        >
                           {job.promoted === "spotlight" ? "SPOTLIGHT" : "URGENT"}
                         </Text>
                       </View>
@@ -528,7 +534,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 10,
     gap: 12,
@@ -538,8 +544,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.ink,
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: colors.textMuted,
@@ -566,11 +573,11 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   chipRowContent: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     gap: 8,
   },
   chip: {
-    borderRadius: 999,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.mistDark,
     paddingHorizontal: 14,
@@ -605,7 +612,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     marginBottom: 6,
     textAlign: "center",
@@ -618,7 +625,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
     textAlign: "center",
@@ -644,25 +651,30 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   listError: {
-    color: "#B3403A",
+    color: colors.danger,
     fontSize: 12.5,
     marginBottom: 10,
   },
   list: {
-    padding: 22,
+    padding: 20,
     paddingTop: 10,
     paddingBottom: 40,
   },
   jobCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
     marginBottom: 12,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   cardPressed: {
-    opacity: 0.92,
+    opacity: 0.88,
   },
   jobTop: {
     flexDirection: "row",
@@ -671,32 +683,35 @@ const styles = StyleSheet.create({
   },
   promoPill: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFF0EE",
+    backgroundColor: withAlpha(colors.danger, 0.1),
     borderWidth: 1,
-    borderColor: "#F2CFC9",
-    borderRadius: 6,
-    paddingHorizontal: 6,
+    borderColor: withAlpha(colors.danger, 0.28),
+    borderRadius: 8,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     marginBottom: 4,
   },
   promoPillSpotlight: {
-    backgroundColor: "#FBF3E1",
-    borderColor: "#E7D2A8",
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    borderColor: withAlpha(colors.gold, 0.45),
   },
   promoPillText: {
     color: colors.danger,
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: "800",
     letterSpacing: 0.8,
+  },
+  promoPillTextSpotlight: {
+    color: colors.goldDark,
   },
   jobTitleWrap: {
     flex: 1,
   },
   jobTitle: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "800",
-    lineHeight: 20,
+    lineHeight: 21,
   },
   employerRow: {
     flexDirection: "row",
@@ -793,7 +808,7 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-    backgroundColor: "rgba(38, 49, 43, 0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
   },
   detailSheet: {
     backgroundColor: colors.white,
@@ -890,6 +905,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   pressed: {
-    opacity: 0.9,
+    opacity: 0.88,
   },
 });

@@ -66,9 +66,21 @@ const SLOTS = [
 const POLL_MS = 12000;
 
 const STATUS_THEMES = {
-  verified: { bg: "#EAF7EE", border: "#BFE3C8", text: "#1F7A3D" },
-  pending: { bg: "#FFF6E5", border: "#F0DFBC", text: "#8A6116" },
-  rejected: { bg: "#FFF0EE", border: "#F2CFC9", text: "#7D2922" },
+  verified: {
+    bg: withAlpha(colors.brand, 0.08),
+    border: withAlpha(colors.brand, 0.22),
+    text: colors.brand,
+  },
+  pending: {
+    bg: withAlpha(colors.gold, 0.14),
+    border: withAlpha(colors.gold, 0.38),
+    text: colors.goldDark,
+  },
+  rejected: {
+    bg: withAlpha(colors.danger, 0.07),
+    border: withAlpha(colors.danger, 0.22),
+    text: colors.danger,
+  },
   unverified: { bg: colors.mist, border: colors.mistDark, text: colors.ink },
 };
 
@@ -434,11 +446,14 @@ export default function VerificationScreen() {
           <Text style={styles.subtitle}>{roleCopy.intro}</Text>
 
           {loadError ? (
-            <View style={[styles.statusCard, { backgroundColor: "#FFF0EE", borderColor: "#F2CFC9" }]}>
-              <Text style={[styles.statusTitle, { color: "#7D2922" }]}>
-                Something went wrong
-              </Text>
-              <Text style={[styles.statusBody, { color: "#7D2922" }]}>{loadError}</Text>
+            <View style={[styles.statusCard, styles.errorCard]}>
+              <View style={styles.statusHead}>
+                <TabBarIcon name="alert-triangle" color={colors.danger} size={20} />
+                <Text style={[styles.statusTitle, styles.errorTone]}>
+                  Something went wrong
+                </Text>
+              </View>
+              <Text style={[styles.statusBody, styles.errorTone]}>{loadError}</Text>
             </View>
           ) : null}
 
@@ -480,14 +495,21 @@ export default function VerificationScreen() {
           {kycStatus === "pending" ? (
             <Pressable
               accessibilityRole="button"
-              style={styles.fastTrackCard}
+              style={({ pressed }) => [
+                styles.fastTrackCard,
+                pressed && styles.pressed,
+              ]}
               onPress={() =>
                 navigation.navigate("MpesaCheckout", {
                   plan: "verification_fast_track",
                   label: "Fast-track review (6 hours)",
                 })
               }
+              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             >
+              <View style={styles.fastTrackIcon}>
+                <TabBarIcon name="zap" color={colors.goldDark} size={20} />
+              </View>
               <View style={styles.fastTrackMain}>
                 <Text style={styles.fastTrackTitle}>In a hurry?</Text>
                 <Text style={styles.fastTrackText}>
@@ -496,7 +518,9 @@ export default function VerificationScreen() {
                   the outcome, only the speed.
                 </Text>
               </View>
-              <Text style={styles.fastTrackPrice}>KES 100</Text>
+              <View style={styles.pricePill}>
+                <Text style={styles.fastTrackPrice}>KES 100</Text>
+              </View>
             </Pressable>
           ) : null}
 
@@ -505,9 +529,16 @@ export default function VerificationScreen() {
           {kycStatus === "rejected" ? (
             <Pressable
               accessibilityRole="button"
-              style={styles.appealCard}
+              style={({ pressed }) => [
+                styles.appealCard,
+                pressed && styles.pressed,
+              ]}
               onPress={() => setAppealOpen(true)}
+              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             >
+              <View style={styles.appealIcon}>
+                <TabBarIcon name="flag" color={colors.danger} size={20} />
+              </View>
               <View style={styles.fastTrackMain}>
                 <Text style={styles.fastTrackTitle}>
                   Think this was a mistake?
@@ -542,15 +573,23 @@ export default function VerificationScreen() {
                       ) : null}
                     </View>
                     <View style={styles.docSide}>
-                      <Text
+                      <View
                         style={[
-                          styles.docState,
-                          doc.status === "approved" && styles.docStateOk,
-                          rejected && styles.docStateBad,
+                          styles.docPill,
+                          doc.status === "approved" && styles.docPillOk,
+                          rejected && styles.docPillBad,
                         ]}
                       >
-                        {DOC_STATUS_LABELS[doc.status] || doc.status}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.docPillText,
+                            doc.status === "approved" && styles.docPillTextOk,
+                            rejected && styles.docPillTextBad,
+                          ]}
+                        >
+                          {DOC_STATUS_LABELS[doc.status] || doc.status}
+                        </Text>
+                      </View>
                       {rejected ? (
                         <Text style={styles.docRetake}>Tap to retake</Text>
                       ) : null}
@@ -586,7 +625,9 @@ export default function VerificationScreen() {
 
           {kycStatus === "verified" ? (
             <View style={styles.trustStrip}>
-              <TabBarIcon name="star" color={colors.goldDark} size={16} />
+              <View style={styles.trustIcon}>
+                <TabBarIcon name="star" color={colors.goldDark} size={16} />
+              </View>
               <Text style={styles.trustText}>
                 Verified members are 3x more likely to be contacted. Keep your
                 profile photo and skills updated.
@@ -698,6 +739,7 @@ export default function VerificationScreen() {
             onPress={() => setAppealOpen(false)}
           />
           <View style={styles.appealSheet}>
+            <View style={styles.appealGrabber} />
             <Text style={styles.appealSheetTitle}>Appeal this decision</Text>
             <Text style={styles.appealSheetHint}>
               Tell the second reviewer why you believe the rejection was a
@@ -780,31 +822,55 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
+  pressed: {
+    opacity: 0.88,
+  },
   fastTrackCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
-  fastTrackMain: { flex: 1, marginRight: 10 },
+  fastTrackIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  fastTrackMain: { flex: 1, marginRight: 12 },
   fastTrackTitle: {
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: "800",
   },
   fastTrackText: {
     color: colors.textMuted,
-    fontSize: 11.5,
-    lineHeight: 15.5,
+    fontSize: 12,
+    lineHeight: 17,
     marginTop: 3,
   },
+  pricePill: {
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
   fastTrackPrice: {
-    color: colors.brand,
-    fontSize: 13,
+    color: colors.goldDark,
+    fontSize: 12.5,
     fontWeight: "800",
   },
   appealCard: {
@@ -813,45 +879,68 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  appealIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.danger, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   appealArrow: {
-    color: colors.brand,
+    color: colors.textFaint,
     fontSize: 22,
     fontWeight: "700",
   },
   appealSheetWrap: { flex: 1, justifyContent: "flex-end" },
   appealSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(38, 49, 43, 0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
   },
   appealSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    padding: 20,
-    paddingBottom: 30,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 22,
+    paddingBottom: 34,
+  },
+  appealGrabber: {
+    alignSelf: "center",
+    width: 44,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.cloud,
+    marginBottom: 16,
   },
   appealSheetTitle: {
     color: colors.ink,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
   },
   appealSheetHint: {
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 6,
-    marginBottom: 12,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginTop: 8,
+    marginBottom: 14,
   },
   appealSheetInput: {
     borderWidth: 1,
     borderColor: colors.mistDark,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: colors.cream,
-    padding: 12,
+    padding: 14,
     minHeight: 100,
     textAlignVertical: "top",
     color: colors.ink,
@@ -865,48 +954,59 @@ const styles = StyleSheet.create({
   },
   appealSheetBtn: {
     backgroundColor: colors.brand,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
     minWidth: 110,
     alignItems: "center",
+    justifyContent: "center",
   },
   appealSheetBtnText: { color: colors.white, fontWeight: "800", fontSize: 14 },
   appealSheetBtnGhost: { backgroundColor: colors.mist },
   appealSheetBtnGhostText: { color: colors.ink, fontWeight: "700", fontSize: 14 },
   appealSheetBtnDisabled: { opacity: 0.45 },
-  flex: {
-    flex: 1,
-  },
   center: {
     alignItems: "center",
     justifyContent: "center",
   },
   scroll: {
-    padding: 22,
-    paddingBottom: 60,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 48,
   },
   menuRow: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   title: {
     color: colors.ink,
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
-    marginTop: 4,
-    marginBottom: 16,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+    marginBottom: 20,
   },
   statusCard: {
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 18,
     marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  errorCard: {
+    backgroundColor: withAlpha(colors.danger, 0.07),
+    borderColor: withAlpha(colors.danger, 0.22),
+  },
+  errorTone: {
+    color: colors.danger,
   },
   statusHead: {
     flexDirection: "row",
@@ -914,27 +1014,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statusTitle: {
-    fontSize: 17,
+    fontSize: 17.5,
     fontWeight: "800",
     marginLeft: 10,
   },
   statusBody: {
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
   },
   docsCard: {
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 6,
     marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   docRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    minHeight: 56,
+    paddingVertical: 13,
     paddingHorizontal: 12,
   },
   docMain: {
@@ -943,51 +1049,76 @@ const styles = StyleSheet.create({
   },
   docLabel: {
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "700",
   },
   docReason: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 12,
     lineHeight: 17,
     marginTop: 3,
   },
   docSide: {
     alignItems: "flex-end",
+    gap: 4,
   },
-  docState: {
-    fontSize: 12.5,
+  docPill: {
+    backgroundColor: colors.mist,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  docPillOk: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
+  docPillBad: {
+    backgroundColor: withAlpha(colors.danger, 0.1),
+  },
+  docPillText: {
+    fontSize: 11.5,
     fontWeight: "800",
     color: colors.textMuted,
+  },
+  docPillTextOk: {
+    color: colors.brand,
+  },
+  docPillTextBad: {
+    color: colors.danger,
   },
   docRetake: {
     color: colors.brand,
     fontSize: 11.5,
     fontWeight: "800",
-    marginTop: 3,
-  },
-  docStateOk: {
-    color: "#1F7A3D",
-  },
-  docStateBad: {
-    color: "#7D2922",
   },
   trustStrip: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 14,
     marginTop: 4,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  trustIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    alignItems: "center",
+    justifyContent: "center",
   },
   trustText: {
     flex: 1,
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
-    marginLeft: 10,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginLeft: 12,
   },
   card: {
     backgroundColor: colors.white,
@@ -995,6 +1126,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   slot: {
     flexDirection: "row",
@@ -1009,25 +1145,25 @@ const styles = StyleSheet.create({
     height: 84,
   },
   slotLockedThumb: {
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
   slotLockedHint: {
-    color: "#1F7A3D",
+    color: colors.brand,
     fontWeight: "600",
   },
   slotThumb: {
     width: 84,
     height: 84,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.mist,
   },
   slotEmpty: {
     width: 84,
     height: 84,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.mistDark,
@@ -1036,7 +1172,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   slotPlus: {
-    color: colors.textMuted,
+    color: colors.textFaint,
     fontSize: 30,
     fontWeight: "400",
     marginTop: -4,
@@ -1058,7 +1194,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   slotPillError: {
-    backgroundColor: "#B3493E",
+    backgroundColor: colors.danger,
   },
   slotCopy: {
     flex: 1,
@@ -1078,15 +1214,17 @@ const styles = StyleSheet.create({
   consentRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: colors.mist,
-    borderRadius: 14,
+    backgroundColor: colors.cream,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.mist,
     padding: 14,
     marginBottom: 16,
   },
   consentBox: {
     width: 22,
     height: 22,
-    borderRadius: 7,
+    borderRadius: 8,
     borderWidth: 1.5,
     borderColor: colors.mistDark,
     backgroundColor: colors.white,
@@ -1107,13 +1245,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   errorBox: {
-    backgroundColor: "#FFF0EE",
-    borderRadius: 12,
+    backgroundColor: withAlpha(colors.danger, 0.07),
+    borderRadius: 14,
     padding: 12,
     marginBottom: 14,
   },
   errorText: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -1122,8 +1260,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backLinkText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "700",
+    color: colors.brand,
+    fontSize: 14,
+    fontWeight: "800",
   },
 });
