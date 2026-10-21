@@ -19,6 +19,27 @@ import TabBarIcon from "../../components/ui/TabBarIcon";
 import GradientBanner from "../../components/ui/GradientBanner";
 import { colors, withAlpha } from "../../theme/colors";
 
+// Maid-side catalog (PRD v1.1 §5.1; amounts looked up server-side at push
+// time). Basic/Gold are fixed 7-day periods (§8.1); a single application
+// stays KES 50. Tile rendering mirrors the employer Subscription plans.
+const MAID_PLAN_TILES = [
+  {
+    id: "maid_basic",
+    name: "Basic",
+    price: 199,
+    per: "3 applications · 7 days",
+    label: "Basic — 3 applications",
+  },
+  {
+    id: "maid_gold",
+    name: "Gold",
+    price: 349,
+    per: "10 applications · 7 days",
+    label: "Gold — 10 applications",
+    best: true,
+  },
+];
+
 // Maid home (PRD §5.2): get the worker search-ready and into work fast.
 export default function MaidHomeScreen() {
   const navigation = useNavigation();
@@ -273,13 +294,14 @@ export default function MaidHomeScreen() {
 
         <LocationPromptCard />
 
-        {/* ---------- Application plans (PRD §5.1 maid products) ---------- */}
+        {/* ---------- Application plans (PRD §5.1 maid products) ----------
+            Layout mirrored 1:1 from the employer Subscription plans card
+            (PRD §5.2): single-title head with the Active pill, centered
+            plan tiles with the floating solid-gold "Best value" badge, and
+            a centered footnote. Catalog/copy stays maid-side (§5.1). */}
         <View style={styles.planCard}>
           <View style={styles.planHead}>
-            <View style={styles.planHeadLeft}>
-              <Text style={styles.cardEyebrow}>Weekly plans</Text>
-              <Text style={styles.planTitle}>Get more applications</Text>
-            </View>
+            <Text style={styles.planTitle}>Get more applications</Text>
             {ent?.subscription ? (
               <View style={styles.planActivePill}>
                 <Text style={styles.planActiveText}>Active</Text>
@@ -305,47 +327,33 @@ export default function MaidHomeScreen() {
                   : "Your first application is free. After that, bundles keep the search going:"}
               </Text>
               <View style={styles.planRow}>
-                <Pressable
-                  accessibilityRole="button"
-                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                  style={({ pressed }) => [
-                    styles.planTile,
-                    pressed && styles.tilePressed,
-                  ]}
-                  onPress={() =>
-                    navigation.navigate("MpesaCheckout", {
-                      plan: "maid_basic",
-                      label: "Basic — 3 applications",
-                    })
-                  }
-                >
-                  <Text style={styles.planName}>Basic</Text>
-                  <Text style={styles.planPrice}>KES 199</Text>
-                  <Text style={styles.planPer}>3 applications · 7 days</Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="button"
-                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                  style={({ pressed }) => [
-                    styles.planTile,
-                    styles.planTileBest,
-                    pressed && styles.tilePressed,
-                  ]}
-                  onPress={() =>
-                    navigation.navigate("MpesaCheckout", {
-                      plan: "maid_gold",
-                      label: "Gold — 10 applications",
-                    })
-                  }
-                >
-                  <View style={styles.planBest}>
-                    <Text style={styles.planBestText}>Best value</Text>
-                  </View>
-                  <Text style={styles.planName}>Gold</Text>
-                  <Text style={styles.planPrice}>KES 349</Text>
-                  <Text style={styles.planPer}>10 applications · 7 days</Text>
-                </Pressable>
+                {MAID_PLAN_TILES.map((plan) => (
+                  <Pressable
+                    key={plan.id}
+                    accessibilityRole="button"
+                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                    style={({ pressed }) => [
+                      styles.planTile,
+                      plan.best && styles.planTileBest,
+                      pressed && styles.tilePressed,
+                    ]}
+                    onPress={() =>
+                      navigation.navigate("MpesaCheckout", {
+                        plan: plan.id,
+                        label: plan.label,
+                      })
+                    }
+                  >
+                    {plan.best ? (
+                      <View style={styles.planBest}>
+                        <Text style={styles.planBestText}>Best value</Text>
+                      </View>
+                    ) : null}
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    <Text style={styles.planPrice}>KES {plan.price}</Text>
+                    <Text style={styles.planPer}>{plan.per}</Text>
+                  </Pressable>
+                ))}
               </View>
               <Text style={styles.planFootnote}>
                 Just one role? A single application is KES 50 on any job.
@@ -375,17 +383,10 @@ export default function MaidHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  /* ---- Card eyebrow (shared) ---- */
-  cardEyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-
-  /* ---- Application plans ---- */
+  /* ---- Application plans — layout mirrored from the employer
+     Subscription plans card (PRD §5.2): centered tiles, floating solid-gold
+     "Best value" badge, muted plan name over a large ink price, centered
+     footnote. planCard keeps marginBottom (tipsCard has marginTop: 0). */
   planCard: {
     backgroundColor: colors.white,
     borderRadius: 20,
@@ -402,42 +403,37 @@ const styles = StyleSheet.create({
   planHead: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  planHeadLeft: {
-    flex: 1,
+    gap: 8,
   },
   planTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: "800",
+    flex: 1,
   },
   planActivePill: {
-    backgroundColor: withAlpha(colors.brand, 0.12),
+    backgroundColor: withAlpha(colors.brand, 0.14),
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   planActiveText: {
     color: colors.brand,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
   },
   planActiveCopy: {
     color: colors.textMuted,
     fontSize: 12.5,
     lineHeight: 19,
-    fontWeight: "600",
     marginTop: 8,
   },
   planCopy: {
     color: colors.textMuted,
     fontSize: 12.5,
     lineHeight: 19,
-    fontWeight: "600",
-    marginTop: 6,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 14,
   },
   planRow: {
     flexDirection: "row",
@@ -449,49 +445,51 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: "center",
   },
   planTileBest: {
     borderColor: colors.gold,
-    backgroundColor: withAlpha(colors.gold, 0.08),
+    backgroundColor: withAlpha(colors.gold, 0.1),
   },
   planBest: {
-    alignSelf: "flex-start",
-    backgroundColor: withAlpha(colors.gold, 0.16),
+    position: "absolute",
+    top: -9,
+    backgroundColor: colors.gold,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    marginBottom: 6,
   },
   planBestText: {
-    color: colors.goldDark,
-    fontSize: 10,
+    color: colors.white,
+    fontSize: 9.5,
     fontWeight: "800",
   },
   planName: {
-    color: colors.ink,
-    fontSize: 13.5,
+    color: colors.textMuted,
+    fontSize: 12,
     fontWeight: "800",
   },
   planPrice: {
-    color: colors.brand,
-    fontSize: 16,
+    color: colors.ink,
+    fontSize: 19,
     fontWeight: "800",
-    marginTop: 2,
-  },
-  planPer: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    lineHeight: 15,
     marginTop: 4,
   },
+  planPer: {
+    color: colors.textFaint,
+    fontSize: 10.5,
+    fontWeight: "700",
+    marginTop: 3,
+    textAlign: "center",
+  },
   planFootnote: {
-    color: colors.textMuted,
-    fontSize: 11.5,
-    lineHeight: 17,
-    fontWeight: "600",
+    color: colors.textFaint,
+    fontSize: 11,
+    lineHeight: 16,
     marginTop: 12,
+    textAlign: "center",
   },
   tilePressed: {
     opacity: 0.88,
