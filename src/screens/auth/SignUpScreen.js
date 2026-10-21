@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import TextField from "../../components/ui/TextField";
@@ -26,6 +26,7 @@ const ROLE_LABELS = {
 export default function SignUpScreen() {
   const navigation = useNavigation();
   const { params } = useRoute();
+  const insets = useSafeAreaInsets();
 
   // Role comes from the RoleSelector ("employer" | "domestic_worker");
   // the API expects the PRD's enum value ("maid").
@@ -113,7 +114,10 @@ export default function SignUpScreen() {
         behavior="padding"
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: 32 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

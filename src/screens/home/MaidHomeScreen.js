@@ -135,14 +135,25 @@ export default function MaidHomeScreen() {
 
           <View style={styles.checklist}>
             {checklist.map((item) => (
-              <View key={item.label} style={styles.checkRow}>
-                <View style={[styles.checkDot, item.done && styles.checkDotDone]}>
-                  {item.done ? (
-                    <TabBarIcon name="check" color={colors.white} size={10} />
-                  ) : null}
-                </View>
+              <View
+                key={item.label}
+                style={[
+                  styles.checkChip,
+                  item.done ? styles.checkChipDone : styles.checkChipTodo,
+                ]}
+              >
+                <TabBarIcon
+                  name="check"
+                  color={item.done ? colors.brand : colors.textFaint}
+                  size={12}
+                />
                 <Text
-                  style={[styles.checkLabel, item.done && styles.checkLabelDone]}
+                  style={[
+                    styles.checkChipText,
+                    item.done
+                      ? styles.checkChipTextDone
+                      : styles.checkChipTextTodo,
+                  ]}
                 >
                   {item.label}
                 </Text>
@@ -167,7 +178,7 @@ export default function MaidHomeScreen() {
           <TabBarIcon
             name={searchReady ? "check" : "shield"}
             color={searchReady ? colors.brand : colors.goldDark}
-            size={16}
+            size={15}
           />
           <Text
             style={[
@@ -223,12 +234,47 @@ export default function MaidHomeScreen() {
           </Pressable>
         </View>
 
+        {/* ---------- Featured / boost promo (moved from Account) ---------- */}
+        <View style={styles.promoCard}>
+          <View style={styles.promoBadge}>
+            <TabBarIcon name="zap" color={colors.goldDark} size={20} />
+          </View>
+          <View style={styles.promoMain}>
+            <Text style={styles.promoEyebrow}>Featured</Text>
+            <Text style={styles.promoTitle}>Boost your profile</Text>
+            <Text style={styles.promoCopy}>
+              Get a labeled “Featured” placement at the top of employer searches for 7 days.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              android_ripple={{ color: withAlpha(colors.white, 0.16) }}
+              style={({ pressed }) => [
+                styles.promoCta,
+                pressed && styles.tilePressed,
+              ]}
+              onPress={() =>
+                navigation.navigate("MpesaCheckout", {
+                  plan: "profile_boost",
+                  label: "Profile boost — 7 days featured",
+                })
+              }
+            >
+              <Text style={styles.promoCtaText}>
+                Boost — KES 100 / 7 days
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         <LocationPromptCard />
 
         {/* ---------- Application plans (PRD §5.1 maid products) ---------- */}
         <View style={styles.planCard}>
           <View style={styles.planHead}>
-            <Text style={styles.planTitle}>Get more applications</Text>
+            <View style={styles.planHeadLeft}>
+              <Text style={styles.cardEyebrow}>Weekly plans</Text>
+              <Text style={styles.planTitle}>Get more applications</Text>
+            </View>
             {ent?.subscription ? (
               <View style={styles.planActivePill}>
                 <Text style={styles.planActiveText}>Active</Text>
@@ -324,6 +370,16 @@ export default function MaidHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  /* ---- Card eyebrow (shared) ---- */
+  cardEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+
   /* ---- Application plans ---- */
   planCard: {
     backgroundColor: colors.white,
@@ -343,6 +399,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
+  },
+  planHeadLeft: {
+    flex: 1,
   },
   planTitle: {
     color: colors.ink,
@@ -500,7 +559,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 18,
+    padding: 16,
     marginBottom: 14,
     shadowColor: colors.ink,
     shadowOpacity: 0.05,
@@ -520,7 +579,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   progressTitle: {
     color: colors.ink,
@@ -537,56 +596,64 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.mist,
     overflow: "hidden",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   fill: {
     height: "100%",
     borderRadius: 4,
     backgroundColor: colors.brand,
   },
+  /* ---- Completeness chips (2-col grid) ---- */
   checklist: {
-    marginBottom: 6,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
   },
-  checkRow: {
+  checkChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
+    gap: 6,
+    width: "48.5%",
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
   },
-  checkDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+  checkChipDone: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
+  checkChipTodo: {
     backgroundColor: colors.mist,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 9,
   },
-  checkDotDone: {
-    backgroundColor: colors.brandSoft,
-  },
-  checkLabel: {
+  checkChipText: {
+    flexShrink: 1,
     color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 15,
   },
-  checkLabelDone: {
+  checkChipTextDone: {
     color: colors.ink,
+  },
+  checkChipTextTodo: {
+    color: colors.textMuted,
   },
   progressCta: {
     color: colors.brand,
     fontSize: 12.5,
     fontWeight: "800",
-    marginTop: 8,
+    marginTop: 2,
   },
 
   /* ---- Search-ready status ---- */
   readyCard: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 18,
-    padding: 14,
-    gap: 10,
-    marginBottom: 18,
+    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    gap: 8,
+    marginBottom: 14,
   },
   readyOk: {
     backgroundColor: withAlpha(colors.brand, 0.1),
@@ -596,9 +663,9 @@ const styles = StyleSheet.create({
   },
   readyText: {
     flex: 1,
-    fontSize: 12.5,
-    lineHeight: 18,
-    fontWeight: "600",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
   },
   readyTextOk: {
     color: colors.brand,
@@ -666,6 +733,69 @@ const styles = StyleSheet.create({
     color: withAlpha(colors.cream, 0.82),
   },
 
+  /* ---- Featured / boost promo ---- */
+  promoCard: {
+    flexDirection: "row",
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.35),
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  promoBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.gold, 0.2),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  promoMain: {
+    flex: 1,
+  },
+  promoEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  promoTitle: {
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  promoCopy: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  promoCta: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  promoCtaText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
   /* ---- Tips ---- */
   tipsCard: {
     backgroundColor: colors.white,
@@ -673,7 +803,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 16,
-    marginTop: 4,
+    marginTop: 0,
     shadowColor: colors.ink,
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -690,7 +820,7 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     color: colors.ink,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
     marginBottom: 8,
   },
@@ -698,6 +828,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12.5,
     lineHeight: 19,
+    fontWeight: "600",
     marginBottom: 6,
   },
 });

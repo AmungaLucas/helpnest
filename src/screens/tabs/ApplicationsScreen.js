@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,11 +13,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import {
+  applyToJob,
   listMyApplications,
   setApplicationStatus,
 } from "../../services/jobsService";
 import EmptyState from "../../components/ui/EmptyState";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import {
+  ConfirmDialog,
+  InfoDialog,
+} from "../../components/ui/AppDialogs";
 import { serviceLabel } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -46,6 +50,12 @@ export default function ApplicationsScreen() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState(null);
+
+  // Branded dialog state (replaces the old system Alert.alert flows).
+  const [withdrawTarget, setWithdrawTarget] = useState(null);
+  const [reapplyTarget, setReapplyTarget] = useState(null);
+  const [reapplyingId, setReapplyingId] = useState(null);
+  const [info, setInfo] = useState(null);
 
   const load = useCallback(async () => {
     setError("");
@@ -89,18 +99,7 @@ export default function ApplicationsScreen() {
   }, [load]);
 
   const confirmWithdraw = useCallback((application) => {
-    Alert.alert(
-      "Withdraw this application?",
-      "The employer will no longer see it as active. The application credit is not returned.",
-      [
-        { text: "Keep it", style: "cancel" },
-        {
-          text: "Withdraw",
-          style: "destructive",
-          onPress: () => withdraw(application),
-        },
-      ]
-    );
+    setWithdrawTarget(application);
   }, []);
 
   const withdraw = useCallback(
@@ -114,13 +113,65 @@ export default function ApplicationsScreen() {
             a.id === application.id ? { ...a, status: "withdrawn" } : a
           )
         );
+        setWithdrawTarget(null);
       } catch (err) {
-        Alert.alert(
-          "Could not withdraw",
-          err?.message || "Try again in a moment."
-        );
+        setWithdrawTarget(null);
+        setInfo({
+          tone: "danger",
+          icon: "alert-triangle",
+          title: "Could not withdraw",
+          message: err?.message || "Try again in a moment.",
+        });
       } finally {
         setBusyId(null);
+      }
+    },
+    []
+  );
+
+  // Re-apply to a job whose previous application was withdrawn. The gateway
+  // reactivates the withdrawn application for free (200 { reactivated:true });
+  // a 409 { alreadyApplied:true } means an active application already exists.
+  const reapply = useCallback(
+    async (application) => {
+      setReapplyingId(application.id);
+
+      try {
+        await applyToJob(application.job.id);
+        setApplications((prev) =>
+          prev.map((a) =>
+            a.id === application.id ? { ...a, status: "submitted" } : a
+          )
+        );
+        setReapplyTarget(null);
+        setInfo({
+          tone: "brand",
+          icon: "check-circle",
+          title: "Application re-sent",
+          message:
+            "The employer can see your application again under their job.",
+        });
+      } catch (err) {
+        setReapplyTarget(null);
+
+        if (err?.status === 409) {
+          setInfo({
+            tone: "brand",
+            icon: "info",
+            title: "Already active",
+            message:
+              "Your application to this job is already active — check its status here.",
+          });
+        } else {
+          setInfo({
+            tone: "danger",
+            icon: "alert-triangle",
+            title: "Could not re-apply",
+            message: err?.message || "Try again in a moment.",
+          });
+        }
+      } finally {
+        setReapplyingId(null);
       }
     },
     []
@@ -231,9 +282,25 @@ export default function ApplicationsScreen() {
           {applications.map((application) => {
             const pill = STATUS_STYLES[application.status] || STATUS_STYLES.submitted;
             const job = application.job || {};
+            const canReapply =
+              application.status === "withdrawn" && job.status === "open";
+            const jobClosed = Boolean(job.status) && job.status !== "open";
 
             return (
-              <View key={application.id} style={styles.card}>
+              <Pressable
+                key={application.id}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.card,
+                  pressed && styles.pressed,
+                ]}
+                android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
+                onPress={() =>
+                  navigation.navigate("FindJobsTab", {
+                    openJobId: application.job?.id,
+                  })
+                }
+              >
                 <View style={styles.cardTop}>
                   <Text style={styles.jobTitle} numberOfLines={2}>
                     {job.title || "Job"}
@@ -243,6 +310,16 @@ export default function ApplicationsScreen() {
                       {pill.label}
                     </Text>
                   </View>
+                  {jobClosed ? (
+                    <View style={styles.closedChip}>
+                      <Text style={styles.closedChipText}>Job closed</Text>
+                    </View>
+                  ) : null}
+                  <TabBarIcon
+                    name="chevron-right"
+                    color={colors.textFaint}
+                    size={16}
+                  />
                 </View>
 
                 <View style={styles.employerRow}>
@@ -291,7 +368,18 @@ export default function ApplicationsScreen() {
                     Applied {appliedLabel(application.createdAt)}
                   </Text>
 
-                  {application.status !== "withdrawn" &&
+                  {canReapply ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.reapplyButton,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setReapplyTarget(application)}
+                    >
+                      <Text style={styles.reapplyText}>Re-apply</Text>
+                    </Pressable>
+                  ) : application.status !== "withdrawn" &&
                   application.status !== "accepted" &&
                   application.status !== "rejected" ? (
                     <Pressable
@@ -317,7 +405,7 @@ export default function ApplicationsScreen() {
                     </Pressable>
                   ) : null}
                 </View>
-              </View>
+              </Pressable>
             );
           })}
 
@@ -332,6 +420,39 @@ export default function ApplicationsScreen() {
           </View>
         </ScrollView>
       )}
+
+      <ConfirmDialog
+        visible={withdrawTarget !== null}
+        onClose={() => setWithdrawTarget(null)}
+        icon="x"
+        tone="danger"
+        title="Withdraw this application?"
+        message="The employer will no longer see it as active. The application credit is not returned."
+        confirmLabel="Withdraw"
+        busy={withdrawTarget !== null && busyId === withdrawTarget.id}
+        onConfirm={() => withdraw(withdrawTarget)}
+      />
+
+      <ConfirmDialog
+        visible={reapplyTarget !== null}
+        onClose={() => setReapplyTarget(null)}
+        icon="send"
+        tone="brand"
+        title="Send your application again?"
+        message="Your original application credit stays used — re-applying to this job is free. The employer is notified again."
+        confirmLabel="Re-apply"
+        busy={reapplyTarget !== null && reapplyingId === reapplyTarget.id}
+        onConfirm={() => reapply(reapplyTarget)}
+      />
+
+      <InfoDialog
+        visible={info !== null}
+        onClose={() => setInfo(null)}
+        tone={info?.tone}
+        icon={info?.icon}
+        title={info?.title}
+        message={info?.message}
+      />
     </SafeAreaView>
   );
 }
@@ -525,6 +646,31 @@ const styles = StyleSheet.create({
   withdrawText: {
     color: colors.textMuted,
     fontSize: 12,
+    fontWeight: "800",
+  },
+  reapplyButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.brand, 0.35),
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    minWidth: 84,
+    alignItems: "center",
+  },
+  reapplyText: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  closedChip: {
+    backgroundColor: colors.mist,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  closedChipText: {
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: "800",
   },
   hintCard: {

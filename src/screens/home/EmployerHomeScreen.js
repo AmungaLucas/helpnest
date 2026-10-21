@@ -683,6 +683,30 @@ export default function EmployerHomeScreen() {
           </>
         )}
 
+        {/* ---------- Featured promo: boost a job ---------- */}
+        <Pressable
+          accessibilityRole="button"
+          android_ripple={{ color: withAlpha(colors.gold, 0.12) }}
+          style={({ pressed }) => [
+            styles.boostStrip,
+            pressed && styles.pressedDim,
+          ]}
+          onPress={() => navigation.navigate("MyJobsTab")}
+        >
+          <View style={styles.boostBadge}>
+            <TabBarIcon name="zap" color={colors.goldDark} size={19} />
+          </View>
+          <View style={styles.boostBody}>
+            <Text style={styles.boostEyebrow}>Featured</Text>
+            <Text style={styles.boostTitle}>Get more applicants</Text>
+            <Text style={styles.boostCopy}>
+              Boost any job with Urgent (24h) or Spotlight placement from My
+              Jobs.
+            </Text>
+          </View>
+          <TabBarIcon name="chevron-right" color={colors.goldDark} size={16} />
+        </Pressable>
+
         {/* ---------- How it works ---------- */}
         <View style={styles.sectionHead}>
           <View style={styles.sectionHeadLeft}>
@@ -1159,6 +1183,57 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  /* ---- Featured promo: boost a job ---- */
+  boostStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.35),
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingLeft: 14,
+    paddingRight: 10,
+    gap: 12,
+    marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  boostBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.gold, 0.2),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  boostBody: {
+    flex: 1,
+  },
+  boostEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 1,
+  },
+  boostTitle: {
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  boostCopy: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+
   /* ---- How it works ---- */
   stepsCard: {
     backgroundColor: colors.white,
@@ -1219,7 +1294,7 @@ const styles = StyleSheet.create({
   trustCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: withAlpha(colors.gold, 0.13),
+    backgroundColor: withAlpha(colors.brand, 0.07),
     borderRadius: 18,
     padding: 14,
     gap: 10,
@@ -1227,7 +1302,7 @@ const styles = StyleSheet.create({
   },
   trustText: {
     flex: 1,
-    color: colors.goldDark,
+    color: colors.brand,
     fontSize: 12,
     lineHeight: 17.5,
     fontWeight: "600",

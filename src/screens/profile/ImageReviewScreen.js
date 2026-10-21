@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import PrimaryButton from "../../components/ui/PrimaryButton";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import { takeCaptureCallback } from "../../utils/captureCallback";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Review-before-upload (W2-F3 polish, 2026-10-20).
@@ -18,8 +19,10 @@ import { colors, withAlpha } from "../../theme/colors";
 // Every photo the user picks — KYC documents from the gallery, the profile
 // picture — lands here BEFORE anything is uploaded. The screen never touches
 // the network: on "Use photo" it hands the local file URI back to the caller
-// via route.params.onUse(uri) and pops itself; "Choose different" just pops.
-// The caller (VerificationScreen / AccountScreen) owns staging + upload.
+// via the captureCallback registry (params carry only a serializable useId —
+// functions in navigation state trigger React Navigation's
+// non-serializable-params warning) and pops itself; "Choose different" just
+// pops. The caller (VerificationScreen / AccountScreen) owns staging + upload.
 //
 // Camera captures skip this screen — KYCCameraScreen already has its own
 // review step (Retake / Use photo) built into the shutter flow.
@@ -28,7 +31,8 @@ export default function ImageReviewScreen({ route, navigation }) {
   const uri = route?.params?.uri;
   const title = route?.params?.title || "Review photo";
   const subtitle = route?.params?.subtitle;
-  const onUse = route?.params?.onUse;
+  // Single-use callback from the registry (consumed once, survives re-renders).
+  const onUseRef = React.useRef(takeCaptureCallback(route?.params?.useId));
   const [busy, setBusy] = useState(false);
 
   if (!uri) {
@@ -41,7 +45,7 @@ export default function ImageReviewScreen({ route, navigation }) {
     if (busy) return;
 
     setBusy(true);
-    onUse?.(uri);
+    onUseRef.current?.(uri);
     navigation.goBack();
   }
 

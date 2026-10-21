@@ -13,6 +13,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import EmptyState from "../../components/ui/EmptyState";
+import SignedImage from "../../components/media/SignedImage";
 import { useAuth } from "../../context/AuthContext";
 import { colors, withAlpha } from "../../theme/colors";
 import {
@@ -169,9 +170,13 @@ export default function RequestsScreen() {
               }
             >
               <View style={styles.cardAvatar}>
-                <Text style={styles.cardAvatarText}>
-                  {(item.peer?.name || "?").charAt(0).toUpperCase()}
-                </Text>
+                <SignedImage
+                  mediaId={item.peer?.avatarMediaId || null}
+                  variant="thumb"
+                  fallbackText={(item.peer?.name || "?").charAt(0).toUpperCase()}
+                  style={styles.cardAvatarImage}
+                  textStyle={styles.cardAvatarText}
+                />
               </View>
 
               <View style={styles.cardMain}>
@@ -290,7 +295,9 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
+  cardAvatarImage: { width: 48, height: 48 },
   cardAvatarText: { color: colors.brand, fontSize: 20, fontWeight: "800" },
   cardMain: { flex: 1 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },

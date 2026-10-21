@@ -12,6 +12,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import EmptyState from "../../components/ui/EmptyState";
+import SignedImage from "../../components/media/SignedImage";
 import { useAuth } from "../../context/AuthContext";
 import { colors, withAlpha } from "../../theme/colors";
 import { listConversations, registerChatKey } from "../../services/chatService";
@@ -69,11 +70,19 @@ function previewFor(item, myId) {
   }
 }
 
-function Avatar({ name, verified }) {
+function Avatar({ name, verified, mediaId }) {
   const initial = (name || "?").charAt(0).toUpperCase();
   return (
     <View style={styles.avatar}>
-      <Text style={styles.avatarText}>{initial}</Text>
+      {/* Real profile photo when the peer has one; initial-letter fallback
+          otherwise (SignedImage handles load failure back to the initial). */}
+      <SignedImage
+        mediaId={mediaId || null}
+        variant="thumb"
+        fallbackText={initial}
+        style={styles.avatarImage}
+        textStyle={styles.avatarText}
+      />
       {verified ? (
         <View style={styles.verifiedDot}>
           <TabBarIcon name="check" color={colors.white} size={8} />
@@ -98,7 +107,11 @@ function ConversationRow({ item, myId, isEmployer, onPress }) {
       android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
       style={({ pressed }) => [styles.row, hasUnread && styles.rowUnread, pressed && styles.rowPressed]}
     >
-      <Avatar name={item.peer?.name} verified={item.peer?.verified} />
+      <Avatar
+        name={item.peer?.name}
+        verified={item.peer?.verified}
+        mediaId={item.peer?.avatarMediaId}
+      />
 
       <View style={styles.rowMain}>
         <View style={styles.rowTopLine}>
@@ -335,7 +348,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 13,
+    overflow: "hidden",
   },
+  avatarImage: { width: 52, height: 52 },
   avatarText: { color: colors.brand, fontSize: 20, fontWeight: "800" },
   verifiedDot: {
     position: "absolute",

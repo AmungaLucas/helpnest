@@ -25,6 +25,7 @@ import { useAuth } from "../../context/AuthContext";
 import { uploadMedia } from "../../services/mediaService";
 import { getKycStatus, submitKyc } from "../../services/kycService";
 import { fileAppeal } from "../../services/appealsService";
+import { registerCaptureCallback } from "../../utils/captureCallback";
 import { colors, withAlpha } from "../../theme/colors";
 
 // KYC verification flow (PRD §4.2, §10.2, BUILD-PLAN W2-F3).
@@ -312,7 +313,9 @@ export default function VerificationScreen() {
       title: slotLabel,
       subtitle:
         "Check that everything is readable — this is what the reviewer will see.",
-      onUse: (uri) => handleCaptured(slotKey, mediaKind, uri),
+      useId: registerCaptureCallback((uri) =>
+        handleCaptured(slotKey, mediaKind, uri)
+      ),
     });
   }
 
@@ -328,7 +331,9 @@ export default function VerificationScreen() {
           onPress: () =>
             navigation.navigate("KYCCamera", {
               docKind: slotKey,
-              onCaptured: (uri) => handleCaptured(slotKey, mediaKind, uri),
+              captureId: registerCaptureCallback((uri) =>
+                handleCaptured(slotKey, mediaKind, uri)
+              ),
             }),
         },
         {

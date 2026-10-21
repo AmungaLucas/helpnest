@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 
 import TextField from "../../components/ui/TextField";
@@ -22,6 +22,7 @@ import { colors, withAlpha } from "../../theme/colors";
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { applySession } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -96,7 +97,10 @@ export default function LoginScreen() {
         behavior="padding"
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: 32 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

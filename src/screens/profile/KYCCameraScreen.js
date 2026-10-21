@@ -16,6 +16,7 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 
 import PrimaryButton from "../../components/ui/PrimaryButton";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import { takeCaptureCallback } from "../../utils/captureCallback";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Guided document capture (PRD §4.2 — W2-F3 follow-up).
@@ -31,8 +32,10 @@ import { colors, withAlpha } from "../../theme/colors";
 //                         starts on the front camera, flip gives the back one
 //
 // The screen NEVER uploads and holds no server state: on "Use photo" it hands
-// the local file URI back to the caller via route.params.onCaptured(uri) and
-// pops itself. VerificationScreen / AccountScreen own staging + upload.
+// the local file URI back to the caller via the captureCallback registry
+// (params carry only a serializable captureId — functions in navigation
+// state trigger React Navigation's non-serializable-params warning) and pops
+// itself. VerificationScreen / AccountScreen own staging + upload.
 //
 // Captures are downscaled to <=1600px JPEG q0.8 on-device before handing off —
 // the gateway ceiling is 8 MB per upload and modern phone sensors produce
@@ -59,7 +62,9 @@ const HINTS = {
 
 export default function KYCCameraScreen({ route, navigation }) {
   const docKind = route?.params?.docKind || "id_front";
-  const onCaptured = route?.params?.onCaptured;
+  // Consumed exactly once on first render (useRef initializer): the callback
+  // is single-use and must survive re-renders while the shot is reviewed.
+  const onCapturedRef = useRef(takeCaptureCallback(route?.params?.captureId));
   const isSelfie = docKind === "selfie";
   const isProfile = docKind === "profile";
   const isId = !isSelfie && !isProfile;
@@ -151,7 +156,7 @@ export default function KYCCameraScreen({ route, navigation }) {
 
       if (!saved?.uri) throw new Error("save failed");
 
-      onCaptured?.(saved.uri);
+      onCapturedRef.current?.(saved.uri);
       navigation.goBack();
     } catch (err) {
       setError("Could not process the photo. Retake it or use the gallery.");

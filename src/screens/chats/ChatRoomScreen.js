@@ -32,6 +32,8 @@ import {
   getConversation,
   getMessages,
   sendMessage,
+  editMessage,
+  deleteMessage,
   markRead,
   registerChatKey,
   blockConversation,
@@ -39,6 +41,8 @@ import {
   reportConversation,
   grantConsent,
 } from "../../services/chatService";
+import SignedImage from "../../components/media/SignedImage";
+import { OptionsSheet, ConfirmDialog } from "../../components/ui/AppDialogs";
 import { scanForContacts, maskedSenderNotice } from "../../utils/contactGuard";
 import {
   confirmHire,
@@ -60,6 +64,10 @@ const CARD_FIELD_LABELS = {
 
 const POLL_MS = 15000;
 
+// Edit/delete window for your OWN text messages (2026-10-21): three minutes
+// from send, enforced again server-side — the UI only surfaces the affordance.
+const EDIT_WINDOW_MS = 3 * 60 * 1000;
+
 function timeLabel(iso) {
   const d = iso ? new Date(iso) : new Date();
   const h = d.getHours() % 12 || 12;
@@ -77,21 +85,53 @@ function formatCard(plain) {
   }
 }
 
-function Bubble({ mine, text, time, flagged, pending }) {
+function Bubble({ mine, text, time, flagged, pending, edited, onLongPress }) {
+  const meta = (
+    <View style={styles.bubbleMeta}>
+      {edited ? (
+        <Text style={[styles.editedTag, mine && styles.editedTagMine]}>
+          edited
+        </Text>
+      ) : null}
+      {flagged ? (
+        <TabBarIcon name="shield" color={mine ? withAlpha(colors.white, 0.8) : colors.textFaint} size={11} />
+      ) : null}
+      {pending ? (
+        <TabBarIcon name="clock" color={mine ? withAlpha(colors.white, 0.8) : colors.textFaint} size={11} />
+      ) : null}
+      <Text style={[styles.bubbleTime, mine && styles.bubbleTimeMine]}>{time}</Text>
+    </View>
+  );
+
+  const body = (
+    <>
+      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{text}</Text>
+      {meta}
+    </>
+  );
+
+  // Own recent messages are long-pressable (Edit / Delete within the window).
   return (
     <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-      <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-        <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{text}</Text>
-        <View style={styles.bubbleMeta}>
-          {flagged ? (
-            <TabBarIcon name="shield" color={mine ? withAlpha(colors.white, 0.8) : colors.textFaint} size={11} />
-          ) : null}
-          {pending ? (
-            <TabBarIcon name="clock" color={mine ? withAlpha(colors.white, 0.8) : colors.textFaint} size={11} />
-          ) : null}
-          <Text style={[styles.bubbleTime, mine && styles.bubbleTimeMine]}>{time}</Text>
+      {onLongPress ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Message options"
+          onLongPress={onLongPress}
+          delayLongPress={280}
+          style={({ pressed }) => [
+            styles.bubble,
+            mine ? styles.bubbleMine : styles.bubbleTheirs,
+            pressed && styles.bubblePressed,
+          ]}
+        >
+          {body}
+        </Pressable>
+      ) : (
+        <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+          {body}
         </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -176,6 +216,13 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [hireComment, setHireComment] = useState("");
   const [hireBusy, setHireBusy] = useState(false);
   const [maskNotice, setMaskNotice] = useState("");
+
+  // Message edit/delete (3-minute window, own text messages only).
+  const [actionMsg, setActionMsg] = useState(null); // long-pressed message
+  const [confirmDelete, setConfirmDelete] = useState(null); // awaiting confirm
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [editing, setEditing] = useState(null); // { seq, text }
+  const lastRevisionRef = useRef(null);
 
   const convRef = useRef(null);
   const lastSeqRef = useRef(0);
@@ -278,6 +325,8 @@ export default function ChatRoomScreen({ route, navigation }) {
       const fresh = data.conversation || null;
 
       if (fresh) {
+        if (fresh.revisedAt) lastRevisionRef.current = fresh.revisedAt;
+
         setConversation((prev) => ({
           ...(prev || conv),
           status: fresh.status,
@@ -385,12 +434,27 @@ export default function ChatRoomScreen({ route, navigation }) {
             afterSeq: lastSeqRef.current,
           });
 
+          const fresh = data.conversation;
+
+          // Edits/deletes bump the conversation's revisedAt — the tail poll
+          // (afterSeq) would never see them, so reload the whole thread once.
+          const revisedAt = fresh?.revisedAt || null;
+          const revisionChanged =
+            revisedAt &&
+            lastRevisionRef.current !== null &&
+            revisedAt !== lastRevisionRef.current;
+
+          if (revisedAt) lastRevisionRef.current = revisedAt;
+
+          if (revisionChanged) {
+            await loadMessages(convRef.current, { silent: false });
+            return;
+          }
+
           if ((data.messages || []).length > 0) {
             ingest(data.messages);
             markRead(convRef.current.id, lastSeqRef.current).catch(() => {});
           }
-
-          const fresh = data.conversation;
 
           if (fresh) {
             setConversation((prev) =>
@@ -428,6 +492,12 @@ export default function ChatRoomScreen({ route, navigation }) {
   );
 
   async function handleSend() {
+    // Editing an existing message: re-seal and PATCH instead of a new send.
+    if (editing) {
+      await performEdit();
+      return;
+    }
+
     const raw = draft.trim();
     if (!raw || !canSend || sending || !peerKeyRef.current) return;
 
@@ -480,6 +550,90 @@ export default function ChatRoomScreen({ route, navigation }) {
       }
     } finally {
       setSending(false);
+    }
+  }
+
+  // ---- message edit / delete (own text messages, 3-minute window) --------
+
+  const withinEditWindow = (msg) =>
+    Boolean(
+      msg?.createdAt &&
+        Date.now() - new Date(msg.createdAt).getTime() < EDIT_WINDOW_MS
+    );
+
+  function startEditing(msg) {
+    setActionMsg(null);
+    setEditing({ seq: msg.seq, text: msg.text });
+    setDraft(msg.text);
+  }
+
+  function cancelEditing() {
+    setEditing(null);
+    setDraft("");
+  }
+
+  async function performEdit() {
+    const target = editing;
+
+    if (!target || !convRef.current || !peerKeyRef.current) return;
+
+    const raw = draft.trim();
+
+    if (!raw) return;
+
+    // §10.2 applies to edits too — definite contacts are masked pre-seal.
+    const scan = scanForContacts(raw);
+    const textToSend = scan.definiteHits.length > 0 ? scan.masked : raw;
+
+    if (textToSend === target.text) {
+      // Unchanged (already-masked) text — nothing to update server-side.
+      cancelEditing();
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const env = seal(convRef.current.id, peerKeyRef.current, textToSend);
+
+      await editMessage(convRef.current.id, target.seq, {
+        nonce: env.nonce,
+        cipher: env.cipher,
+        charLen: textToSend.length,
+      });
+
+      cancelEditing();
+      await loadMessages(convRef.current, { silent: false });
+    } catch (error) {
+      Alert.alert(
+        "Could not edit",
+        error?.message || "The 3-minute edit window may have passed."
+      );
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function performDelete(msg) {
+    if (!msg || !convRef.current) return;
+
+    setDeleteBusy(true);
+
+    try {
+      await deleteMessage(convRef.current.id, msg.seq);
+      setConfirmDelete(null);
+      setActionMsg(null);
+
+      if (editing?.seq === msg.seq) cancelEditing();
+
+      await loadMessages(convRef.current, { silent: false });
+    } catch (error) {
+      Alert.alert(
+        "Could not delete",
+        error?.message || "The 3-minute window may have passed."
+      );
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -722,9 +876,13 @@ export default function ChatRoomScreen({ route, navigation }) {
           </Pressable>
 
           <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>
-              {(peerName || "?").charAt(0).toUpperCase()}
-            </Text>
+            <SignedImage
+              mediaId={peer?.avatarMediaId || null}
+              variant="thumb"
+              fallbackText={(peerName || "?").charAt(0).toUpperCase()}
+              style={styles.headerAvatarImage}
+              textStyle={styles.headerAvatarText}
+            />
             {peer?.verified ? (
               <View style={styles.verifiedDot}>
                 <TabBarIcon name="check" color={colors.white} size={8} />
@@ -821,13 +979,19 @@ export default function ChatRoomScreen({ route, navigation }) {
             if (item.card) {
               return <CardBubble mine={item.senderId === myId} card={item.card} time={timeLabel(item.createdAt)} />;
             }
+            const mine = item.senderId === myId;
+            const canAct =
+              mine && item.type === "text" && !item.pending && withinEditWindow(item);
+
             return (
               <Bubble
-                mine={item.senderId === myId}
+                mine={mine}
                 text={item.text}
                 time={timeLabel(item.createdAt)}
                 flagged={item.flagged}
                 pending={item.pending}
+                edited={Boolean(item.editedAt)}
+                onLongPress={canAct ? () => setActionMsg(item) : undefined}
               />
             );
           }}
@@ -867,6 +1031,25 @@ export default function ChatRoomScreen({ route, navigation }) {
             <Text style={styles.limitChip}>
               Exchanges left: {exchangesLeft} of {limits.maxExchanges} · {charLimit} chars max
             </Text>
+          </View>
+        ) : null}
+
+        {/* ---------- Editing bar (message edit mode) ---------- */}
+        {editing && canSend ? (
+          <View style={styles.editingBar}>
+            <TabBarIcon name="edit-2" color={colors.brand} size={13} />
+            <Text style={styles.editingText} numberOfLines={1}>
+              Editing message
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cancel editing"
+              hitSlop={8}
+              onPress={cancelEditing}
+              style={styles.editingCancel}
+            >
+              <TabBarIcon name="x" color={colors.textMuted} size={15} />
+            </Pressable>
           </View>
         ) : null}
 
@@ -913,7 +1096,11 @@ export default function ChatRoomScreen({ route, navigation }) {
                 {sending ? (
                   <ActivityIndicator size="small" color={colors.white} />
                 ) : (
-                  <TabBarIcon name="send" color={colors.white} size={18} />
+                  <TabBarIcon
+                    name={editing ? "check" : "send"}
+                    color={colors.white}
+                    size={18}
+                  />
                 )}
               </Pressable>
             </>
@@ -955,6 +1142,43 @@ export default function ChatRoomScreen({ route, navigation }) {
         busy={consentBusy}
         user={user}
         onShare={handleShareContact}
+      />
+
+      {/* ---------- Message actions (own text, 3-min window) ---------- */}
+      <OptionsSheet
+        visible={Boolean(actionMsg)}
+        onClose={() => setActionMsg(null)}
+        title="Message options"
+        message={
+          actionMsg
+            ? `Sent ${timeLabel(actionMsg.createdAt).toLowerCase()} — you can edit or delete it within 3 minutes of sending.`
+            : ""
+        }
+        options={[
+          {
+            label: "Edit message",
+            icon: "edit-2",
+            onPress: (option) => startEditing(actionMsg),
+          },
+          {
+            label: "Delete message",
+            icon: "trash-2",
+            tone: "danger",
+            onPress: () => setConfirmDelete(actionMsg),
+          },
+        ]}
+      />
+
+      <ConfirmDialog
+        visible={Boolean(confirmDelete)}
+        onClose={() => setConfirmDelete(null)}
+        icon="trash-2"
+        tone="danger"
+        title="Delete this message?"
+        message="It will be removed for both of you. This cannot be undone."
+        confirmLabel="Delete"
+        busy={deleteBusy}
+        onConfirm={() => performDelete(confirmDelete)}
       />
 
       {/* ---------- Conversation menu ---------- */}
@@ -1181,7 +1405,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 11,
+    overflow: "hidden",
   },
+  headerAvatarImage: { width: 40, height: 40 },
   headerAvatarText: { color: colors.brand, fontSize: 17, fontWeight: "800" },
   verifiedDot: {
     position: "absolute",
@@ -1260,6 +1486,32 @@ const styles = StyleSheet.create({
   bubbleText: { color: colors.ink, fontSize: 14.5, lineHeight: 21 },
   bubbleTextMine: { color: colors.white },
   bubbleMeta: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-end", marginTop: 4 },
+  bubblePressed: { opacity: 0.82 },
+  editedTag: {
+    color: colors.textFaint,
+    fontSize: 10,
+    fontWeight: "700",
+    fontStyle: "italic",
+  },
+  editedTagMine: { color: withAlpha(colors.white, 0.75) },
+  editingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 12,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.brand, 0.08),
+  },
+  editingText: {
+    flex: 1,
+    color: colors.brand,
+    fontSize: 12.5,
+    fontWeight: "800",
+  },
+  editingCancel: { padding: 4 },
   bubbleTime: { color: colors.textFaint, fontSize: 10.5, fontWeight: "700" },
   bubbleTimeMine: { color: withAlpha(colors.white, 0.75) },
   systemPill: {

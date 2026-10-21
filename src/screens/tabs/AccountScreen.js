@@ -26,6 +26,7 @@ import {
 } from "../../utils/location";
 import HamburgerButton from "../../components/ui/HamburgerButton";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import { registerCaptureCallback } from "../../utils/captureCallback";
 import { colors, withAlpha } from "../../theme/colors";
 
 const ROLE_LABELS = {
@@ -175,7 +176,7 @@ export default function AccountScreen() {
         title: "Profile photo",
         subtitle:
           "This becomes your profile picture — visible to employers and workers.",
-        onUse: (uri) => uploadProfilePhoto(uri),
+        useId: registerCaptureCallback((uri) => uploadProfilePhoto(uri)),
       });
     } catch (error) {
       Alert.alert(
@@ -197,7 +198,7 @@ export default function AccountScreen() {
           onPress: () =>
             navigation.navigate("KYCCamera", {
               docKind: "profile",
-              onCaptured: (uri) => uploadProfilePhoto(uri),
+              captureId: registerCaptureCallback((uri) => uploadProfilePhoto(uri)),
             }),
         },
         { text: "Choose from gallery", onPress: pickProfileFromGallery },
@@ -413,44 +414,8 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* Profile boost (PRD §5.1/§18.4) — maids only: 7 days of labeled
-            featured placement in employer searches. */}
-        {user?.role === "maid" ? (
-          <View style={[styles.card, CARD_SHADOW]}>
-            <View style={styles.headRow}>
-              <View style={[styles.headIcon, styles.headIconGold]}>
-                <TabBarIcon name="zap" color={colors.goldDark} size={20} />
-              </View>
-              <View style={styles.headMain}>
-                <Text style={styles.eyebrow}>Featured</Text>
-                <Text style={styles.cardTitle}>Boost your profile</Text>
-              </View>
-            </View>
-            <Text style={styles.locationNote}>
-              Get a labeled “Featured” placement at the top of employer
-              searches for 7 days — KES 100. Placement is labeled, never a
-              guaranteed position.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.pressed,
-              ]}
-              onPress={() =>
-                navigation.navigate("MpesaCheckout", {
-                  plan: "profile_boost",
-                  label: "Profile boost — 7 days featured",
-                })
-              }
-              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Boost my profile — KES 100 / 7 days
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
+        {/* Profile boost (PRD §5.1/§18.4) now lives on the maid HOME screen
+            as a Featured promo card — moved there 2026-10-21 for relevance. */}
 
         <View style={[styles.card, CARD_SHADOW]}>
           <View style={styles.headRow}>

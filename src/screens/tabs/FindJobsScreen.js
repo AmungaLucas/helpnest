@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   applyToJob,
@@ -37,6 +37,7 @@ import { colors, withAlpha } from "../../theme/colors";
 // ---------------------------------------------------------------------------
 export default function FindJobsScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
 
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState("");
@@ -100,12 +101,14 @@ export default function FindJobsScreen() {
 
       (async () => {
         try {
-          await applyToJob(pending.id);
+          const res = await applyToJob(pending.id);
           setAppliedIds((prev) => ({ ...prev, [pending.id]: true }));
           setDetail(null);
           Alert.alert(
-            "Application sent 🎉",
-            "The employer can now see your application under their job."
+            res?.reactivated ? "Application re-sent" : "Application sent 🎉",
+            res?.reactivated
+              ? "Your application is active again — the employer has been notified."
+              : "The employer can now see your application under their job."
           );
         } catch (err) {
           if (err?.status === 402) {
@@ -164,6 +167,39 @@ export default function FindJobsScreen() {
     }
   }, []);
 
+  // Deep-open a job by id (from My Applications: tapping an application card
+  // navigates here with { openJobId }). Works even for closed jobs the maid
+  // has applied to — the gateway allows applicants to fetch their jobs.
+  const openJobId = route.params?.openJobId;
+
+  useEffect(() => {
+    if (!openJobId) return undefined;
+
+    navigation.setParams({ openJobId: null });
+
+    (async () => {
+      setDetailLoading(true);
+      setDetail({ id: openJobId, title: "" });
+
+      try {
+        const data = await getJob(openJobId);
+
+        if (data.job) setDetail(data.job);
+        else setDetail(null);
+      } catch (err) {
+        setDetail(null);
+        Alert.alert(
+          "Job unavailable",
+          err?.message || "This job can no longer be viewed."
+        );
+      } finally {
+        setDetailLoading(false);
+      }
+    })();
+
+    return undefined;
+  }, [openJobId, navigation]);
+
   const handleApply = useCallback(async () => {
     const job = detail;
 
@@ -172,12 +208,14 @@ export default function FindJobsScreen() {
     setApplying(true);
 
     try {
-      await applyToJob(job.id);
+      const res = await applyToJob(job.id);
       setAppliedIds((prev) => ({ ...prev, [job.id]: true }));
       setDetail(null);
       Alert.alert(
-        "Application sent 🎉",
-        "The employer can now see your application under their job."
+        res?.reactivated ? "Application re-sent" : "Application sent 🎉",
+        res?.reactivated
+          ? "Your application is active again — the employer has been notified."
+          : "The employer can now see your application under their job."
       );
     } catch (err) {
       if (err?.status === 402) {

@@ -62,6 +62,26 @@ export function sendMessage(conversationId, payload) {
   });
 }
 
+/**
+ * Edits one of MY text messages within the 3-minute window (server-enforced).
+ * payload: { nonce, cipher, charLen } — a freshly sealed envelope for the
+ * edited text (E2EE: the gateway never sees plaintext).
+ */
+export function editMessage(conversationId, seq, payload) {
+  return apiRequest(`/api/chat/conversations/${conversationId}/messages/${seq}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Deletes one of MY messages within the 3-minute window (soft delete —
+ *  the gateway wipes the ciphertext; both sides stop seeing the bubble). */
+export function deleteMessage(conversationId, seq) {
+  return apiRequest(`/api/chat/conversations/${conversationId}/messages/${seq}`, {
+    method: "DELETE",
+  });
+}
+
 export function markRead(conversationId, seq) {
   return apiRequest(`/api/chat/conversations/${conversationId}/read`, {
     method: "POST",
