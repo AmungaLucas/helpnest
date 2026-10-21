@@ -104,6 +104,7 @@ export default function RequestsScreen() {
       <View style={[styles.container, styles.center]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <ActivityIndicator size="large" color={colors.brand} />
+        <Text style={styles.loadingText}>Loading new chats…</Text>
       </View>
     );
   }
@@ -112,21 +113,31 @@ export default function RequestsScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      {/* v3 header — eyebrow + display title on the cream canvas. */}
+      {/* Ambient orb — one very faint brand tint, echoing the Chats tab. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.orb} />
+      </View>
+
+      {/* Header — kicker with inline icon + display title. */}
       <View style={styles.headerBlock}>
-        <Text style={styles.headerEyebrow}>Awaiting your reply</Text>
+        <View style={styles.encRow}>
+          <View style={styles.encIcon}>
+            <TabBarIcon name="message-circle" color={colors.brand} size={9} />
+          </View>
+          <Text style={styles.headerEyebrow}>Awaiting your reply</Text>
+        </View>
         <Text style={styles.headerTitle}>New chats</Text>
       </View>
 
+      {/* Opt-out — compact card, same language as the rows below. */}
       <View style={styles.optOutCard}>
         <View style={styles.optOutIcon}>
-          <TabBarIcon name="bell" color={colors.brand} size={17} />
+          <TabBarIcon name="bell" color={colors.brand} size={16} />
         </View>
         <View style={styles.optOutMain}>
           <Text style={styles.optOutTitle}>Stop new chat requests</Text>
           <Text style={styles.optOutBody}>
-            Employers can't start new chats with you. Existing conversations
-            stay open.
+            Employers can't start new chats. Existing chats stay open.
           </Text>
         </View>
         <Switch
@@ -159,7 +170,7 @@ export default function RequestsScreen() {
           return (
             <Pressable
               accessibilityRole="button"
-              android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
+              android_ripple={{ color: withAlpha(colors.ink, 0.05) }}
               style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
               onPress={() =>
                 navigation.navigate("ChatRoom", {
@@ -177,35 +188,39 @@ export default function RequestsScreen() {
                   style={styles.cardAvatarImage}
                   textStyle={styles.cardAvatarText}
                 />
+                {item.peer?.verified ? (
+                  <View style={styles.verifiedDot}>
+                    <TabBarIcon name="check" color={colors.white} size={8} />
+                  </View>
+                ) : null}
               </View>
 
               <View style={styles.cardMain}>
-                <View style={styles.cardTop}>
-                  <View style={styles.kindChip}>
-                    <Text style={styles.kindChipText}>New chat</Text>
-                  </View>
-                  {item.peer?.verified ? (
-                    <View style={styles.verifiedChip}>
-                      <Text style={styles.verifiedText}>Verified</Text>
-                    </View>
-                  ) : null}
+                <View style={styles.cardTopLine}>
+                  <Text style={styles.cardName} numberOfLines={1}>
+                    {item.peer?.name || "HelpNest member"}
+                  </Text>
                   {item.unread > 0 ? (
                     <View style={styles.unreadPill}>
-                      <Text style={styles.unreadText}>{item.unread}</Text>
+                      <Text style={styles.unreadText}>
+                        {item.unread > 99 ? "99+" : item.unread}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
-                <Text style={styles.cardName}>{item.peer?.name}</Text>
-                <Text style={styles.cardPreview} numberOfLines={2}>
-                  {preview}
-                </Text>
-              </View>
 
-              <TabBarIcon name="chevron-right" color={colors.textFaint} size={18} />
+                <View style={styles.cardBottomLine}>
+                  <View style={styles.kindChip}>
+                    <Text style={styles.kindChipText}>New chat</Text>
+                  </View>
+                  <Text style={styles.cardPreview} numberOfLines={1}>
+                    {preview}
+                  </Text>
+                </View>
+              </View>
             </Pressable>
           );
         }}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <EmptyState
@@ -221,100 +236,196 @@ export default function RequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Cream canvas (Modern v3) — white squircle cards float on it.
+  // Cream canvas so the white chat cards visibly sit ON something.
   container: { flex: 1, backgroundColor: colors.cream },
-  center: { alignItems: "center", justifyContent: "center" },
-  list: { paddingHorizontal: 20, paddingBottom: 24 },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+    backgroundColor: colors.cream,
+  },
+  loadingText: {
+    color: colors.textMuted,
+    marginTop: 14,
+    fontSize: 13.5,
+    fontWeight: "600",
+  },
+  orb: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: withAlpha(colors.brand, 0.04),
+    top: -120,
+    right: -90,
+  },
 
-  headerBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  /* ---- Header ---- */
+  headerBlock: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 },
+  encRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 3,
+  },
+  encIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerEyebrow: {
     color: colors.goldDark,
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginBottom: 3,
   },
   headerTitle: {
     color: colors.ink,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
 
+  /* ---- List ---- */
+  list: { paddingHorizontal: 12, paddingBottom: 12 },
+
+  /* ---- Opt-out card (compact) ---- */
   optOutCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 18,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 14,
     backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.05),
     shadowColor: colors.ink,
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   optOutIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: withAlpha(colors.brand, 0.1),
     alignItems: "center",
     justifyContent: "center",
   },
   optOutMain: { flex: 1 },
-  optOutTitle: { color: colors.ink, fontSize: 14.5, fontWeight: "800" },
+  optOutTitle: {
+    color: colors.ink,
+    fontSize: 13.5,
+    fontWeight: "800",
+    letterSpacing: -0.1,
+  },
   optOutBody: {
     color: colors.textMuted,
-    fontSize: 11.5,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "500",
     marginTop: 2,
   },
 
+  /* ---- Row — tight white card on the cream canvas ---- */
   card: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: 18,
-    padding: 14,
-    gap: 12,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.05),
     shadowColor: colors.ink,
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
-  cardPressed: { opacity: 0.88 },
+  cardPressed: { backgroundColor: withAlpha(colors.ink, 0.04) },
+
+  /* ---- Avatar (48px round) ---- */
   cardAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 12,
     overflow: "hidden",
   },
   cardAvatarImage: { width: 48, height: 48 },
-  cardAvatarText: { color: colors.brand, fontSize: 20, fontWeight: "800" },
+  cardAvatarText: { color: colors.brand, fontSize: 18, fontWeight: "800" },
+  verifiedDot: {
+    position: "absolute",
+    right: -1,
+    bottom: -1,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+
+  /* ---- Row content ---- */
   cardMain: { flex: 1 },
-  cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardTopLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 2,
+  },
+  cardName: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: -0.1,
+  },
+  cardBottomLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  /* ---- Kind chip (inline with preview) ---- */
   kindChip: {
     backgroundColor: withAlpha(colors.brand, 0.1),
-    borderRadius: 8,
+    borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 2,
+    flexShrink: 0,
   },
-  kindChipText: { color: colors.brand, fontSize: 10, fontWeight: "800" },
-  verifiedChip: {
-    backgroundColor: withAlpha(colors.gold, 0.18),
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  kindChipText: {
+    color: colors.brand,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
-  verifiedText: { color: colors.goldDark, fontSize: 10, fontWeight: "800" },
+
+  cardPreview: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "500",
+  },
+
+  /* ---- Unread badge ---- */
   unreadPill: {
     minWidth: 20,
     height: 20,
@@ -322,11 +433,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
-    marginLeft: "auto",
+    paddingHorizontal: 5,
+    flexShrink: 0,
   },
   unreadText: { color: colors.white, fontSize: 10.5, fontWeight: "800" },
-  cardName: { color: colors.ink, fontSize: 15, fontWeight: "800", marginTop: 5 },
-  cardPreview: { color: colors.textMuted, fontSize: 13, lineHeight: 17, marginTop: 2 },
-  separator: { height: 10 },
 });

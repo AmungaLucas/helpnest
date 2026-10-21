@@ -149,8 +149,8 @@ function CardBubble({ mine, card, time }) {
     <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
       <View style={[styles.bubble, styles.cardBubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
         <View style={styles.cardHead}>
-          <TabBarIcon name="key" color={colors.brand} size={13} />
-          <Text style={styles.cardLabel}>{card.label} shared</Text>
+          <TabBarIcon name="key" color={mine ? colors.gold : colors.brand} size={13} />
+          <Text style={[styles.cardLabel, mine && styles.cardLabelMine]}>{card.label} shared</Text>
         </View>
         <Text style={[styles.cardValue, mine && styles.bubbleTextMine]}>{card.value}</Text>
         <Text style={[styles.bubbleTime, mine && styles.bubbleTimeMine]}>{time}</Text>
@@ -794,7 +794,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   if (booting && !conversation) {
     return (
       <SafeAreaView style={[styles.safe, styles.center]} edges={["top"]}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <ActivityIndicator size="large" color={colors.brand} />
         <Text style={styles.bootText}>Opening secure chat…</Text>
       </SafeAreaView>
@@ -804,7 +804,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   if (bootError && !conversation) {
     return (
       <SafeAreaView style={[styles.safe, styles.center]} edges={["top"]}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <TabBarIcon name="alert-triangle" color={colors.gold} size={30} />
         <Text style={styles.bootError}>{bootError}</Text>
         <Pressable style={styles.retryButton} onPress={() => { setBooting(true); ensure(); }}>
@@ -821,7 +821,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   if (paywall && !conversation) {
     return (
       <SafeAreaView style={[styles.safe, styles.center]} edges={["top"]}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <TabBarIcon name="lock" color={colors.brand} size={30} />
         <Text style={styles.paywallTitle}>Chat with {fallbackName}</Text>
         <Text style={styles.paywallBody}>
@@ -850,11 +850,16 @@ export default function ChatRoomScreen({ route, navigation }) {
   const closed = status === "closed" && !blocked;
   const limitReached = status === "limit_reached";
   const expired = status === "expired";
-  const sendBlocked = !canSend;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+    <SafeAreaView style={styles.chatSafe} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+
+      {/* Ambient orbs behind the chat body — very faint, purely decorative. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.chatOrb1} />
+        <View style={styles.chatOrb2} />
+      </View>
 
       <KeyboardAvoidingView
         style={[
@@ -869,10 +874,13 @@ export default function ChatRoomScreen({ route, navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Go back"
             hitSlop={10}
-            style={styles.backButton}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.iconButtonPressed,
+            ]}
             onPress={() => navigation.goBack()}
           >
-            <TabBarIcon name="chevron-left" color={colors.ink} size={24} />
+            <TabBarIcon name="chevron-left" color={colors.ink} size={22} />
           </Pressable>
 
           <View style={styles.headerAvatar}>
@@ -894,11 +902,9 @@ export default function ChatRoomScreen({ route, navigation }) {
             <Text style={styles.headerName} numberOfLines={1}>
               {peerName}
             </Text>
-            <View style={styles.headerSubRow}>
-              <TabBarIcon name="lock" color={colors.brand} size={11} />
-              <Text style={styles.headerEnc}>
-                End-to-end encrypted
-              </Text>
+            <View style={styles.encPill}>
+              <TabBarIcon name="lock" color={colors.brand} size={9} />
+              <Text style={styles.headerEnc}>End-to-end encrypted</Text>
             </View>
           </View>
 
@@ -906,7 +912,10 @@ export default function ChatRoomScreen({ route, navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Conversation options"
             hitSlop={8}
-            style={styles.menuButton}
+            style={({ pressed }) => [
+              styles.menuButton,
+              pressed && styles.iconButtonPressed,
+            ]}
             onPress={() => setShowMenu(true)}
           >
             <TabBarIcon name="more-vertical" color={colors.ink} size={20} />
@@ -916,7 +925,9 @@ export default function ChatRoomScreen({ route, navigation }) {
         {/* ---------- Request-phase banner (§9.5) ---------- */}
         {conversation?.phase === "request" && status === "active" ? (
           <View style={styles.stateBanner}>
-            <TabBarIcon name="message-circle" color={colors.goldDark} size={15} />
+            <View style={styles.stateBannerIcon}>
+              <TabBarIcon name="message-circle" color={colors.goldDark} size={14} />
+            </View>
             <Text style={styles.stateBannerText}>
               {isEmployer
                 ? `Chat request — ${peerName} sees this under "New chats" until you get a reply.`
@@ -934,11 +945,18 @@ export default function ChatRoomScreen({ route, navigation }) {
               (limitReached || expired) && styles.stateBannerWarn,
             ]}
           >
-            <TabBarIcon
-              name={blocked || restricted ? "user-x" : "info"}
-              color={(blocked || restricted) ? colors.danger : colors.goldDark}
-              size={15}
-            />
+            <View
+              style={[
+                styles.stateBannerIcon,
+                (blocked || restricted) && styles.stateBannerIconDanger,
+              ]}
+            >
+              <TabBarIcon
+                name={blocked || restricted ? "user-x" : "info"}
+                color={(blocked || restricted) ? colors.danger : colors.goldDark}
+                size={14}
+              />
+            </View>
             <Text style={[styles.stateBannerText, (blocked || restricted) && styles.stateBannerTextDanger]}>
               {blocked
                 ? "This conversation was blocked. History stays readable."
@@ -1000,8 +1018,12 @@ export default function ChatRoomScreen({ route, navigation }) {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyThread}>
+              <View style={styles.emptyIconWrap}>
+                <TabBarIcon name="message-circle" color={colors.brand} size={22} />
+              </View>
+              <Text style={styles.emptyThreadTitle}>Say hello</Text>
               <Text style={styles.emptyThreadText}>
-                Say hello to start the conversation.
+                Start the conversation. Messages are end-to-end encrypted.
               </Text>
             </View>
           }
@@ -1010,7 +1032,9 @@ export default function ChatRoomScreen({ route, navigation }) {
         {/* ---------- Masking notice (§10.2) ---------- */}
         {maskNotice && canSend ? (
           <View style={styles.maskNotice}>
-            <TabBarIcon name="shield" color={colors.goldDark} size={13} />
+            <View style={styles.maskNoticeIcon}>
+              <TabBarIcon name="shield" color={colors.goldDark} size={12} />
+            </View>
             <Text style={styles.maskNoticeText}>{maskNotice}</Text>
           </View>
         ) : null}
@@ -1018,13 +1042,16 @@ export default function ChatRoomScreen({ route, navigation }) {
         {/* ---------- Limits chip ---------- */}
         {canSend && paid?.active ? (
           <View style={styles.limitChipRow}>
-            <Text style={styles.limitChipPaid}>
-              {paid.source === "chat_pass" || paid.source === "hire_pass"
-                ? "Unlocked"
-                : "Subscription"}{" "}
-              active
-              {paid.until ? ` · ${new Date(paid.until).toLocaleDateString()}` : ""}
-            </Text>
+            <View style={styles.limitPillActive}>
+              <TabBarIcon name="check" color={colors.brand} size={9} />
+              <Text style={styles.limitChipPaid}>
+                {paid.source === "chat_pass" || paid.source === "hire_pass"
+                  ? "Unlocked"
+                  : "Subscription"}{" "}
+                active
+                {paid.until ? ` · ${new Date(paid.until).toLocaleDateString()}` : ""}
+              </Text>
+            </View>
           </View>
         ) : canSend && exchangesLeft !== null ? (
           <View style={styles.limitChipRow}>
@@ -1037,7 +1064,9 @@ export default function ChatRoomScreen({ route, navigation }) {
         {/* ---------- Editing bar (message edit mode) ---------- */}
         {editing && canSend ? (
           <View style={styles.editingBar}>
-            <TabBarIcon name="edit-2" color={colors.brand} size={13} />
+            <View style={styles.editingIcon}>
+              <TabBarIcon name="edit-2" color={colors.brand} size={12} />
+            </View>
             <Text style={styles.editingText} numberOfLines={1}>
               Editing message
             </Text>
@@ -1065,7 +1094,10 @@ export default function ChatRoomScreen({ route, navigation }) {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Share a contact with consent"
-                style={styles.keyButton}
+                style={({ pressed }) => [
+                  styles.keyButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
                 onPress={() => setShowConsentSheet(true)}
               >
                 <TabBarIcon name="key" color={colors.brand} size={19} />
@@ -1185,6 +1217,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
         <Pressable style={styles.menuBackdrop} onPress={() => setShowMenu(false)}>
           <View style={styles.menuSheet}>
+            <View style={styles.grabber} />
             <Text style={styles.menuTitle}>{peerName}</Text>
             <Text style={styles.menuSub}>
               {ROLE_LABELS[peerRole] || "HelpNest member"}
@@ -1192,7 +1225,9 @@ export default function ChatRoomScreen({ route, navigation }) {
             </Text>
 
             <Pressable style={styles.menuItem} onPress={openReport}>
-              <TabBarIcon name="flag" color={colors.ink} size={17} />
+              <View style={styles.menuItemIcon}>
+                <TabBarIcon name="flag" color={colors.ink} size={16} />
+              </View>
               <Text style={styles.menuItemText}>Report conversation</Text>
             </Pressable>
             {user?.role ? (
@@ -1204,18 +1239,24 @@ export default function ChatRoomScreen({ route, navigation }) {
                   setShowHireSheet(true);
                 }}
               >
-                <TabBarIcon name="shield" color={colors.brand} size={17} />
+                <View style={[styles.menuItemIcon, styles.menuItemIconBrand]}>
+                  <TabBarIcon name="shield" color={colors.brand} size={16} />
+                </View>
                 <Text style={[styles.menuItemText, { color: colors.brand, fontWeight: "800" }]}>
                   Hire confirmation & review
                 </Text>
               </Pressable>
             ) : null}
             <Pressable style={styles.menuItem} onPress={confirmClose}>
-              <TabBarIcon name="x" color={colors.ink} size={17} />
+              <View style={styles.menuItemIcon}>
+                <TabBarIcon name="x" color={colors.ink} size={16} />
+              </View>
               <Text style={styles.menuItemText}>Close conversation</Text>
             </Pressable>
             <Pressable style={[styles.menuItem, styles.menuItemDanger]} onPress={confirmBlock}>
-              <TabBarIcon name="user-x" color={colors.danger} size={17} />
+              <View style={[styles.menuItemIcon, styles.menuItemIconDanger]}>
+                <TabBarIcon name="user-x" color={colors.danger} size={16} />
+              </View>
               <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>Block</Text>
             </Pressable>
           </View>
@@ -1305,7 +1346,13 @@ function ConsentSheet({ visible, onClose, busy, user, onShare }) {
             ]}
             onPress={() => onShare(field.key, field.value)}
           >
-            <TabBarIcon name={field.key === "email" ? "file-text" : "phone"} color={colors.brand} size={16} />
+            <View style={styles.shareIcon}>
+              <TabBarIcon
+                name={field.key === "email" ? "file-text" : "phone"}
+                color={colors.brand}
+                size={15}
+              />
+            </View>
             <View style={styles.shareMain}>
               <Text style={styles.shareLabel}>Share my {field.label}</Text>
               <Text style={styles.shareValue} numberOfLines={1}>
@@ -1336,7 +1383,8 @@ function maskOwnValue(value) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.white },
+  safe: { flex: 1, backgroundColor: colors.cream },
+  chatSafe: { flex: 1, backgroundColor: colors.cream },
   flex: { flex: 1 },
   center: { alignItems: "center", justifyContent: "center", padding: 30 },
   bootText: { color: colors.textMuted, marginTop: 14, fontSize: 13.5, fontWeight: "600" },
@@ -1350,9 +1398,14 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: 18,
     backgroundColor: colors.brand,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 26,
     paddingVertical: 14,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   retryText: { color: colors.white, fontWeight: "800", fontSize: 14 },
   backLink: { marginTop: 14 },
@@ -1362,6 +1415,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "800",
     marginTop: 12,
+    letterSpacing: -0.3,
   },
   paywallBody: {
     color: colors.textMuted,
@@ -1376,18 +1430,48 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 30,
     paddingVertical: 14,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   unlockText: { color: colors.white, fontWeight: "800", fontSize: 14.5 },
+
+  /* ---- Ambient orbs ---- */
+  chatOrb1: {
+    position: "absolute",
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: withAlpha(colors.brand, 0.035),
+    top: -120,
+    right: -90,
+  },
+  chatOrb2: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: withAlpha(colors.gold, 0.06),
+    bottom: 40,
+    left: -80,
+  },
 
   /* ---- Header ---- */
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.mist,
     backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: withAlpha(colors.ink, 0.05),
+    shadowColor: colors.ink,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   backButton: {
     width: 40,
@@ -1395,26 +1479,31 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 8,
+    marginRight: 6,
+  },
+  iconButtonPressed: {
+    backgroundColor: withAlpha(colors.ink, 0.05),
   },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
     marginRight: 11,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: withAlpha(colors.brand, 0.16),
   },
-  headerAvatarImage: { width: 40, height: 40 },
+  headerAvatarImage: { width: 42, height: 42 },
   headerAvatarText: { color: colors.brand, fontSize: 17, fontWeight: "800" },
   verifiedDot: {
     position: "absolute",
     right: -3,
     bottom: -3,
-    width: 15,
-    height: 15,
+    width: 16,
+    height: 16,
     borderRadius: 8,
     backgroundColor: colors.brand,
     alignItems: "center",
@@ -1423,9 +1512,29 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
   headerMain: { flex: 1 },
-  headerName: { color: colors.ink, fontSize: 16.5, fontWeight: "800" },
-  headerSubRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  headerEnc: { color: colors.brand, fontSize: 11, fontWeight: "700", letterSpacing: 0.1 },
+  headerName: {
+    color: colors.ink,
+    fontSize: 16.5,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  encPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    alignSelf: "flex-start",
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginTop: 3,
+  },
+  headerEnc: {
+    color: colors.brand,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
   menuButton: {
     width: 40,
     height: 40,
@@ -1438,54 +1547,97 @@ const styles = StyleSheet.create({
   stateBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: withAlpha(colors.gold, 0.13),
-  },
-  stateBannerDanger: { backgroundColor: withAlpha(colors.danger, 0.1) },
-  stateBannerWarn: {
+    marginHorizontal: 12,
+    marginTop: 10,
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: withAlpha(colors.gold, 0.4),
+    borderColor: withAlpha(colors.gold, 0.28),
+  },
+  stateBannerDanger: {
+    backgroundColor: withAlpha(colors.danger, 0.08),
+    borderColor: withAlpha(colors.danger, 0.24),
+  },
+  stateBannerWarn: {
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderColor: withAlpha(colors.gold, 0.35),
+  },
+  stateBannerIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stateBannerIconDanger: {
+    backgroundColor: withAlpha(colors.danger, 0.14),
   },
   stateBannerText: {
     flex: 1,
     color: colors.goldDark,
-    fontSize: 12.5,
-    fontWeight: "600",
-    lineHeight: 17,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
   },
   stateBannerTextDanger: { color: colors.danger },
   bannerUnlock: {
     backgroundColor: colors.brand,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 8,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   bannerUnlockText: { color: colors.white, fontWeight: "800", fontSize: 12 },
 
   /* ---- Messages ---- */
-  list: { paddingHorizontal: 16, paddingVertical: 16, flexGrow: 1 },
+  list: { paddingHorizontal: 14, paddingVertical: 16, flexGrow: 1 },
   bubbleRow: { flexDirection: "row", marginBottom: 8 },
   bubbleRowMine: { justifyContent: "flex-end" },
   bubbleRowTheirs: { justifyContent: "flex-start" },
   bubble: {
     maxWidth: "78%",
-    borderRadius: 18,
-    paddingHorizontal: 13,
-    paddingTop: 9,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingTop: 10,
     paddingBottom: 6,
   },
-  bubbleMine: { backgroundColor: colors.brand, borderBottomRightRadius: 6 },
+  bubbleMine: {
+    backgroundColor: colors.brand,
+    borderBottomRightRadius: 6,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
   bubbleTheirs: {
-    backgroundColor: colors.cream,
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.mist,
+    borderColor: withAlpha(colors.ink, 0.06),
     borderBottomLeftRadius: 6,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   bubbleText: { color: colors.ink, fontSize: 14.5, lineHeight: 21 },
   bubbleTextMine: { color: colors.white },
-  bubbleMeta: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-end", marginTop: 4 },
+  bubbleMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-end",
+    marginTop: 5,
+  },
   bubblePressed: { opacity: 0.82 },
   editedTag: {
     color: colors.textFaint,
@@ -1497,13 +1649,23 @@ const styles = StyleSheet.create({
   editingBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginHorizontal: 12,
     marginTop: 8,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
+    paddingVertical: 9,
+    borderRadius: 16,
     backgroundColor: withAlpha(colors.brand, 0.08),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.brand, 0.18),
+  },
+  editingIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.brand, 0.14),
+    alignItems: "center",
+    justifyContent: "center",
   },
   editingText: {
     flex: 1,
@@ -1513,11 +1675,11 @@ const styles = StyleSheet.create({
   },
   editingCancel: { padding: 4 },
   bubbleTime: { color: colors.textFaint, fontSize: 10.5, fontWeight: "700" },
-  bubbleTimeMine: { color: withAlpha(colors.white, 0.75) },
+  bubbleTimeMine: { color: withAlpha(colors.white, 0.78) },
   systemPill: {
     alignSelf: "center",
-    backgroundColor: colors.mist,
-    borderRadius: 12,
+    backgroundColor: withAlpha(colors.ink, 0.06),
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 7,
     marginVertical: 8,
@@ -1532,7 +1694,14 @@ const styles = StyleSheet.create({
   },
   cardBubble: { borderLeftWidth: 3, borderLeftColor: colors.brand },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 3 },
-  cardLabel: { color: colors.brand, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
+  cardLabel: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  cardLabelMine: { color: colors.gold },
   cardValue: { color: colors.ink, fontSize: 15, fontWeight: "700" },
   emptyThread: {
     flex: 1,
@@ -1541,22 +1710,69 @@ const styles = StyleSheet.create({
     padding: 30,
     transform: [{ scaleY: -1 }],
   },
-  emptyThreadText: { color: colors.textFaint, fontSize: 13.5, textAlign: "center" },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  emptyThreadTitle: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  emptyThreadText: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: "80%",
+  },
 
   /* ---- Masking notice + limits ---- */
   maskNotice: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    marginHorizontal: 16,
-    marginBottom: 6,
-    backgroundColor: withAlpha(colors.gold, 0.14),
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    gap: 9,
+    marginHorizontal: 14,
+    marginBottom: 8,
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.28),
   },
-  maskNoticeText: { flex: 1, color: colors.goldDark, fontSize: 11, fontWeight: "700", lineHeight: 15 },
-  limitChipRow: { paddingHorizontal: 16, paddingBottom: 4, alignItems: "center" },
+  maskNoticeIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.gold, 0.2),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  maskNoticeText: {
+    flex: 1,
+    color: colors.goldDark,
+    fontSize: 11.5,
+    fontWeight: "700",
+    lineHeight: 15,
+  },
+  limitChipRow: { paddingHorizontal: 14, paddingBottom: 6, alignItems: "center" },
+  limitPillActive: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   limitChip: { color: colors.textFaint, fontSize: 10.5, fontWeight: "700" },
   limitChipPaid: { color: colors.brand, fontSize: 10.5, fontWeight: "800" },
 
@@ -1564,12 +1780,12 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.mist,
+    borderTopColor: withAlpha(colors.ink, 0.05),
     backgroundColor: colors.white,
-    gap: 9,
+    gap: 8,
   },
   keyButton: {
     width: 44,
@@ -1583,9 +1799,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
     borderWidth: 1,
-    borderColor: colors.mist,
+    borderColor: withAlpha(colors.ink, 0.06),
     borderRadius: 22,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     minHeight: 44,
     justifyContent: "center",
@@ -1598,8 +1814,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: colors.brand,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
-  sendButtonIdle: { backgroundColor: withAlpha(colors.brand, 0.35) },
+  sendButtonIdle: { backgroundColor: withAlpha(colors.brand, 0.35), shadowOpacity: 0 },
   composerLocked: {
     flex: 1,
     flexDirection: "row",
@@ -1614,6 +1835,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   composerUnlockText: { color: colors.white, fontWeight: "800", fontSize: 12.5 },
 
@@ -1621,26 +1847,31 @@ const styles = StyleSheet.create({
   sheetBackdrop: { flex: 1, backgroundColor: withAlpha(colors.ink, 0.45) },
   sheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 28,
   },
   grabber: {
     alignSelf: "center",
-    width: 44,
+    width: 42,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.cloud,
+    backgroundColor: withAlpha(colors.ink, 0.12),
     marginBottom: 16,
   },
-  sheetTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" },
+  sheetTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
   sheetBody: {
     color: colors.textMuted,
     fontSize: 12.5,
-    lineHeight: 17,
-    marginTop: 4,
+    lineHeight: 18,
+    marginTop: 6,
     marginBottom: 16,
   },
   shareRow: {
@@ -1648,21 +1879,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderWidth: 1,
-    borderColor: colors.mist,
-    borderRadius: 16,
+    borderColor: withAlpha(colors.ink, 0.06),
+    borderRadius: 18,
     padding: 14,
     marginBottom: 9,
+    backgroundColor: colors.cream,
   },
-  shareRowPressed: { backgroundColor: colors.cream },
+  shareRowPressed: { backgroundColor: withAlpha(colors.brand, 0.06) },
   shareRowDisabled: { opacity: 0.55 },
+  shareIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+  },
   shareMain: { flex: 1 },
   shareLabel: { color: colors.ink, fontSize: 13.5, fontWeight: "800" },
   shareValue: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   sheetCancel: {
     alignItems: "center",
     paddingVertical: 14,
-    marginTop: 6,
-    borderRadius: 14,
+    marginTop: 8,
+    borderRadius: 16,
     backgroundColor: withAlpha(colors.brand, 0.07),
   },
   sheetCancelText: { color: colors.brand, fontWeight: "800", fontSize: 14 },
@@ -1675,18 +1915,43 @@ const styles = StyleSheet.create({
   },
   menuSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 20,
     paddingBottom: 30,
   },
-  menuTitle: { color: colors.ink, fontSize: 16.5, fontWeight: "800" },
-  menuSub: { color: colors.textMuted, fontSize: 12.5, fontWeight: "600", marginTop: 2, marginBottom: 14 },
+  menuTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  menuSub: {
+    color: colors.textMuted,
+    fontSize: 12.5,
+    fontWeight: "600",
+    marginTop: 3,
+    marginBottom: 14,
+  },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
+  },
+  menuItemIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.ink, 0.05),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuItemIconBrand: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
+  menuItemIconDanger: {
+    backgroundColor: withAlpha(colors.danger, 0.1),
   },
   menuItemDanger: {},
   menuItemText: { color: colors.ink, fontSize: 14.5, fontWeight: "700" },
@@ -1718,6 +1983,7 @@ function HireSheet({
     <Modal transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.menuBackdrop} onPress={onClose}>
         <Pressable style={styles.menuSheet} onPress={() => {}}>
+          <View style={styles.grabber} />
           <Text style={styles.menuTitle}>Hire confirmation</Text>
           <Text style={styles.menuSub}>
             Reviews unlock when you both confirm the hire happened. Silence
@@ -1838,23 +2104,30 @@ const hireStyles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  btnPrimary: { backgroundColor: colors.brand },
+  btnPrimary: {
+    backgroundColor: colors.brand,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
   btnPrimaryText: { color: colors.white, fontWeight: "800", fontSize: 13.5 },
-  btnGhost: { backgroundColor: colors.mist },
+  btnGhost: { backgroundColor: withAlpha(colors.ink, 0.06) },
   btnGhostText: { color: colors.ink, fontWeight: "700", fontSize: 13.5 },
-  btnDisabled: { opacity: 0.45 },
+  btnDisabled: { opacity: 0.45, shadowOpacity: 0 },
   rateLabel: {
     color: colors.ink,
     fontSize: 13,
     fontWeight: "800",
-    marginTop: 4,
+    marginTop: 6,
   },
   starsRow: { flexDirection: "row", gap: 8, marginVertical: 8 },
   star: { fontSize: 30, color: colors.mistDark },
   starOn: { color: colors.gold },
   commentInput: {
     borderWidth: 1,
-    borderColor: colors.mistDark,
+    borderColor: withAlpha(colors.ink, 0.08),
     borderRadius: 14,
     backgroundColor: colors.cream,
     padding: 12,

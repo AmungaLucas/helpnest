@@ -23,10 +23,10 @@ import {
 } from "../../services/chatCrypto";
 
 const STATUS_CHIPS = {
-  limit_reached: { label: "Limit reached", tone: "warn" },
-  expired: { label: "Expired", tone: "warn" },
-  closed: { label: "Closed", tone: "muted" },
-  restricted: { label: "Restricted", tone: "danger" },
+  limit_reached: { label: "Limit reached", tone: "warn", icon: "alert-circle" },
+  expired: { label: "Expired", tone: "warn", icon: "clock" },
+  closed: { label: "Closed", tone: "muted", icon: "x-circle" },
+  restricted: { label: "Restricted", tone: "danger", icon: "alert-triangle" },
 };
 
 function timeLabel(iso) {
@@ -70,28 +70,6 @@ function previewFor(item, myId) {
   }
 }
 
-function Avatar({ name, verified, mediaId }) {
-  const initial = (name || "?").charAt(0).toUpperCase();
-  return (
-    <View style={styles.avatar}>
-      {/* Real profile photo when the peer has one; initial-letter fallback
-          otherwise (SignedImage handles load failure back to the initial). */}
-      <SignedImage
-        mediaId={mediaId || null}
-        variant="thumb"
-        fallbackText={initial}
-        style={styles.avatarImage}
-        textStyle={styles.avatarText}
-      />
-      {verified ? (
-        <View style={styles.verifiedDot}>
-          <TabBarIcon name="check" color={colors.white} size={8} />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
 function ConversationRow({ item, myId, isEmployer, onPress }) {
   const hasUnread = item.unread > 0;
   const chip = STATUS_CHIPS[item.status];
@@ -104,54 +82,84 @@ function ConversationRow({ item, myId, isEmployer, onPress }) {
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
-      style={({ pressed }) => [styles.row, hasUnread && styles.rowUnread, pressed && styles.rowPressed]}
+      android_ripple={{ color: withAlpha(colors.ink, 0.05) }}
+      style={({ pressed }) => [
+        styles.row,
+        hasUnread && styles.rowUnread,
+        pressed && styles.rowPressed,
+      ]}
     >
-      <Avatar
-        name={item.peer?.name}
-        verified={item.peer?.verified}
-        mediaId={item.peer?.avatarMediaId}
-      />
+      <View style={styles.avatar}>
+        <SignedImage
+          mediaId={item.peer?.avatarMediaId || null}
+          variant="thumb"
+          fallbackText={(item.peer?.name || "?").charAt(0).toUpperCase()}
+          style={styles.avatarImage}
+          textStyle={styles.avatarText}
+        />
+        {item.peer?.verified ? (
+          <View style={styles.verifiedDot}>
+            <TabBarIcon name="check" color={colors.white} size={8} />
+          </View>
+        ) : null}
+      </View>
 
       <View style={styles.rowMain}>
         <View style={styles.rowTopLine}>
-          <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
+          <Text
+            style={[styles.name, hasUnread && styles.nameUnread]}
+            numberOfLines={1}
+          >
             {item.peer?.name || "HelpNest member"}
           </Text>
-
-          {/* Unread = brand border on the row + gold dot beside the time. */}
-          {hasUnread ? <View style={styles.goldDot} /> : null}
-
           <Text style={[styles.time, hasUnread && styles.timeUnread]}>
             {timeLabel(item.lastMessageAt || item.createdAt)}
           </Text>
         </View>
 
         <View style={styles.rowBottomLine}>
-          <Text style={[styles.preview, hasUnread && styles.previewUnread]} numberOfLines={1}>
-            {preview}
-          </Text>
-
-          {/* Request phase — the peer has not replied yet (PRD §9.5). */}
           {isRequest && item.status === "active" ? (
             <View style={[styles.statusChip, styles.requestChip]}>
               <Text style={styles.requestChipText}>
-                {isEmployer ? "Waiting for reply" : "New request"}
+                {isEmployer ? "Waiting" : "New"}
               </Text>
             </View>
-          ) : null}
-
-          {chip ? (
+          ) : chip ? (
             <View style={[styles.statusChip, styles[`chip_${chip.tone}`]]}>
-              <Text style={[styles.statusChipText, styles[`chipText_${chip.tone}`]]}>
+              <TabBarIcon
+                name={chip.icon}
+                color={
+                  chip.tone === "warn"
+                    ? colors.goldDark
+                    : chip.tone === "danger"
+                    ? colors.danger
+                    : colors.textMuted
+                }
+                size={9}
+              />
+              <Text
+                style={[
+                  styles.statusChipText,
+                  styles[`chipText_${chip.tone}`],
+                ]}
+              >
                 {chip.label}
               </Text>
             </View>
           ) : null}
 
+          <Text
+            style={[styles.preview, hasUnread && styles.previewUnread]}
+            numberOfLines={1}
+          >
+            {preview}
+          </Text>
+
           {hasUnread ? (
             <View style={styles.unreadPill}>
-              <Text style={styles.unreadText}>{item.unread > 99 ? "99+" : item.unread}</Text>
+              <Text style={styles.unreadText}>
+                {item.unread > 99 ? "99+" : item.unread}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -194,7 +202,10 @@ export default function MessagesScreen() {
         const data = await listConversations();
 
         if (mounted.current) {
-          let rows = (data.conversations || []).map((c) => ({ ...c, peer: { ...c.peer } }));
+          let rows = (data.conversations || []).map((c) => ({
+            ...c,
+            peer: { ...c.peer },
+          }));
 
           // Request vs conversation (PRD §9.5): on the maid side, threads
           // still awaiting her FIRST reply are requests — they belong to the
@@ -236,6 +247,7 @@ export default function MessagesScreen() {
       <View style={[styles.container, styles.center]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <ActivityIndicator size="large" color={colors.brand} />
+        <Text style={styles.loadingText}>Opening secure chats…</Text>
       </View>
     );
   }
@@ -261,9 +273,19 @@ export default function MessagesScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      {/* v3 header — eyebrow + display title on the cream canvas. */}
+      {/* Ambient orb — one very faint brand tint, echoing the chat screen. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.orb} />
+      </View>
+
+      {/* Header — kicker with inline lock chip + display title. */}
       <View style={styles.headerBlock}>
-        <Text style={styles.headerEyebrow}>End-to-end encrypted</Text>
+        <View style={styles.encRow}>
+          <View style={styles.encIcon}>
+            <TabBarIcon name="lock" color={colors.brand} size={9} />
+          </View>
+          <Text style={styles.headerEyebrow}>End-to-end encrypted</Text>
+        </View>
         <Text style={styles.headerTitle}>Chats</Text>
       </View>
 
@@ -284,7 +306,6 @@ export default function MessagesScreen() {
             }
           />
         )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.list}
         refreshing={refreshing}
         onRefresh={() => load({ showSpinner: true })}
@@ -292,7 +313,9 @@ export default function MessagesScreen() {
       />
 
       <View style={styles.safetyNoteRow}>
-        <TabBarIcon name="lock" color={colors.textFaint} size={12} />
+        <View style={styles.safetyLockWrap}>
+          <TabBarIcon name="lock" color={colors.brand} size={10} />
+        </View>
         <Text style={styles.safetyNote}>
           Messages are end-to-end encrypted on this device. HelpNest cannot
           read them.
@@ -303,61 +326,113 @@ export default function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Cream canvas (Modern v3) — white squircle cards float on it.
+  // Cream canvas so the white chat cards visibly sit ON something.
   container: { flex: 1, backgroundColor: colors.cream },
-  center: { alignItems: "center", justifyContent: "center" },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+    backgroundColor: colors.cream,
+  },
+  loadingText: {
+    color: colors.textMuted,
+    marginTop: 14,
+    fontSize: 13.5,
+    fontWeight: "600",
+  },
+  orb: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: withAlpha(colors.brand, 0.04),
+    top: -120,
+    right: -90,
+  },
 
-  headerBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  /* ---- Header ---- */
+  headerBlock: {
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 12,
+  },
+  encRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 3,
+  },
+  encIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerEyebrow: {
     color: colors.goldDark,
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginBottom: 3,
   },
   headerTitle: {
     color: colors.ink,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
 
-  list: { paddingHorizontal: 20, paddingBottom: 16 },
+  /* ---- List ---- */
+  list: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+
+  /* ---- Row — tight white card on the cream canvas ---- */
   row: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    // soft ink shadow (iOS) + gentle elevation (Android)
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.05),
+    // soft ink shadow — enough to lift the card off the cream, still tight
     shadowColor: colors.ink,
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
-  rowUnread: { borderWidth: 1, borderColor: colors.brand },
-  rowPressed: { opacity: 0.88 },
+  rowUnread: {
+    borderColor: withAlpha(colors.brand, 0.4),
+    backgroundColor: withAlpha(colors.brand, 0.025),
+  },
+  rowPressed: { backgroundColor: withAlpha(colors.ink, 0.04) },
+
+  /* ---- Avatar (48px round, WhatsApp) ---- */
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 13,
+    marginRight: 12,
     overflow: "hidden",
   },
-  avatarImage: { width: 52, height: 52 },
-  avatarText: { color: colors.brand, fontSize: 20, fontWeight: "800" },
+  avatarImage: { width: 48, height: 48 },
+  avatarText: { color: colors.brand, fontSize: 18, fontWeight: "800" },
   verifiedDot: {
     position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 16,
-    height: 16,
+    right: -1,
+    bottom: -1,
+    width: 15,
+    height: 15,
     borderRadius: 8,
     backgroundColor: colors.brand,
     alignItems: "center",
@@ -365,68 +440,108 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.white,
   },
+
+  /* ---- Row content ---- */
   rowMain: { flex: 1 },
   rowTopLine: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 6,
+    gap: 8,
+    marginBottom: 2,
   },
-  goldDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold },
-  name: { flexShrink: 1, color: colors.ink, fontSize: 15, fontWeight: "700" },
+  name: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: -0.1,
+  },
   nameUnread: { fontWeight: "800" },
-  time: { color: colors.textFaint, fontSize: 11.5, fontWeight: "600", marginLeft: 2 },
-  timeUnread: { color: colors.goldDark, fontWeight: "700" },
+  time: {
+    color: colors.textFaint,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  timeUnread: { color: colors.brand, fontWeight: "800" },
+
   rowBottomLine: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 4,
-    gap: 8,
+    gap: 6,
   },
-  preview: { flexShrink: 1, color: colors.textMuted, fontSize: 13.5, lineHeight: 18 },
+  preview: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "500",
+  },
   previewUnread: { color: colors.ink, fontWeight: "600" },
+
+  /* ---- Status chips ---- */
   statusChip: {
-    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 2,
+    flexShrink: 0,
   },
   requestChip: { backgroundColor: withAlpha(colors.gold, 0.16) },
-  requestChipText: { color: colors.goldDark, fontSize: 10, fontWeight: "800" },
+  requestChipText: {
+    color: colors.goldDark,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
   chip_warn: { backgroundColor: withAlpha(colors.gold, 0.16) },
-  chip_muted: { backgroundColor: withAlpha(colors.cloud, 0.7) },
-  chip_danger: { backgroundColor: withAlpha(colors.danger, 0.12) },
-  statusChipText: { fontSize: 10, fontWeight: "800" },
+  chip_muted: { backgroundColor: withAlpha(colors.ink, 0.06) },
+  chip_danger: { backgroundColor: withAlpha(colors.danger, 0.1) },
+  statusChipText: { fontSize: 9.5, fontWeight: "800", letterSpacing: 0.2 },
   chipText_warn: { color: colors.goldDark },
   chipText_muted: { color: colors.textMuted },
   chipText_danger: { color: colors.danger },
+
+  /* ---- Unread badge ---- */
   unreadPill: {
-    minWidth: 21,
-    height: 21,
-    borderRadius: 11,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
+    flexShrink: 0,
   },
-  unreadText: { color: colors.white, fontSize: 11, fontWeight: "800" },
-  // Cards carry the separation on the cream canvas — the "separator" is a gap.
-  separator: { height: 10 },
+  unreadText: { color: colors.white, fontSize: 10.5, fontWeight: "800" },
+
+  /* ---- Safety footer ---- */
   safetyNoteRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: 28,
-    paddingVertical: 10,
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.mist,
+    borderTopColor: withAlpha(colors.ink, 0.05),
+  },
+  safetyLockWrap: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
   },
   safetyNote: {
     flex: 1,
     color: colors.textFaint,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10.5,
+    lineHeight: 14,
     textAlign: "center",
+    fontWeight: "600",
   },
 });

@@ -33,28 +33,13 @@ export default function ChatsNavigator() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <TopTab.Navigator
         screenOptions={{
-          tabBarActiveTintColor: colors.brand,
+          tabBarActiveTintColor: colors.ink,
           tabBarInactiveTintColor: colors.textMuted,
-          tabBarPressColor: withAlpha(colors.brand, 0.08),
-          tabBarIndicatorStyle: {
-            backgroundColor: colors.brand,
-            height: 3,
-            borderTopLeftRadius: 3,
-            borderTopRightRadius: 3,
-          },
-          tabBarStyle: {
-            backgroundColor: colors.white,
-            elevation: 0,
-            shadowOpacity: 0,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.mist,
-          },
-          tabBarLabelStyle: {
-            fontSize: 13.5,
-            fontWeight: "800",
-            letterSpacing: 0.1,
-            textTransform: "none",
-          },
+          tabBarPressColor: "transparent",
+          tabBarStyle: styles.tabBar,
+          tabBarIndicatorStyle: styles.tabIndicator,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarItemStyle: styles.tabItem,
           swipeEnabled: true,
           lazy: true,
         }}
@@ -68,7 +53,40 @@ export default function ChatsNavigator() {
 
 const styles = StyleSheet.create({
   // Cream canvas so the status-bar band matches the list screens below the
-  // white tab bar.
+  // tab bar. The tab bar itself is now a floating segmented pill — a soft
+  // brand-tinted track with a white rounded chip sliding under the active
+  // tab. Same visual language as the pill / card surfaces across the app.
   safeArea: { flex: 1, backgroundColor: colors.cream },
   single: { flex: 1 },
+
+  tabBar: {
+    backgroundColor: withAlpha(colors.brand, 0.07),
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 12,
+    height: 44,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    elevation: 0,
+    shadowOpacity: 0,
+    borderBottomWidth: 0,
+  },
+  tabItem: {
+    paddingVertical: 0,
+  },
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0,
+    textTransform: "none",
+    margin: 0,
+  },
+  tabIndicator: {
+    backgroundColor: colors.white,
+    top: 4,
+    height: 36,
+    borderRadius: 12,
+    marginHorizontal: 8,
+  },
 });

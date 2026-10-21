@@ -27,26 +27,10 @@ import {
 import { formatDistance } from "../../utils/geo";
 import { colors, withAlpha } from "../../theme/colors";
 
-// ---------------------------------------------------------------------------
-// Employer home — Modern v3 redesign (top -> bottom):
-//   greeting display header + supporting caption -> location chip -> search
-//   pill -> Post a job / Find a maid CTAs -> brand-tinted category pills ->
-//   Maids near you (distance) -> Top rated (+ Near me filter) -> Verified &
-//   background-checked -> How it works (numbered block) -> trust strip.
-//
-// "Near you" is now REAL distance: the employer's saved coords go to
-// GET /api/workers?lat=&lng=&sort=near and every worker comes back with
-// distance_km (Haversine server-side). No coords / no matches fall back to
-// the old area-token match, then to a plain "Available now" rail.
-// ---------------------------------------------------------------------------
-
-const CAROUSEL_FETCH = 40; // one page, plenty for three 6-item rails
+const CAROUSEL_FETCH = 40;
 const RAIL_SIZE = 6;
-const NEAR_RADIUS_KM = 25; // "near you" cut-off before we loosen the rail
+const NEAR_RADIUS_KM = 25;
 
-// Subscription tiles on the home plans section — display-only mirror of the
-// server-side catalog (PRD v1.1 §5.2; amounts looked up server-side at push
-// time). Hire Pass is one-time, Basic/Gold are fixed 7-day periods (§8.1).
 const PLAN_TILES = [
   {
     id: "emp_basic",
@@ -77,7 +61,6 @@ function formatExpiry(iso) {
   }
 }
 
-// Emoji per service — zero icon-package weight, reads well at chip size.
 const SERVICE_EMOJI = {
   cleaning: "🧹",
   cooking: "🍳",
@@ -95,10 +78,11 @@ function greetingForHour() {
 }
 
 // ---------------------------------------------------------------------------
-// Rail cards — memoized with navigation inside (same contract as before:
-// the memo key is the `worker` object itself).
+// Card #1 — Maids near you: POSTER card (reverted to previous design)
+//   Photo on top, verified white-circle badge top-left, distance pill
+//   bottom-right, body below with name / services / hairline footer that
+//   shows rate + location.
 // ---------------------------------------------------------------------------
-
 const NearbyMaidCard = React.memo(function NearbyMaidCard({ worker }) {
   const navigation = useNavigation();
   const firstName = (worker.name || "").split(" ")[0] || "?";
@@ -128,11 +112,12 @@ const NearbyMaidCard = React.memo(function NearbyMaidCard({ worker }) {
         />
         {verified ? (
           <View style={styles.nearVerifiedBadge}>
-            <TabBarIcon name="check" color={colors.white} size={9} />
+            <TabBarIcon name="check" color={colors.brand} size={11} />
           </View>
         ) : null}
         {distance ? (
           <View style={styles.nearDistancePill}>
+            <TabBarIcon name="map-pin" color={colors.white} size={9} />
             <Text style={styles.nearDistanceText}>{distance}</Text>
           </View>
         ) : null}
@@ -146,20 +131,106 @@ const NearbyMaidCard = React.memo(function NearbyMaidCard({ worker }) {
           {(worker.services || []).map(serviceLabel).join(" · ") ||
             "Domestic worker"}
         </Text>
-        <Text style={styles.nearMeta} numberOfLines={1}>
-          {worker.hourlyRate !== null
-            ? `KES ${worker.hourlyRate}/hr`
-            : "Rate on ask"}
-          {worker.locationLabel ? ` · ${worker.locationLabel}` : ""}
-        </Text>
+
+        <View style={styles.nearFooter}>
+          <Text style={styles.nearRate}>
+            {worker.hourlyRate !== null
+              ? `KES ${worker.hourlyRate}/hr`
+              : "Rate on ask"}
+          </Text>
+          {worker.locationLabel ? (
+            <Text style={styles.nearLocation} numberOfLines={1}>
+              · {worker.locationLabel}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
 });
 
-// Shared mini card: powers both "Top rated" and "Verified & background-
-// checked" rails (the user's rule — one question per section, shared look).
-const MiniMaidCard = React.memo(function MiniMaidCard({ worker, shield }) {
+// ---------------------------------------------------------------------------
+// Card #2 — Top rated: HORIZONTAL SPLIT card.
+//   Left: square portrait with rank badge (#1/#2...) + verified check.
+//   Right: name, services, hairline divider, rate + experience chip.
+// ---------------------------------------------------------------------------
+const TopRatedCard = React.memo(function TopRatedCard({ worker, rank }) {
+  const navigation = useNavigation();
+  const firstName = (worker.name || "").split(" ")[0] || "?";
+  const verified = worker.kycStatus === "verified";
+
+  const onPress = useCallback(
+    () => navigation.navigate("WorkerProfile", { workerId: worker.id }),
+    [navigation, worker.id]
+  );
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+      style={({ pressed }) => [styles.topCard, pressed && styles.tilePressed]}
+      onPress={onPress}
+    >
+      <View style={styles.topPhotoWrap}>
+        <SignedImage
+          url={worker.avatarUrl}
+          mediaId={worker.avatarMediaId}
+          variant="thumb"
+          fallbackText={firstName}
+          style={styles.topPhoto}
+          textStyle={styles.topPhotoText}
+        />
+        {rank ? (
+          <View style={styles.topRankBadge}>
+            <Text style={styles.topRankText}>#{rank}</Text>
+          </View>
+        ) : null}
+        {verified ? (
+          <View style={styles.topVerifyDot}>
+            <TabBarIcon name="check" color={colors.white} size={10} />
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.topInfo}>
+        <Text style={styles.topName} numberOfLines={1}>
+          {worker.name}
+        </Text>
+        <Text style={styles.topServices} numberOfLines={2}>
+          {(worker.services || []).map(serviceLabel).join(" · ") ||
+            "Domestic worker"}
+        </Text>
+
+        <View style={styles.topDivider} />
+
+        <View style={styles.topMetaRow}>
+          <Text style={styles.topRate} numberOfLines={1}>
+            {worker.hourlyRate !== null
+              ? `KES ${worker.hourlyRate}/hr`
+              : "Rate on ask"}
+          </Text>
+          {worker.experienceYears ? (
+            <View style={styles.topExpChip}>
+              <Text style={styles.topExpChipText}>
+                {worker.experienceYears}{" "}
+                {worker.experienceYears === 1 ? "yr" : "yrs"}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Card #3 — Verified: GOLD RIBBON certificate card.
+//   Gold banner on top ("ID VERIFIED" + shield), then a white body with a
+//   gold-ringed avatar, name, experience, and rate in gold. Reads as a
+//   certified listing — visually distinct from both near (poster) and top
+//   rated (horizontal split).
+// ---------------------------------------------------------------------------
+const VerifiedCard = React.memo(function VerifiedCard({ worker }) {
   const navigation = useNavigation();
   const firstName = (worker.name || "").split(" ")[0] || "?";
   const distance = formatDistance(worker.distanceKm);
@@ -172,41 +243,53 @@ const MiniMaidCard = React.memo(function MiniMaidCard({ worker, shield }) {
   return (
     <Pressable
       accessibilityRole="button"
-      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-      style={({ pressed }) => [styles.miniCard, pressed && styles.tilePressed]}
+      android_ripple={{ color: withAlpha(colors.gold, 0.14) }}
+      style={({ pressed }) => [
+        styles.verifiedCard,
+        pressed && styles.tilePressed,
+      ]}
       onPress={onPress}
     >
-      <SignedImage
-        url={worker.avatarUrl}
-        mediaId={worker.avatarMediaId}
-        variant="thumb"
-        fallbackText={firstName}
-        style={styles.miniAvatar}
-        textStyle={styles.miniAvatarText}
-      />
-      <Text style={styles.miniName} numberOfLines={1}>
-        {firstName}
-      </Text>
-      {shield ? (
-        <View style={styles.miniShield}>
-          <TabBarIcon name="shield" color={colors.brand} size={10} />
-          <Text style={styles.miniShieldText}>ID verified</Text>
+      <View style={styles.verifiedRibbon}>
+        <TabBarIcon name="shield" color={colors.goldDark} size={11} />
+        <Text style={styles.verifiedRibbonText}>ID VERIFIED</Text>
+      </View>
+
+      <View style={styles.verifiedBody}>
+        <View style={styles.verifiedAvatarRing}>
+          <SignedImage
+            url={worker.avatarUrl}
+            mediaId={worker.avatarMediaId}
+            variant="thumb"
+            fallbackText={firstName}
+            style={styles.verifiedAvatar}
+            textStyle={styles.verifiedAvatarText}
+          />
         </View>
-      ) : worker.experienceYears ? (
-        <Text style={styles.miniExperience}>
-          {worker.experienceYears} {worker.experienceYears === 1 ? "yr" : "yrs"} exp
+
+        <Text style={styles.verifiedName} numberOfLines={1}>
+          {firstName}
         </Text>
-      ) : (
-        <View style={styles.miniSpacer} />
-      )}
-      <Text style={styles.miniRate}>
-        {worker.hourlyRate !== null
-          ? `KES ${worker.hourlyRate}/hr`
-          : "Rate on ask"}
-      </Text>
-      {distance ? (
-        <Text style={styles.miniDistance}>{distance} away</Text>
-      ) : null}
+
+        {worker.experienceYears ? (
+          <Text style={styles.verifiedExp}>
+            {worker.experienceYears}{" "}
+            {worker.experienceYears === 1 ? "yr" : "yrs"} exp
+          </Text>
+        ) : (
+          <View style={styles.verifiedSpacer} />
+        )}
+
+        <Text style={styles.verifiedRate}>
+          {worker.hourlyRate !== null
+            ? `KES ${worker.hourlyRate}/hr`
+            : "Rate on ask"}
+        </Text>
+
+        {distance ? (
+          <Text style={styles.verifiedDistance}>{distance} away</Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 });
@@ -241,12 +324,6 @@ export default function EmployerHomeScreen() {
   const [topNearOnly, setTopNearOnly] = useState(false);
   const [subStatus, setSubStatus] = useState(null);
 
-  // Coords live in a ref so the focus fetch can read the latest values
-  // without re-render churn. `fetchedCoordsKeyRef` remembers which coords
-  // the last fetch ACTUALLY used: on a cold launch AuthContext hydrates
-  // after the first fetch (which then runs without coords and the rail
-  // falls back to "Available now"), so the effect below refetches ONCE the
-  // moment coords arrive or change — no pull-to-refresh needed.
   const coordsRef = useRef(null);
   if (
     typeof user?.locationLat === "number" &&
@@ -255,14 +332,10 @@ export default function EmployerHomeScreen() {
     coordsRef.current = { lat: user.locationLat, lng: user.locationLng };
   }
   const fetchedCoordsKeyRef = useRef(null);
-  // Monotonic sequence: only the newest fetch may commit state (a slow
-  // no-coords response must never overwrite a fresh coords response).
   const fetchSeqRef = useRef(0);
 
   const firstName = (user?.name || "").split(" ")[0] || "";
 
-  // Set false whenever the tab loses focus (and on unmount) so late
-  // responses never setState on a dead screen.
   const aliveRef = useRef(true);
 
   const fetchWorkers = useCallback(async ({ asRefresh } = {}) => {
@@ -283,9 +356,6 @@ export default function EmployerHomeScreen() {
       setWorkers(data.workers || []);
       setLoadError(false);
     } catch {
-      // Home treats failures as non-fatal, but they must not read as
-      // "no workers exist" — the error state changes the empty-box copy
-      // and offers a retry (this exact silence once hid a gateway 500).
       if (!aliveRef.current || seq !== fetchSeqRef.current) return;
       setWorkers([]);
       setLoadError(true);
@@ -297,8 +367,6 @@ export default function EmployerHomeScreen() {
     }
   }, []);
 
-  // Fresh picks every time the tab regains focus (cheap: one 40-row page).
-  // Also refreshes the subscription status for the plans section.
   useFocusEffect(
     useCallback(() => {
       aliveRef.current = true;
@@ -319,10 +387,6 @@ export default function EmployerHomeScreen() {
     }, [fetchWorkers])
   );
 
-  // Cold-launch fix: AuthContext hydrates AFTER the first focus fetch, so
-  // the first fetch usually runs without coords. The moment coords arrive
-  // (or change after a location save), refetch once — "Maids near you"
-  // with real distances appears without leaving the tab.
   useEffect(() => {
     if (
       typeof user?.locationLat !== "number" ||
@@ -339,8 +403,6 @@ export default function EmployerHomeScreen() {
 
   const hasCoords = Boolean(coordsRef.current);
 
-  // "Maids near you" — real distance when we have coords (server already
-  // returned workers sorted near-first), else the old area-token match.
   const near = useMemo(() => {
     if (hasCoords) {
       const withDistance = workers
@@ -350,7 +412,6 @@ export default function EmployerHomeScreen() {
       if (withDistance.length >= 2) {
         return { list: withDistance.slice(0, RAIL_SIZE), matched: true };
       }
-      // Nobody within the radius yet — widen instead of an empty rail.
       const anyDistance = workers
         .filter((w) => w.distanceKm !== null)
         .sort((a, b) => a.distanceKm - b.distanceKm);
@@ -380,8 +441,6 @@ export default function EmployerHomeScreen() {
     return { list: (hit ? matches : workers).slice(0, RAIL_SIZE), matched: hit };
   }, [workers, hasCoords, user?.locationLabel]);
 
-  // "Top rated" — verified first, then most experienced. With the "Near me"
-  // filter on, rank the near set by real distance instead.
   const top = useMemo(() => {
     if (topNearOnly && hasCoords) {
       return [...near.list]
@@ -398,8 +457,6 @@ export default function EmployerHomeScreen() {
       .slice(0, RAIL_SIZE);
   }, [workers, near.list, topNearOnly, hasCoords]);
 
-  // "Verified & background-checked" — the trust section doubles as the
-  // featured/recommended rail. Hidden unless we can show at least 3.
   const verified = useMemo(
     () =>
       workers
@@ -415,11 +472,11 @@ export default function EmployerHomeScreen() {
 
   const renderNear = useCallback(({ item }) => <NearbyMaidCard worker={item} />, []);
   const renderTop = useCallback(
-    ({ item }) => <MiniMaidCard worker={item} />,
+    ({ item, index }) => <TopRatedCard worker={item} rank={index + 1} />,
     []
   );
   const renderVerified = useCallback(
-    ({ item }) => <MiniMaidCard worker={item} shield />,
+    ({ item }) => <VerifiedCard worker={item} />,
     []
   );
 
@@ -440,373 +497,398 @@ export default function EmployerHomeScreen() {
           />
         }
       >
-        {/* ---------- Greeting header zone ---------- */}
-        <Text style={styles.karibu}>
-          {greetingForHour()}
-          {firstName ? `, ${firstName}` : ""} 👋
-        </Text>
-        <Text style={styles.karibuLede}>
-          Trusted help for your home — search, compare and hire safely.
-        </Text>
+        {/* ---------- Hero ---------- */}
+        <View style={styles.hero}>
+          <View style={styles.orb1} />
+          <View style={styles.orb2} />
+          <View style={styles.orb3} />
 
-        <Pressable
-          accessibilityRole="button"
-          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-          style={({ pressed }) => [styles.locationChip, pressed && styles.pressedDim]}
-          onPress={() => setPickerOpen(true)}
-        >
-          <TabBarIcon name="map-pin" color={colors.brand} size={14} />
-          <Text style={styles.locationText} numberOfLines={1}>
-            {locationChipLabel}
+          <Text style={styles.kicker}>EMPLOYER · HOME</Text>
+          <Text style={styles.karibu}>
+            {greetingForHour()}
+            {firstName ? `, ${firstName}` : ""} 👋
           </Text>
-          <Text style={styles.locationChange}>Change</Text>
-        </Pressable>
+          <Text style={styles.lede}>
+            Trusted help for your home — search, compare and hire safely.
+          </Text>
 
-        {/* ---------- Search ---------- */}
-        <Pressable
-          accessibilityRole="button"
-          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-          style={({ pressed }) => [styles.searchCard, pressed && styles.pressedDim]}
-          onPress={() => navigation.navigate("MaidsTab")}
-        >
-          <TabBarIcon name="search" color={colors.textMuted} size={19} />
-          <Text style={styles.searchText}>Search name, skill or area…</Text>
-        </Pressable>
-
-        {/* ---------- Primary CTAs ---------- */}
-        <View style={styles.ctaRow}>
           <Pressable
             accessibilityRole="button"
-            android_ripple={{ color: withAlpha(colors.white, 0.16) }}
+            android_ripple={{ color: withAlpha(colors.brand, 0.1) }}
             style={({ pressed }) => [
-              styles.postJob,
-              styles.ctaPrimary,
+              styles.locationRow,
               pressed && styles.pressedDim,
             ]}
-            onPress={() => navigation.navigate("PostJob")}
+            onPress={() => setPickerOpen(true)}
           >
-            <TabBarIcon name="file-text" color={colors.white} size={18} />
-            <Text style={styles.postJobText}>Post a job</Text>
+            <View style={styles.locationIconChip}>
+              <TabBarIcon name="map-pin" color={colors.brand} size={13} />
+            </View>
+            <Text style={styles.locationText} numberOfLines={1}>
+              {locationChipLabel}
+            </Text>
+            <Text style={styles.locationChange}>Change</Text>
           </Pressable>
+        </View>
+
+        <View style={styles.content}>
+          {/* ---------- Search ---------- */}
           <Pressable
             accessibilityRole="button"
-            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+            android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
             style={({ pressed }) => [
-              styles.findMaid,
-              styles.ctaSecondary,
+              styles.searchCard,
               pressed && styles.pressedDim,
             ]}
             onPress={() => navigation.navigate("MaidsTab")}
           >
-            <TabBarIcon name="users" color={colors.brand} size={18} />
-            <Text style={styles.findMaidText}>Find a maid</Text>
+            <TabBarIcon name="search" color={colors.textMuted} size={18} />
+            <Text style={styles.searchText}>Search name, skill or area…</Text>
           </Pressable>
-        </View>
 
-        {/* ---------- Categories ---------- */}
-        <View style={styles.sectionHead}>
-          <View style={styles.sectionHeadLeft}>
-            <Text style={styles.eyebrow}>Services</Text>
-            <Text style={styles.sectionTitle}>
-              What do you need help with?
-            </Text>
-          </View>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsRow}
-        >
-          {SERVICE_OPTIONS.map((option) => (
+          {/* ---------- Primary CTAs (initial design) ---------- */}
+          <View style={styles.ctaRow}>
             <Pressable
-              key={option.value}
+              accessibilityRole="button"
+              android_ripple={{ color: withAlpha(colors.white, 0.16) }}
+              style={({ pressed }) => [
+                styles.postJob,
+                styles.ctaPrimary,
+                pressed && styles.pressedDim,
+              ]}
+              onPress={() => navigation.navigate("PostJob")}
+            >
+              <TabBarIcon name="file-text" color={colors.white} size={18} />
+              <Text style={styles.postJobText}>Post a job</Text>
+            </Pressable>
+            <Pressable
               accessibilityRole="button"
               android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
               style={({ pressed }) => [
-                styles.categoryChip,
-                pressed && styles.categoryChipPressed,
+                styles.findMaid,
+                styles.ctaSecondary,
+                pressed && styles.pressedDim,
               ]}
-              onPress={() =>
-                navigation.navigate("MaidsTab", { service: option.value })
-              }
+              onPress={() => navigation.navigate("MaidsTab")}
             >
-              <Text style={styles.categoryEmoji}>
-                {SERVICE_EMOJI[option.value] || "✨"}
-              </Text>
-              <Text style={styles.categoryLabel}>{option.label}</Text>
+              <TabBarIcon name="users" color={colors.brand} size={18} />
+              <Text style={styles.findMaidText}>Find a maid</Text>
             </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* ---------- Workers ---------- */}
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={colors.brand} />
           </View>
-        ) : workers.length === 0 ? (
-          <EmptyState
-            icon={loadError ? "alert-triangle" : "users"}
-            tone={loadError ? "danger" : "brand"}
-            title={loadError ? "Connection hiccup" : "No workers yet"}
-            body={
-              loadError
-                ? "Couldn't load workers just now. Check your connection and try again."
-                : "No worker profiles yet. They'll appear here as domestic workers complete their profiles."
-            }
-            actionLabel={loadError ? "Try again" : undefined}
-            onAction={
-              loadError
-                ? () => {
-                    setLoading(true);
-                    fetchWorkers();
-                  }
-                : undefined
-            }
-          />
-        ) : (
-          <>
-            <View style={styles.sectionHead}>
-              <View style={styles.sectionHeadLeft}>
-                <Text style={styles.eyebrow}>Around you</Text>
-                <Text style={styles.sectionTitle}>{nearTitle}</Text>
-              </View>
+
+          {/* ---------- Categories ---------- */}
+          <View style={styles.sectionHead}>
+            <View style={styles.sectionHeadLeft}>
+              <Text style={styles.eyebrow}>SERVICES</Text>
+              <Text style={styles.sectionTitle}>
+                What do you need help with?
+              </Text>
+            </View>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsRow}
+          >
+            {SERVICE_OPTIONS.map((option) => (
               <Pressable
+                key={option.value}
                 accessibilityRole="button"
                 android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                style={({ pressed }) => [styles.seeAllHit, pressed && styles.pressedDim]}
-                onPress={() => navigation.navigate("MaidsTab")}
+                style={({ pressed }) => [
+                  styles.categoryChip,
+                  pressed && styles.categoryChipPressed,
+                ]}
+                onPress={() =>
+                  navigation.navigate("MaidsTab", { service: option.value })
+                }
               >
-                <Text style={styles.seeAll}>See all</Text>
+                <Text style={styles.categoryEmoji}>
+                  {SERVICE_EMOJI[option.value] || "✨"}
+                </Text>
+                <Text style={styles.categoryLabel}>{option.label}</Text>
               </Pressable>
-            </View>
-            <FlatList
-              horizontal
-              data={near.list}
-              keyExtractor={(item) => item.id}
-              renderItem={renderNear}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rail}
-              initialNumToRender={4}
-              maxToRenderPerBatch={4}
-              windowSize={3}
-              removeClippedSubviews
-            />
+            ))}
+          </ScrollView>
 
-            <View style={styles.sectionHead}>
-              <View style={styles.sectionHeadLeft}>
-                <Text style={styles.eyebrow}>Top picks</Text>
-                <Text style={styles.sectionTitle}>Top rated</Text>
-              </View>
-              <View style={styles.sectionHeadRight}>
-                {hasCoords ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: topNearOnly }}
-                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      topNearOnly && styles.filterChipOn,
-                      pressed && styles.pressedDim,
-                    ]}
-                    onPress={() => setTopNearOnly((v) => !v)}
-                  >
-                    <TabBarIcon
-                      name="map-pin"
-                      color={topNearOnly ? colors.white : colors.brand}
-                      size={10}
-                    />
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        topNearOnly && styles.filterChipTextOn,
-                      ]}
-                    >
-                      Near me
-                    </Text>
-                  </Pressable>
-                ) : null}
+          {/* ---------- Workers ---------- */}
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.brand} />
+            </View>
+          ) : workers.length === 0 ? (
+            <EmptyState
+              icon={loadError ? "alert-triangle" : "users"}
+              tone={loadError ? "danger" : "brand"}
+              title={loadError ? "Connection hiccup" : "No workers yet"}
+              body={
+                loadError
+                  ? "Couldn't load workers just now. Check your connection and try again."
+                  : "No worker profiles yet. They'll appear here as domestic workers complete their profiles."
+              }
+              actionLabel={loadError ? "Try again" : undefined}
+              onAction={
+                loadError
+                  ? () => {
+                      setLoading(true);
+                      fetchWorkers();
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <>
+              <View style={styles.sectionHead}>
+                <View style={styles.sectionHeadLeft}>
+                  <Text style={styles.eyebrow}>AROUND YOU</Text>
+                  <Text style={styles.sectionTitle}>{nearTitle}</Text>
+                </View>
                 <Pressable
                   accessibilityRole="button"
                   android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                  style={({ pressed }) => [styles.seeAllHit, pressed && styles.pressedDim]}
+                  style={({ pressed }) => [
+                    styles.seeAllHit,
+                    pressed && styles.pressedDim,
+                  ]}
                   onPress={() => navigation.navigate("MaidsTab")}
                 >
                   <Text style={styles.seeAll}>See all</Text>
                 </Pressable>
               </View>
-            </View>
-            <FlatList
-              horizontal
-              data={top}
-              keyExtractor={(item) => item.id}
-              renderItem={renderTop}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rail}
-              initialNumToRender={4}
-              maxToRenderPerBatch={4}
-              windowSize={3}
-              removeClippedSubviews
-            />
+              <FlatList
+                horizontal
+                data={near.list}
+                keyExtractor={(item) => item.id}
+                renderItem={renderNear}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rail}
+                initialNumToRender={4}
+                maxToRenderPerBatch={4}
+                windowSize={3}
+                removeClippedSubviews
+              />
 
-            {verified.length >= 3 ? (
-              <>
-                <View style={styles.sectionHead}>
-                  <View style={styles.sectionHeadLeft}>
-                    <Text style={styles.eyebrow}>Trusted profiles</Text>
-                    <Text style={styles.sectionTitle}>
-                      Verified &amp; background-checked
-                    </Text>
-                  </View>
+              <View style={styles.sectionHead}>
+                <View style={styles.sectionHeadLeft}>
+                  <Text style={styles.eyebrow}>TOP PICKS</Text>
+                  <Text style={styles.sectionTitle}>Top rated</Text>
+                </View>
+                <View style={styles.sectionHeadRight}>
+                  {hasCoords ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: topNearOnly }}
+                      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        topNearOnly && styles.filterChipOn,
+                        pressed && styles.pressedDim,
+                      ]}
+                      onPress={() => setTopNearOnly((v) => !v)}
+                    >
+                      <TabBarIcon
+                        name="map-pin"
+                        color={topNearOnly ? colors.white : colors.brand}
+                        size={10}
+                      />
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          topNearOnly && styles.filterChipTextOn,
+                        ]}
+                      >
+                        Near me
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                    style={({ pressed }) => [styles.seeAllHit, pressed && styles.pressedDim]}
+                    style={({ pressed }) => [
+                      styles.seeAllHit,
+                      pressed && styles.pressedDim,
+                    ]}
                     onPress={() => navigation.navigate("MaidsTab")}
                   >
                     <Text style={styles.seeAll}>See all</Text>
                   </Pressable>
                 </View>
-                <FlatList
-                  horizontal
-                  data={verified}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderVerified}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.rail}
-                  initialNumToRender={4}
-                  maxToRenderPerBatch={4}
-                  windowSize={3}
-                  removeClippedSubviews
-                />
-              </>
-            ) : null}
-          </>
-        )}
+              </View>
+              <FlatList
+                horizontal
+                data={top}
+                keyExtractor={(item) => item.id}
+                renderItem={renderTop}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rail}
+                initialNumToRender={4}
+                maxToRenderPerBatch={4}
+                windowSize={3}
+                removeClippedSubviews
+              />
 
-        {/* ---------- Featured promo: boost a job ----------
-            INITIAL layout restored (badge | eyebrow/title/copy + chevron) on
-            the fixed rendering — elevation on the OPAQUE boostShadow
-            wrapper, alpha fill + 1px alpha border on the elevation-free
-            inner (no dark silhouette through the tint). */}
-        <View style={styles.boostShadow}>
+              {verified.length >= 3 ? (
+                <>
+                  <View style={styles.sectionHead}>
+                    <View style={styles.sectionHeadLeft}>
+                      <Text style={styles.eyebrow}>TRUSTED PROFILES</Text>
+                      <Text style={styles.sectionTitle}>
+                        Verified &amp; background-checked
+                      </Text>
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                      style={({ pressed }) => [
+                        styles.seeAllHit,
+                        pressed && styles.pressedDim,
+                      ]}
+                      onPress={() => navigation.navigate("MaidsTab")}
+                    >
+                      <Text style={styles.seeAll}>See all</Text>
+                    </Pressable>
+                  </View>
+                  <FlatList
+                    horizontal
+                    data={verified}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderVerified}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.rail}
+                    initialNumToRender={4}
+                    maxToRenderPerBatch={4}
+                    windowSize={3}
+                    removeClippedSubviews
+                  />
+                </>
+              ) : null}
+            </>
+          )}
+
+          {/* ---------- Featured promo: boost a job (dark card) ---------- */}
           <Pressable
             accessibilityRole="button"
-            android_ripple={{ color: withAlpha(colors.gold, 0.12) }}
+            android_ripple={{ color: withAlpha(colors.white, 0.1) }}
             style={({ pressed }) => [
-              styles.boostStrip,
+              styles.promoCard,
               pressed && styles.pressedDim,
             ]}
             onPress={() => navigation.navigate("MyJobsTab")}
           >
-            <View style={styles.boostBadge}>
-              <TabBarIcon name="zap" color={colors.goldDark} size={19} />
-            </View>
-            <View style={styles.boostBody}>
-              <Text style={styles.boostEyebrow}>Featured</Text>
-              <Text style={styles.boostTitle}>Get more applicants</Text>
-              <Text style={styles.boostCopy}>
-                Boost any job with Urgent (24h) or Spotlight placement from My
-                Jobs.
-              </Text>
-            </View>
-            <TabBarIcon name="chevron-right" color={colors.goldDark} size={16} />
-          </Pressable>
-        </View>
-
-        {/* ---------- How it works ---------- */}
-        <View style={styles.sectionHead}>
-          <View style={styles.sectionHeadLeft}>
-            <Text style={styles.eyebrow}>Simple process</Text>
-            <Text style={styles.sectionTitle}>How it works</Text>
-          </View>
-        </View>
-        <View style={styles.stepsCard}>
-          {HOW_IT_WORKS.map((step, index) => (
-            <View
-              key={step.title}
-              style={[styles.stepRow, index > 0 && styles.stepDivided]}
-            >
-              <View style={styles.stepNumWrap}>
-                <Text style={styles.stepNum}>{index + 1}</Text>
+            <View style={styles.promoTopRow}>
+              <View style={styles.promoBadge}>
+                <TabBarIcon name="zap" color={colors.gold} size={17} />
               </View>
-              <View style={styles.stepMain}>
-                <Text style={styles.stepTitle}>{step.title}</Text>
-                <Text style={styles.stepBody}>{step.body}</Text>
-              </View>
-              <TabBarIcon
-                name={step.icon}
-                color={withAlpha(colors.brand, 0.55)}
-                size={18}
-              />
+              <Text style={styles.promoEyebrow}>FEATURED</Text>
             </View>
-          ))}
-        </View>
 
-        {/* ---------- Trust strip ---------- */}
-        <View style={styles.trustCard}>
-          <TabBarIcon name="shield" color={colors.goldDark} size={17} />
-          <Text style={styles.trustText}>
-            Every contact unlock is paid through M-Pesa and workers keep
-            control of who sees their number.
-          </Text>
-        </View>
-
-        {/* ---------- Subscription plans (PRD §5.2 employer products) ---------- */}
-        <View style={styles.planCard}>
-          <View style={styles.planHead}>
-            <Text style={styles.planTitle}>Hire faster</Text>
-            {subStatus?.hasSubscription ? (
-              <View style={styles.planActivePill}>
-                <Text style={styles.planActiveText}>Active</Text>
-              </View>
-            ) : null}
-          </View>
-
-          {subStatus?.hasSubscription ? (
-            <Text style={styles.planActiveCopy}>
-              {subStatus.planLabel} · active until{" "}
-              {formatExpiry(subStatus.expiresAt)}.
+            <Text style={styles.promoTitle}>Get more applicants</Text>
+            <Text style={styles.promoCopy}>
+              Boost any job with Urgent (24h) or Spotlight placement from My
+              Jobs.
             </Text>
-          ) : (
-            <>
-              <Text style={styles.planCopy}>
-                Chat with maids and post jobs from one weekly bundle.
-              </Text>
-              <View style={styles.planRow}>
-                {PLAN_TILES.map((plan) => (
-                  <Pressable
-                    key={plan.id}
-                    accessibilityRole="button"
-                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-                    style={({ pressed }) => [
-                      styles.planTile,
-                      plan.best && styles.planTileBest,
-                      pressed && styles.pressedDim,
-                    ]}
-                    onPress={() =>
-                      navigation.navigate("MpesaCheckout", {
-                        plan: plan.id,
-                        label: plan.label,
-                      })
-                    }
-                  >
-                    {plan.best ? (
-                      <View style={styles.planBest}>
-                        <Text style={styles.planBestText}>Best value</Text>
-                      </View>
-                    ) : null}
-                    <Text style={styles.planName}>{plan.name}</Text>
-                    <Text style={styles.planPrice}>KES {plan.price}</Text>
-                    <Text style={styles.planPer}>{plan.per}</Text>
-                  </Pressable>
-                ))}
+
+            <View style={styles.promoCta}>
+              <Text style={styles.promoCtaText}>Go to My Jobs</Text>
+              <TabBarIcon name="chevron-right" color={colors.ink} size={14} />
+            </View>
+          </Pressable>
+
+          {/* ---------- How it works ---------- */}
+          <View style={styles.sectionHead}>
+            <View style={styles.sectionHeadLeft}>
+              <Text style={styles.eyebrow}>SIMPLE PROCESS</Text>
+              <Text style={styles.sectionTitle}>How it works</Text>
+            </View>
+          </View>
+          <View style={styles.stepsCard}>
+            {HOW_IT_WORKS.map((step, index) => (
+              <View
+                key={step.title}
+                style={[styles.stepRow, index > 0 && styles.stepDivided]}
+              >
+                <View style={styles.stepNumWrap}>
+                  <Text style={styles.stepNum}>{index + 1}</Text>
+                </View>
+                <View style={styles.stepMain}>
+                  <Text style={styles.stepTitle}>{step.title}</Text>
+                  <Text style={styles.stepBody}>{step.body}</Text>
+                </View>
+                <TabBarIcon
+                  name={step.icon}
+                  color={withAlpha(colors.brand, 0.55)}
+                  size={18}
+                />
               </View>
-              <Text style={styles.planFootnote}>
-                Just one thing? A chat unlock is KES 150 on any maid's
-                profile and a standard job post is KES 300.
+            ))}
+          </View>
+
+          {/* ---------- Trust strip ---------- */}
+          <View style={styles.trustCard}>
+            <TabBarIcon name="shield" color={colors.goldDark} size={17} />
+            <Text style={styles.trustText}>
+              Every contact unlock is paid through M-Pesa and workers keep
+              control of who sees their number.
+            </Text>
+          </View>
+
+          {/* ---------- Subscription plans (initial design) ---------- */}
+          <View style={styles.planCard}>
+            <View style={styles.planHead}>
+              <Text style={styles.planTitle}>Hire faster</Text>
+              {subStatus?.hasSubscription ? (
+                <View style={styles.planActivePill}>
+                  <Text style={styles.planActiveText}>Active</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {subStatus?.hasSubscription ? (
+              <Text style={styles.planActiveCopy}>
+                {subStatus.planLabel} · active until{" "}
+                {formatExpiry(subStatus.expiresAt)}.
               </Text>
-            </>
-          )}
+            ) : (
+              <>
+                <Text style={styles.planCopy}>
+                  Chat with maids and post jobs from one weekly bundle.
+                </Text>
+                <View style={styles.planRow}>
+                  {PLAN_TILES.map((plan) => (
+                    <Pressable
+                      key={plan.id}
+                      accessibilityRole="button"
+                      android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                      style={({ pressed }) => [
+                        styles.planTile,
+                        plan.best && styles.planTileBest,
+                        pressed && styles.pressedDim,
+                      ]}
+                      onPress={() =>
+                        navigation.navigate("MpesaCheckout", {
+                          plan: plan.id,
+                          label: plan.label,
+                        })
+                      }
+                    >
+                      {plan.best ? (
+                        <View style={styles.planBest}>
+                          <Text style={styles.planBestText}>Best value</Text>
+                        </View>
+                      ) : null}
+                      <Text style={styles.planName}>{plan.name}</Text>
+                      <Text style={styles.planPrice}>KES {plan.price}</Text>
+                      <Text style={styles.planPer}>{plan.per}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.planFootnote}>
+                  Just one thing? A chat unlock is KES 150 on any maid's
+                  profile and a standard job post is KES 300.
+                </Text>
+              </>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -819,70 +901,137 @@ export default function EmployerHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  /* ---- Shell ---- */
   safeArea: {
     flex: 1,
     backgroundColor: colors.cream,
   },
   bodyScroll: {
     flex: 1,
+    backgroundColor: colors.cream,
   },
   body: {
-    padding: 20,
-    paddingBottom: 36,
+    paddingBottom: 40,
+  },
+  pressedDim: {
+    opacity: 0.88,
+  },
+  tilePressed: {
+    opacity: 0.9,
   },
 
-  /* ---- Header: greeting + location chip ---- */
+  /* ---- Hero ---- */
+  hero: {
+    paddingHorizontal: 22,
+    paddingTop: 24,
+    paddingBottom: 24,
+    overflow: "hidden",
+    backgroundColor: colors.cream,
+  },
+  orb1: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: withAlpha(colors.brand, 0.07),
+    top: -110,
+    right: -90,
+  },
+  orb2: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    top: 40,
+    left: -70,
+  },
+  orb3: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: withAlpha(colors.brand, 0.05),
+    bottom: -20,
+    right: 30,
+  },
+  kicker: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
   karibu: {
     color: colors.ink,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "800",
-    letterSpacing: -0.6,
-    marginBottom: 5,
+    letterSpacing: -0.9,
+    lineHeight: 36,
+    marginBottom: 8,
   },
-  karibuLede: {
+  lede: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 14,
+    fontWeight: "500",
+    maxWidth: "94%",
   },
-  locationChip: {
-    alignSelf: "flex-start",
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    borderRadius: 999,
-    paddingLeft: 13,
-    paddingRight: 8,
-    paddingVertical: 7,
-    gap: 6,
-    marginBottom: 16,
+    gap: 8,
+    alignSelf: "flex-start",
     maxWidth: "100%",
+    marginTop: 18,
+    paddingVertical: 4,
+    paddingRight: 6,
+    borderRadius: 999,
+  },
+  locationIconChip: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
   },
   locationText: {
     flexShrink: 1,
     color: colors.ink,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: "700",
   },
   locationChange: {
     color: colors.brand,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "800",
     marginLeft: 2,
+  },
+
+  /* ---- Content column ---- */
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
 
   /* ---- Search ---- */
   searchCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.mist,
-    borderRadius: 16,
+    backgroundColor: colors.white,
+    borderRadius: 18,
     minHeight: 54,
     paddingHorizontal: 16,
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.04),
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   searchText: {
     color: colors.textMuted,
@@ -891,7 +1040,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ---- Primary CTAs ---- */
+  /* ---- Primary CTAs (initial design) ---- */
   ctaRow: {
     flexDirection: "row",
     gap: 10,
@@ -935,17 +1084,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-  tilePressed: {
-    opacity: 0.88,
-  },
-  pressedDim: {
-    opacity: 0.88,
-  },
 
   /* ---- Sections ---- */
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    marginTop: 4,
+  },
   sectionHeadLeft: {
     flex: 1,
     marginRight: 12,
+  },
+  sectionHeadRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingBottom: 1,
   },
   eyebrow: {
     color: colors.goldDark,
@@ -960,19 +1116,6 @@ const styles = StyleSheet.create({
     fontSize: 17.5,
     fontWeight: "800",
     letterSpacing: -0.4,
-  },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  sectionHeadRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingBottom: 1,
   },
   seeAllHit: {
     paddingHorizontal: 6,
@@ -1042,225 +1185,395 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  /* ---- Nearby card (photo top) ---- */
+  /* ============================================================
+     Card #1 — Maids near you: POSTER (reverted)
+     ============================================================ */
   nearCard: {
     width: 204,
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: colors.mist,
+    borderColor: withAlpha(colors.ink, 0.05),
     overflow: "hidden",
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   nearPhotoWrap: {
     position: "relative",
   },
   nearPhoto: {
     width: "100%",
-    height: 112,
+    height: 124,
     backgroundColor: withAlpha(colors.brand, 0.14),
   },
   nearPhotoText: {
     color: colors.brand,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
   },
   nearVerifiedBadge: {
     position: "absolute",
-    top: 8,
-    left: 8,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.brand,
+    top: 10,
+    left: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   nearDistancePill: {
     position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: withAlpha(colors.ink, 0.78),
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    bottom: 10,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: withAlpha(colors.ink, 0.72),
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   nearDistanceText: {
     color: colors.white,
     fontSize: 10,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
   nearBody: {
-    padding: 12,
+    padding: 13,
   },
   nearName: {
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "800",
+    letterSpacing: -0.1,
   },
   nearServices: {
-    color: colors.textFaint,
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  nearMeta: {
     color: colors.textMuted,
     fontSize: 11.5,
-    fontWeight: "700",
-    marginTop: 4,
+    fontWeight: "600",
+    marginTop: 3,
   },
-
-  /* ---- Mini card (Top rated / Verified) ---- */
-  miniCard: {
-    width: 136,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
-  },
-  miniAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: withAlpha(colors.brand, 0.14),
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-  miniAvatarText: {
-    color: colors.brand,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  miniName: {
-    color: colors.ink,
-    fontSize: 13,
-    fontWeight: "800",
-    maxWidth: "100%",
-  },
-  miniShield: {
+  nearFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    backgroundColor: withAlpha(colors.brand, 0.13),
-    borderRadius: 999,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(colors.ink, 0.06),
+  },
+  nearRate: {
+    color: colors.brand,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  nearLocation: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 11.5,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+
+  /* ============================================================
+     Card #2 — Top rated: HORIZONTAL SPLIT (with rank badge)
+     ============================================================ */
+  topCard: {
+    width: 292,
+    flexDirection: "row",
+    alignItems: "stretch",
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    padding: 10,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.ink, 0.05),
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  topPhotoWrap: {
+    position: "relative",
+  },
+  topPhoto: {
+    width: 100,
+    height: 100,
+    borderRadius: 16,
+    backgroundColor: withAlpha(colors.brand, 0.14),
+  },
+  topPhotoText: {
+    color: colors.brand,
+    fontSize: 32,
+    fontWeight: "800",
+  },
+  topRankBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: colors.ink,
+    borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    marginTop: 4,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
-  miniShieldText: {
-    color: colors.brand,
-    fontSize: 9,
+  topRankText: {
+    color: colors.gold,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
-  miniExperience: {
+  topVerifyDot: {
+    position: "absolute",
+    bottom: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  topInfo: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingVertical: 2,
+    paddingRight: 2,
+  },
+  topName: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  topServices: {
+    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 15,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  topDivider: {
+    height: 1,
+    backgroundColor: withAlpha(colors.ink, 0.06),
+    marginVertical: 6,
+  },
+  topMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  topRate: {
+    flexShrink: 1,
+    color: colors.brand,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: -0.1,
+  },
+  topExpChip: {
+    backgroundColor: withAlpha(colors.brand, 0.09),
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  topExpChipText: {
+    color: colors.brand,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
+
+  /* ============================================================
+     Card #3 — Verified: GOLD RIBBON CERTIFICATE
+     ============================================================ */
+  verifiedCard: {
+    width: 158,
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.5),
+    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  verifiedRibbon: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: withAlpha(colors.gold, 0.3),
+  },
+  verifiedRibbonText: {
+    color: colors.goldDark,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 1.3,
+  },
+  verifiedBody: {
+    padding: 14,
+    alignItems: "center",
+  },
+  verifiedAvatarRing: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 2,
+    borderColor: withAlpha(colors.gold, 0.5),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+    backgroundColor: colors.white,
+  },
+  verifiedAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: withAlpha(colors.gold, 0.14),
+    overflow: "hidden",
+  },
+  verifiedAvatarText: {
+    color: colors.goldDark,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  verifiedName: {
+    color: colors.ink,
+    fontSize: 13.5,
+    fontWeight: "800",
+    letterSpacing: -0.1,
+    maxWidth: "100%",
+  },
+  verifiedExp: {
     color: colors.textMuted,
     fontSize: 10.5,
     fontWeight: "700",
-    marginTop: 5,
+    marginTop: 4,
   },
-  miniSpacer: {
-    height: 14,
-    marginTop: 5,
+  verifiedSpacer: {
+    height: 15,
+    marginTop: 4,
   },
-  miniRate: {
-    color: colors.brand,
-    fontSize: 11.5,
+  verifiedRate: {
+    color: colors.goldDark,
+    fontSize: 12.5,
     fontWeight: "800",
-    marginTop: 5,
+    marginTop: 10,
   },
-  miniDistance: {
+  verifiedDistance: {
     color: colors.textFaint,
     fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
   },
 
-  /* ---- Featured promo: boost a job — initial layout, fixed rendering ----
-     boostShadow carries elevation on an OPAQUE fill; boostStrip keeps the
-     translucent gold fill + 1px alpha border elevation-free (true 1px
-     border, no dark silhouette). Inner metrics = the original 47-a strip. */
-  boostShadow: {
-    borderRadius: 18,
-    marginBottom: 16,
-    backgroundColor: colors.white,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+  /* ---- Loading ---- */
+  loadingBox: {
+    paddingVertical: 34,
+    alignItems: "center",
   },
-  boostStrip: {
+
+  /* ---- Featured promo (dark) ---- */
+  promoCard: {
+    backgroundColor: colors.ink,
+    borderRadius: 24,
+    padding: 18,
+    marginTop: 4,
+    marginBottom: 20,
+    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+  promoTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: withAlpha(colors.gold, 0.1),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.gold, 0.35),
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingLeft: 14,
-    paddingRight: 10,
-    gap: 12,
+    gap: 10,
+    marginBottom: 12,
   },
-  boostBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.gold, 0.2),
+  promoBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.gold, 0.18),
     alignItems: "center",
     justifyContent: "center",
   },
-  boostBody: {
-    flex: 1,
-  },
-  boostEyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
+  promoEyebrow: {
+    color: colors.gold,
+    fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 1,
+    letterSpacing: 1.6,
   },
-  boostTitle: {
+  promoTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+    marginBottom: 6,
+  },
+  promoCopy: {
+    color: withAlpha(colors.white, 0.72),
+    fontSize: 12.5,
+    lineHeight: 19,
+    fontWeight: "500",
+  },
+  promoCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    backgroundColor: colors.gold,
+    borderRadius: 14,
+    minHeight: 44,
+    paddingHorizontal: 18,
+    marginTop: 14,
+  },
+  promoCtaText: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "800",
-  },
-  boostCopy: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "600",
-    marginTop: 3,
+    letterSpacing: 0.1,
   },
 
   /* ---- How it works ---- */
   stepsCard: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.mist,
+    borderColor: withAlpha(colors.ink, 0.04),
     paddingVertical: 6,
     paddingHorizontal: 16,
     marginBottom: 16,
     shadowColor: colors.ink,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   stepRow: {
     flexDirection: "row",
@@ -1297,12 +1610,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ---- Loading ---- */
-  loadingBox: {
-    paddingVertical: 34,
-    alignItems: "center",
-  },
-
   /* ---- Trust ---- */
   trustCard: {
     flexDirection: "row",
@@ -1311,7 +1618,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     gap: 10,
-    marginTop: 4,
+    marginBottom: 14,
   },
   trustText: {
     flex: 1,
@@ -1321,7 +1628,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ---- Subscription plans ---- */
+  /* ---- Subscription plans (initial design) ---- */
   planCard: {
     backgroundColor: colors.white,
     borderRadius: 20,
