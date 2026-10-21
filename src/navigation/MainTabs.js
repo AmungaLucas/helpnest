@@ -1,4 +1,5 @@
 import React from "react";
+import { StyleSheet, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,7 +13,7 @@ import FindHelpScreen from "../screens/tabs/FindHelpScreen";
 import ChatsNavigator from "../screens/chats/ChatsNavigator";
 import ProfileDrawer from "../screens/profile/ProfileDrawer";
 import TabBarIcon from "../components/ui/TabBarIcon";
-import { colors } from "../theme/colors";
+import { colors, withAlpha } from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
 
@@ -21,14 +22,23 @@ const TAB_BAR_OPTIONS = {
   tabBarActiveTintColor: colors.brand,
   tabBarInactiveTintColor: colors.textMuted,
   tabBarLabelStyle: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
 };
 
-// Shared icon helpers — kept small so each tab set below reads clearly.
+// Shared icon helper — v3 active state: the icon sits inside a brand-tinted
+// squircle pill (Material-3 style) so the selected tab reads instantly.
 const icon = (name) => ({ focused, color }) => (
-  <TabBarIcon name={name} focused={focused} color={color} />
+  <View style={[styles.iconPill, focused && styles.iconPillActive]}>
+    <TabBarIcon
+      name={name}
+      focused={focused}
+      color={focused ? colors.brand : color}
+      size={20}
+    />
+  </View>
 );
 
 // Logged-in area with role-specific bottom tabs (PRD §5/§12):
@@ -44,16 +54,16 @@ export default function MainTabs() {
   const isEmployer = user?.role !== "maid";
   const insets = useSafeAreaInsets();
 
-  // Modern v2 tab bar: slightly taller than UIKit default, hairline mist
-  // border and a soft upward lift. Height is explicit so the safe-area
-  // inset (edge-to-edge Android gesture bar) is preserved via paddingBottom.
+  // Modern v3 tab bar: docked, slightly taller, active icon pill. Height is
+  // explicit so the safe-area inset (edge-to-edge Android gesture bar) is
+  // preserved via paddingBottom.
   const tabBarStyle = {
     backgroundColor: colors.white,
     borderTopColor: colors.mist,
     borderTopWidth: 1,
-    height: 58 + insets.bottom,
-    paddingTop: 8,
-    paddingBottom: insets.bottom + 8,
+    height: 64 + insets.bottom,
+    paddingTop: 7,
+    paddingBottom: insets.bottom + 7,
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -111,3 +121,16 @@ export default function MainTabs() {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  iconPill: {
+    width: 34,
+    height: 26,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconPillActive: {
+    backgroundColor: withAlpha(colors.brand, 0.12),
+  },
+});

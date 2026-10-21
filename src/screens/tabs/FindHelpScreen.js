@@ -18,6 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { listWorkers } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
 import SignedImage from "../../components/media/SignedImage";
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import { formatDistance } from "../../utils/geo";
 import {
   SERVICE_OPTIONS,

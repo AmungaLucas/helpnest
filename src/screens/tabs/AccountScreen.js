@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Share,
   StatusBar,
   StyleSheet,
   Text,
@@ -20,7 +19,6 @@ import { useAuth } from "../../context/AuthContext";
 import { logout } from "../../services/authService";
 import { updateMe } from "../../services/usersService";
 import { uploadMedia } from "../../services/mediaService";
-import { getMyReferrals } from "../../services/referralsService";
 import { fetchHistory, requestRefund } from "../../services/paymentsService";
 import { fetchNotifications } from "../../services/notificationsService";
 import SignedImage from "../../components/media/SignedImage";
@@ -53,27 +51,11 @@ export default function AccountScreen() {
   const [locating, setLocating] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [referral, setReferral] = useState(null);
-  const [referralLoading, setReferralLoading] = useState(true);
   const [history, setHistory] = useState(null);
   const [refundFor, setRefundFor] = useState(null); // txn row awaiting a reason
   const [refundReason, setRefundReason] = useState("");
   const [refundBusy, setRefundBusy] = useState(false);
   const [unread, setUnread] = useState(0);
-
-  // Referral programme summary — invite code, reward rules, earnings.
-  // Silent failure: the card just doesn't render if the API hiccups.
-  const loadReferral = useCallback(() => {
-    setReferralLoading(true);
-    getMyReferrals()
-      .then(setReferral)
-      .catch(() => setReferral(null))
-      .finally(() => setReferralLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadReferral();
-  }, [loadReferral]);
 
   // Purchase history (PRD §14.7) + refund request action (§14.3 manual
   // flow). Silent failure: the card just stays minimal if the API hiccups.
@@ -117,21 +99,12 @@ export default function AccountScreen() {
     }
   }
 
-  async function shareInvite() {
-    if (!referral?.code) return;
-    try {
-      await Share.share({
-        message:
-          referral.shareText ||
-          `Join me on HelpNest — use my code ${referral.code} when you sign up!`,
-      });
-    } catch (error) {
-      // User dismissed the share sheet — nothing to do.
-    }
-  }
-
   const firstName = (user?.name || "").split(" ")[0] || "?";
   const hasCoords = user?.locationLat !== null && user?.locationLat !== undefined;
+
+  // The full verification & safety surface lives one tap away — the drawer
+  // route name differs per role (maid: "Kyc", employer: "Verification").
+  const verificationRoute = user?.role === "maid" ? "Kyc" : "Verification";
 
   // Verified pills for the identity header (visual mirror of the rows in
   // the Verification card below).
@@ -285,14 +258,38 @@ export default function AccountScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
+      {/* Sticky header — always visible: hamburger toggles the profile
+          drawer, bell opens Notifications with the unread badge. */}
+      <View style={styles.topBar}>
+        <HamburgerButton />
+        <View style={styles.topBarMain} pointerEvents="none">
+          <Text style={styles.topBarTitle}>Profile</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+          }
+          onPress={() => navigation.navigate("Notifications")}
+          hitSlop={6}
+          style={({ pressed }) => [styles.bellBtn, pressed && styles.pressed]}
+          android_ripple={{ color: withAlpha(colors.brand, 0.1), radius: 22 }}
+        >
+          <TabBarIcon name="bell" color={colors.ink} size={20} />
+          {unread > 0 ? (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>
+                {unread > 99 ? "99+" : unread}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.menuRow}>
-          <HamburgerButton />
-        </View>
-
         {/* Identity header — avatar squircle, name, role + verified pills. */}
         <View style={styles.profileRow}>
           <Pressable
@@ -338,51 +335,29 @@ export default function AccountScreen() {
           </View>
         </View>
 
-        {/* Notifications (§17) — feed of verification, payment, application
-            and account events. Badge shows the unread count. */}
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.card,
-            CARD_SHADOW,
-            styles.cardTappable,
-            pressed && styles.pressed,
-          ]}
-          onPress={() => navigation.navigate("Notifications")}
-          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-        >
-          <View style={styles.notifRow}>
-            <View style={styles.menuIcon}>
-              <TabBarIcon name="bell" color={colors.brand} size={20} />
-            </View>
-            <View style={styles.menuMain}>
-              <Text style={styles.menuTitle}>Notifications</Text>
-              <Text style={styles.menuNote}>
-                {unread > 0
-                  ? `${unread} unread update${unread === 1 ? "" : "s"} — verification, payments and applications.`
-                  : "Verification, payments and account updates land here."}
-              </Text>
-            </View>
-            {unread > 0 ? (
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>
-                  {unread > 99 ? "99+" : unread}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={styles.menuChevron}>›</Text>
-          </View>
-        </Pressable>
-
+        {/* Account & verification (§4.2) — phone / email / ID channel
+            statuses; trust & safety tooling lives behind the footer link
+            and in the drawer's verification screen. */}
         <View style={[styles.card, CARD_SHADOW]}>
           <View style={styles.headRow}>
             <View style={styles.headIcon}>
-              <TabBarIcon name="shield" color={colors.brand} size={20} />
+              <TabBarIcon name="shield-check" color={colors.brand} size={20} />
             </View>
             <View style={styles.headMain}>
               <Text style={styles.eyebrow}>Trust & safety</Text>
-              <Text style={styles.cardTitle}>Verification</Text>
+              <Text style={styles.cardTitle}>Account & verification</Text>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.navigate(verificationRoute)}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.refreshBtn,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.cardLink}>Manage</Text>
+            </Pressable>
           </View>
 
           <StatusRow
@@ -411,14 +386,68 @@ export default function AccountScreen() {
           />
         </View>
 
-        <PurchasesCard
-          history={history}
-          onRefresh={loadHistory}
-          onRequestRefund={(txn) => {
-            setRefundFor(txn);
-            setRefundReason("");
-          }}
-        />
+        {/* Subscription & payments (§14) — M-Pesa purchases, refunds and
+            the STK-push self-test, merged into one billing surface. */}
+        <View style={[styles.card, CARD_SHADOW]}>
+          <View style={styles.headRow}>
+            <View style={styles.headIcon}>
+              <TabBarIcon name="credit-card" color={colors.brand} size={20} />
+            </View>
+            <View style={styles.headMain}>
+              <Text style={styles.eyebrow}>Billing</Text>
+              <Text style={styles.cardTitle}>Subscription & payments</Text>
+            </View>
+            {history && history.length > 0 ? (
+              <Pressable
+                onPress={loadHistory}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.refreshBtn,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.refundRefresh}>Refresh</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {history && history.length > 0 ? (
+            history.slice(0, 8).map((t) => (
+              <PurchaseRow
+                key={t.id}
+                txn={t}
+                onRequestRefund={(txn) => {
+                  setRefundFor(txn);
+                  setRefundReason("");
+                }}
+              />
+            ))
+          ) : (
+            <Text style={styles.locationNote}>
+              Your M-Pesa purchases and receipts will be listed here. All
+              payments go through STK push — you approve on your phone.
+            </Text>
+          )}
+
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={() =>
+              navigation.navigate("MpesaCheckout", {
+                plan: "test_kes1",
+                label: "M-Pesa test payment",
+              })
+            }
+            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+          >
+            <Text style={styles.secondaryButtonText}>
+              Try a KES 1 test payment
+            </Text>
+          </Pressable>
+        </View>
 
         <View style={[styles.card, CARD_SHADOW]}>
           <View style={styles.headRow}>
@@ -511,93 +540,7 @@ export default function AccountScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.card, CARD_SHADOW]}>
-          <View style={styles.headRow}>
-            <View style={styles.headIcon}>
-              <TabBarIcon name="credit-card" color={colors.brand} size={20} />
-            </View>
-            <View style={styles.headMain}>
-              <Text style={styles.eyebrow}>M-Pesa</Text>
-              <Text style={styles.cardTitle}>Payments</Text>
-            </View>
-          </View>
-          <Text style={styles.locationNote}>
-            M-Pesa is wired up. Try a KES 1 test payment to confirm STK push
-            works on your phone before real pricing goes live.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={() =>
-              navigation.navigate("MpesaCheckout", {
-                plan: "test_kes1",
-                label: "M-Pesa test payment",
-              })
-            }
-            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-          >
-            <Text style={styles.secondaryButtonText}>Try a KES 1 test payment</Text>
-          </Pressable>
-        </View>
-
-        {/* Referral programme — earn cash when friends you invite pay. */}
-        {!referralLoading && referral?.code ? (
-          <View style={[styles.card, CARD_SHADOW]}>
-            <View style={styles.headRow}>
-              <View style={styles.headIcon}>
-                <TabBarIcon name="users" color={colors.brand} size={20} />
-              </View>
-              <View style={styles.headMain}>
-                <Text style={styles.eyebrow}>Invite friends</Text>
-                <Text style={styles.cardTitle}>Earn with referrals</Text>
-              </View>
-            </View>
-            <Text style={styles.locationNote}>{referral.rewardText}</Text>
-
-            <View style={styles.referralCodeRow}>
-              <Text style={styles.referralCode}>{referral.code}</Text>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.shareButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={shareInvite}
-              >
-                <Text style={styles.shareButtonText}>Share code</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.referralStatsRow}>
-              <ReferralStat
-                value={referral.stats?.invited || 0}
-                label="invited"
-              />
-              <View style={styles.referralStatDivider} />
-              <ReferralStat
-                value={referral.stats?.qualified || 0}
-                label="paid"
-              />
-              <View style={styles.referralStatDivider} />
-              <ReferralStat
-                value={`KES ${Number(referral.stats?.earnedKes || 0).toLocaleString("en-KE")}`}
-                label="earned"
-                strong
-              />
-            </View>
-
-            {Number(referral.stats?.pendingKes || 0) > 0 && (
-              <Text style={styles.referralPending}>
-                KES {Number(referral.stats.pendingKes).toLocaleString("en-KE")} on
-                the way — payouts go out to M-Pesa once your balance reaches
-                KES {Number(referral.minPayoutKes || 0).toLocaleString("en-KE")}.
-              </Text>
-            )}
-          </View>
-        ) : null}
+        {/* Referrals moved to the profile drawer (Invite friends). */}
 
         <Text style={styles.versionText}>HelpNest v1.0.0</Text>
       </ScrollView>
@@ -727,86 +670,42 @@ const REFUND_LABEL = {
   rejected: "refund declined",
 };
 
-// Purchases & refunds (PRD §14.7): recent payments with their outcome plus
-// the per-transaction "Get help" action. Money moves stay manual on our
-// side — this card only files and tracks the request.
-function PurchasesCard({ history, onRefresh, onRequestRefund }) {
-  if (!history || history.length === 0) return null;
+// One purchase row (PRD §14.7): outcome line + per-transaction "Get help"
+// while the payment can still be refunded. Money moves stay manual on our
+// side — this row only files and tracks the request.
+function PurchaseRow({ txn, onRequestRefund }) {
+  const refundLabel = REFUND_LABEL[txn.refundStatus || "none"];
 
   return (
-    <View style={[styles.card, CARD_SHADOW]}>
-      <View style={styles.headRow}>
-        <View style={styles.headIcon}>
-          <TabBarIcon name="file-text" color={colors.brand} size={20} />
-        </View>
-        <View style={styles.headMain}>
-          <Text style={styles.eyebrow}>Billing</Text>
-          <Text style={styles.cardTitle}>Purchases & refunds</Text>
-        </View>
+    <View style={styles.purchaseRow}>
+      <View style={styles.purchaseMain}>
+        <Text style={styles.purchaseTitle} numberOfLines={1}>
+          {txn.planLabel || txn.plan} · KES {txn.amountKes}
+        </Text>
+        <Text style={styles.purchaseSub} numberOfLines={1}>
+          {txn.status === "success"
+            ? `Paid · ${txn.unitsGranted > 0 ? `${txn.unitsGranted} credit${txn.unitsGranted === 1 ? "" : "s"}` : "recorded"}`
+            : txn.status === "pending"
+              ? "Awaiting payment"
+              : txn.status === "timeout"
+                ? "Outcome unknown"
+                : "Payment failed"}
+          {refundLabel ? ` · ${refundLabel}` : ""}
+        </Text>
+      </View>
+      {txn.status === "success" && (txn.refundStatus || "none") === "none" ? (
         <Pressable
-          onPress={onRefresh}
-          hitSlop={8}
+          accessibilityRole="button"
           style={({ pressed }) => [
-            styles.refreshBtn,
+            styles.refundBtn,
             pressed && styles.pressed,
           ]}
+          onPress={() => onRequestRefund(txn)}
+          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
         >
-          <Text style={styles.refundRefresh}>Refresh</Text>
+          <Text style={styles.refundBtnText}>Get help</Text>
         </Pressable>
-      </View>
-
-      {history.slice(0, 8).map((t) => {
-        const refundLabel = REFUND_LABEL[t.refundStatus || "none"];
-        return (
-          <View key={t.id} style={styles.purchaseRow}>
-            <View style={styles.purchaseMain}>
-              <Text style={styles.purchaseTitle} numberOfLines={1}>
-                {t.planLabel || t.plan} · KES {t.amountKes}
-              </Text>
-              <Text style={styles.purchaseSub} numberOfLines={1}>
-                {t.status === "success"
-                  ? `Paid · ${t.unitsGranted > 0 ? `${t.unitsGranted} credit${t.unitsGranted === 1 ? "" : "s"}` : "recorded"}`
-                  : t.status === "pending"
-                    ? "Awaiting payment"
-                    : t.status === "timeout"
-                      ? "Outcome unknown"
-                      : "Payment failed"}
-                {refundLabel ? ` · ${refundLabel}` : ""}
-              </Text>
-            </View>
-            {t.status === "success" &&
-              (t.refundStatus || "none") === "none" ? (
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.refundBtn,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => onRequestRefund(t)}
-                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-              >
-                <Text style={styles.refundBtnText}>Get help</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function ReferralStat({ value, label, strong }) {
-  return (
-    <View style={styles.referralStat}>
-      <Text
-        style={[
-          styles.referralStatValue,
-          strong && styles.referralStatValueStrong,
-        ]}
-      >
-        {value}
-      </Text>
-      <Text style={styles.referralStatLabel}>{label}</Text>
+      ) : null}
     </View>
   );
 }
@@ -818,14 +717,63 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 6,
     paddingBottom: 28,
   },
   pressed: {
     opacity: 0.88,
   },
-  menuRow: {
-    marginBottom: 16,
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
+  topBarMain: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  topBarTitle: {
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+  },
+  bellBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.gold,
+    borderWidth: 2,
+    borderColor: colors.cream,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellBadgeText: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  cardLink: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
   },
   profileRow: {
     flexDirection: "row",
@@ -941,55 +889,6 @@ const styles = StyleSheet.create({
     fontSize: 16.5,
     fontWeight: "800",
     letterSpacing: -0.2,
-  },
-  notifRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  menuIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.brand, 0.1),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  menuMain: {
-    flex: 1,
-    marginRight: 10,
-  },
-  menuTitle: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  menuNote: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 2,
-  },
-  menuChevron: {
-    color: colors.textFaint,
-    fontSize: 22,
-    fontWeight: "700",
-    marginLeft: 4,
-  },
-  notifBadge: {
-    backgroundColor: colors.gold,
-    borderRadius: 999,
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 6,
-  },
-  notifBadgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "800",
   },
   statusRow: {
     flexDirection: "row",
@@ -1208,77 +1107,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     marginTop: 2,
-  },
-  referralCodeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.brand, 0.25),
-    padding: 14,
-    marginBottom: 14,
-  },
-  referralCode: {
-    color: colors.brand,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: 2.5,
-  },
-  shareButton: {
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareButtonText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  referralStatsRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    backgroundColor: colors.cream,
-    borderRadius: 14,
-    paddingVertical: 12,
-    marginBottom: 4,
-  },
-  referralStat: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  referralStatDivider: {
-    width: 1,
-    backgroundColor: colors.mistDark,
-  },
-  referralStatValue: {
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-  },
-  referralStatValueStrong: {
-    color: colors.brand,
-  },
-  referralStatLabel: {
-    color: colors.textFaint,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginTop: 3,
-  },
-  referralPending: {
-    color: colors.goldDark,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "600",
-    marginTop: 10,
   },
 });

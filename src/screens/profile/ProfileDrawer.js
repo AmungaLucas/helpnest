@@ -18,6 +18,7 @@ import MyWorkScreen from "../tabs/MyWorkScreen";
 import PaymentHubScreen from "./PaymentHubScreen";
 import HouseholdScreen from "./HouseholdScreen";
 import VerificationScreen from "./VerificationScreen";
+import ReferralsScreen from "./ReferralsScreen";
 import ComingSoonScreen from "../../components/ui/ComingSoonScreen";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import SignedImage from "../../components/media/SignedImage";
@@ -117,8 +118,8 @@ function MaidProfileNavigator() {
       screenOptions={{
         headerShown: false,
         drawerType: "front",
-        drawerStyle: { backgroundColor: colors.white, width: 300 },
-        overlayColor: withAlpha(colors.ink, 0.45),
+        drawerStyle: { backgroundColor: colors.white, width: 312 },
+        overlayStyle: { backgroundColor: withAlpha(colors.ink, 0.45) },
         swipeEdgeWidth: 48,
       }}
     >
@@ -147,6 +148,14 @@ function MaidProfileNavigator() {
         }}
       />
       <Drawer.Screen
+        name="Referrals"
+        component={ReferralsScreen}
+        options={{
+          title: "Invite friends",
+          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+        }}
+      />
+      <Drawer.Screen
         name="Reviews"
         component={ReviewsPlaceholder}
         options={{
@@ -166,8 +175,8 @@ function EmployerProfileNavigator() {
       screenOptions={{
         headerShown: false,
         drawerType: "front",
-        drawerStyle: { backgroundColor: colors.white, width: 300 },
-        overlayColor: withAlpha(colors.ink, 0.45),
+        drawerStyle: { backgroundColor: colors.white, width: 312 },
+        overlayStyle: { backgroundColor: withAlpha(colors.ink, 0.45) },
         swipeEdgeWidth: 48,
       }}
     >
@@ -193,6 +202,14 @@ function EmployerProfileNavigator() {
         options={{
           title: "Account verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
+        }}
+      />
+      <Drawer.Screen
+        name="Referrals"
+        component={ReferralsScreen}
+        options={{
+          title: "Invite friends",
+          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
         }}
       />
       <Drawer.Screen
