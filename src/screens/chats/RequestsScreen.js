@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { useAuth } from "../../context/AuthContext";
@@ -27,9 +27,11 @@ import {
 
 // "New chats" (maid view, PRD §9.5): employers' authorized initiation
 // creates the conversation directly — there is no accept/decline step.
-// Anything awaiting the maid's FIRST reply shows up here, plus the §9.8
-// "stop chat requests" opt-out.
-export default function RequestsScreen({ navigation }) {
+// A conversation stays a REQUEST (gateway `phase: "request"`) until the
+// maid sends her FIRST reply; after that it graduates to a conversation
+// and only lives in the Conversations tab.
+export default function RequestsScreen() {
+  const navigation = useNavigation();
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,7 @@ export default function RequestsScreen({ navigation }) {
       const awaiting = (data.conversations || []).filter(
         (c) =>
           c.status === "active" &&
+          c.phase === "request" &&
           c.lastMessage &&
           c.lastMessage.senderId &&
           c.lastMessage.senderId !== myId

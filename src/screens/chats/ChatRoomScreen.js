@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -125,6 +126,31 @@ function CardBubble({ mine, card, time }) {
 export default function ChatRoomScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+
+  // Keyboard handling (BUILD 2026-10-21.19): Expo SDK 57 runs edge-to-edge
+  // on Android, so the window no longer resizes when the keyboard opens and
+  // the composer ended up UNDER it. We track the keyboard height ourselves:
+  // Android lifts the whole content with manual bottom padding (the built-in
+  // KeyboardAvoidingView ignores behavior="padding" on Android), while iOS
+  // keeps native behavior="padding". While the keyboard is open the composer
+  // also drops its home-indicator inset — the keyboard covers that area, and
+  // keeping the inset would leave a visible gap above the keyboard.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) =>
+      setKeyboardHeight(e?.endCoordinates?.height || 0)
+    );
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const params = route?.params || {};
   const initialConversationId = params.conversationId || null;
@@ -677,7 +703,10 @@ export default function ChatRoomScreen({ route, navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={[
+          styles.flex,
+          Platform.OS === "android" && { paddingBottom: keyboardHeight },
+        ]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/* ---------- Header ---------- */}
@@ -725,6 +754,18 @@ export default function ChatRoomScreen({ route, navigation }) {
             <TabBarIcon name="more-vertical" color={colors.ink} size={20} />
           </Pressable>
         </View>
+
+        {/* ---------- Request-phase banner (§9.5) ---------- */}
+        {conversation?.phase === "request" && status === "active" ? (
+          <View style={styles.stateBanner}>
+            <TabBarIcon name="inbox" color={colors.goldDark} size={15} />
+            <Text style={styles.stateBannerText}>
+              {isEmployer
+                ? `Chat request — ${peerName} sees this under "New chats" until you get a reply.`
+                : "New chat request — reply to move it into your conversations."}
+            </Text>
+          </View>
+        ) : null}
 
         {/* ---------- State banner ---------- */}
         {(blocked || restricted || closed || limitReached || expired || peerKeyMissing) && (
@@ -830,7 +871,12 @@ export default function ChatRoomScreen({ route, navigation }) {
         ) : null}
 
         {/* ---------- Composer ---------- */}
-        <View style={[styles.composer, { paddingBottom: 10 + insets.bottom }]}>
+        <View
+          style={[
+            styles.composer,
+            { paddingBottom: 10 + (keyboardHeight > 0 ? 0 : insets.bottom) },
+          ]}
+        >
           {canSend ? (
             <>
               <Pressable

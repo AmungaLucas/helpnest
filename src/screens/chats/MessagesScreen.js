@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { useAuth } from "../../context/AuthContext";
@@ -82,9 +82,10 @@ function Avatar({ name, verified }) {
   );
 }
 
-function ConversationRow({ item, myId, onPress }) {
+function ConversationRow({ item, myId, isEmployer, onPress }) {
   const hasUnread = item.unread > 0;
   const chip = STATUS_CHIPS[item.status];
+  const isRequest = item.phase === "request";
   const preview = item.lastMessage
     ? previewFor({ ...item.lastMessage, __convId: item.id, peerKey: item.peer?.publicKey }, myId)
     : "";
@@ -113,6 +114,15 @@ function ConversationRow({ item, myId, onPress }) {
             {preview}
           </Text>
 
+          {/* Request phase — the peer has not replied yet (PRD §9.5). */}
+          {isRequest && item.status === "active" ? (
+            <View style={[styles.statusChip, styles.requestChip]}>
+              <Text style={styles.requestChipText}>
+                {isEmployer ? "Waiting for reply" : "New request"}
+              </Text>
+            </View>
+          ) : null}
+
           {chip ? (
             <View style={[styles.statusChip, styles[`chip_${chip.tone}`]]}>
               <Text style={[styles.statusChipText, styles[`chipText_${chip.tone}`]]}>
@@ -134,7 +144,14 @@ function ConversationRow({ item, myId, onPress }) {
 
 // Conversations tab — live threads from GET /api/chat/conversations with
 // on-device preview decryption (BUILD 2026-10-20.14).
-export default function MessagesScreen({ navigation }) {
+//
+// `useNavigation()` instead of the injected prop: ChatsNavigator renders
+// this screen DIRECTLY on the employer side (<MessagesScreen /> inside a
+// plain SafeAreaView), where no navigation prop exists — relying on the
+// prop crashed with "Cannot read property 'navigate' of undefined" the
+// moment an employer opened their chat list (BUILD 2026-10-21.19 fix).
+export default function MessagesScreen() {
+  const navigation = useNavigation();
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +176,17 @@ export default function MessagesScreen({ navigation }) {
         const data = await listConversations();
 
         if (mounted.current) {
-          setConversations((data.conversations || []).map((c) => ({ ...c, peer: { ...c.peer } })));
+          let rows = (data.conversations || []).map((c) => ({ ...c, peer: { ...c.peer } }));
+
+          // Request vs conversation (PRD §9.5): on the maid side, threads
+          // still awaiting her FIRST reply are requests — they belong to the
+          // "New chats" tab, not here. Employers keep everything, with a
+          // "Waiting for reply" chip marking request-phase threads.
+          if (user?.role === "maid") {
+            rows = rows.filter((c) => c.phase !== "request");
+          }
+
+          setConversations(rows);
         }
       } catch (error) {
         // silent — the list refreshes on next focus/poll
@@ -170,7 +197,7 @@ export default function MessagesScreen({ navigation }) {
         }
       }
     },
-    []
+    [user?.role]
   );
 
   useFocusEffect(
@@ -223,6 +250,7 @@ export default function MessagesScreen({ navigation }) {
           <ConversationRow
             item={item}
             myId={user?.id}
+            isEmployer={user?.role === "employer"}
             onPress={() =>
               navigation.navigate("ChatRoom", {
                 conversationId: item.id,
@@ -309,6 +337,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
+  requestChip: { backgroundColor: withAlpha(colors.gold, 0.16) },
+  requestChipText: { color: colors.goldDark, fontSize: 10, fontWeight: "800" },
   chip_warn: { backgroundColor: withAlpha(colors.gold, 0.16) },
   chip_muted: { backgroundColor: withAlpha(colors.cloud, 0.7) },
   chip_danger: { backgroundColor: withAlpha(colors.danger, 0.12) },

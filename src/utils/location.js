@@ -111,6 +111,26 @@ export async function flushPendingLocation() {
 }
 
 // ---------------------------------------------------------------------------
+// Auth-time refresh (login / signup — BUILD 2026-10-21.19)
+// ---------------------------------------------------------------------------
+
+// Called from AuthContext.applySession whenever a session lands (signup,
+// OTP login, password login). Takes a FRESH device fix so the stored
+// lat/lng reflects where the user actually is right now — the launch
+// capture can be minutes old (or missing if permission was granted after
+// launch). Falls back to any stashed launch coords when permission is
+// denied or the fix fails. Best-effort and silent, like every location path.
+export async function syncLocationOnAuth() {
+  const fresh = await captureLaunchLocation();
+
+  if (fresh) {
+    stashLocation(fresh);
+  }
+
+  return flushPendingLocation();
+}
+
+// ---------------------------------------------------------------------------
 // Manual capture (Home "Use my location" card / location chip)
 // ---------------------------------------------------------------------------
 

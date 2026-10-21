@@ -11,7 +11,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { setAuthToken, setAuthEventHandler } from "../config/api";
 import { refreshSession, fetchMe } from "../services/authService";
-import { flushPendingLocation } from "../utils/location";
+import { syncLocationOnAuth } from "../utils/location";
 
 const ACCESS_KEY = "hn.accessToken";
 const REFRESH_KEY = "hn.refreshToken";
@@ -62,9 +62,12 @@ export function AuthProvider({ children }) {
       SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
       markHasAccount();
 
-      // First-run location: if the device coords were captured at launch
-      // (before the user signed in), sync them now that a session exists.
-      flushPendingLocation().then((freshUser) => {
+      // Auth-time location refresh (BUILD 2026-10-21.19): every login or
+      // signup takes a fresh device fix and PATCHes it to the profile, so
+      // "near me" matching works from the very first session. The launch
+      // capture alone could be stale (or missing if permission was granted
+      // later). Silent + best-effort — never blocks or fails the login.
+      syncLocationOnAuth().then((freshUser) => {
         if (freshUser) {
           updateUser(freshUser);
         }
