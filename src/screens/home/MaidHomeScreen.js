@@ -234,20 +234,33 @@ export default function MaidHomeScreen() {
           </Pressable>
         </View>
 
-        {/* ---------- Featured / boost promo (moved from Account) ---------- */}
+        {/* ---------- Featured / boost promo (moved from Account) ----------
+            Dark premium "ad" surface — the only ink-dark card on the screen,
+            so paid placement reads as something special. */}
         <View style={styles.promoCard}>
-          <View style={styles.promoBadge}>
-            <TabBarIcon name="zap" color={colors.goldDark} size={20} />
+          <View pointerEvents="none" style={styles.promoGhost}>
+            <TabBarIcon name="zap" color={withAlpha(colors.gold, 0.14)} size={96} />
           </View>
-          <View style={styles.promoMain}>
-            <Text style={styles.promoEyebrow}>Featured</Text>
-            <Text style={styles.promoTitle}>Boost your profile</Text>
-            <Text style={styles.promoCopy}>
-              Get a labeled “Featured” placement at the top of employer searches for 7 days.
-            </Text>
+          <View style={styles.promoHead}>
+            <View style={styles.promoBadge}>
+              <TabBarIcon name="zap" color={colors.gold} size={20} />
+            </View>
+            <View style={styles.promoHeadText}>
+              <Text style={styles.promoEyebrow}>Featured</Text>
+              <Text style={styles.promoTitle}>Boost your profile</Text>
+            </View>
+          </View>
+          <Text style={styles.promoCopy}>
+            Get a labeled “Featured” placement at the top of employer searches
+            for 7 days.
+          </Text>
+          <View style={styles.promoFoot}>
+            <View style={styles.promoPrice}>
+              <Text style={styles.promoPriceText}>KES 100 · 7 days</Text>
+            </View>
             <Pressable
               accessibilityRole="button"
-              android_ripple={{ color: withAlpha(colors.white, 0.16) }}
+              android_ripple={{ color: withAlpha(colors.ink, 0.18) }}
               style={({ pressed }) => [
                 styles.promoCta,
                 pressed && styles.tilePressed,
@@ -259,9 +272,7 @@ export default function MaidHomeScreen() {
                 })
               }
             >
-              <Text style={styles.promoCtaText}>
-                Boost — KES 100 / 7 days
-              </Text>
+              <Text style={styles.promoCtaText}>Boost now</Text>
             </Pressable>
           </View>
         </View>
@@ -733,65 +744,92 @@ const styles = StyleSheet.create({
     color: withAlpha(colors.cream, 0.82),
   },
 
-  /* ---- Featured / boost promo ---- */
+  /* ---- Featured / boost promo — dark premium ad surface ---- */
   promoCard: {
-    flexDirection: "row",
-    backgroundColor: withAlpha(colors.gold, 0.1),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.gold, 0.35),
-    borderRadius: 20,
-    padding: 16,
+    backgroundColor: colors.ink,
+    borderRadius: 22,
+    padding: 18,
     marginBottom: 14,
+    overflow: "hidden",
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  promoGhost: {
+    position: "absolute",
+    top: -20,
+    right: -16,
+  },
+  promoHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
   },
   promoBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.gold, 0.2),
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.32),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  promoMain: {
+  promoHeadText: {
     flex: 1,
   },
   promoEyebrow: {
-    color: colors.goldDark,
+    color: colors.gold,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   promoTitle: {
-    color: colors.ink,
-    fontSize: 16,
+    color: colors.white,
+    fontSize: 17,
     fontWeight: "800",
+    letterSpacing: -0.2,
   },
   promoCopy: {
-    color: colors.textMuted,
+    color: withAlpha(colors.cream, 0.66),
     fontSize: 12.5,
     lineHeight: 18,
     fontWeight: "600",
-    marginTop: 4,
+    marginBottom: 14,
+  },
+  promoFoot: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  promoPrice: {
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.3),
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  promoPriceText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: "800",
   },
   promoCta: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
-    paddingHorizontal: 16,
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    minHeight: 40,
+    paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
   },
   promoCtaText: {
-    color: colors.white,
+    color: colors.ink,
     fontSize: 13,
     fontWeight: "800",
   },

@@ -197,14 +197,20 @@ export default function WorkerProfileScreen() {
         <View style={[styles.heroCard, styles.cardShadow]}>
           <GradientBanner style={styles.heroBand} />
 
-          <SignedImage
-            url={worker?.avatarDisplayUrl || worker?.avatarUrl}
-            mediaId={worker?.avatarMediaId}
-            variant="display"
-            fallbackText={firstName}
-            style={styles.avatar}
-            textStyle={styles.avatarText}
-          />
+          {/* Ring lives on a wrapper View — a borderWidth directly on the
+              <Image> renders unevenly on Android (clipped/shaved by the
+              rounded-corner overflow clip), so the photo itself stays
+              borderless and the wrapper owns the 4px ring. */}
+          <View style={styles.avatarRing}>
+            <SignedImage
+              url={worker?.avatarDisplayUrl || worker?.avatarUrl}
+              mediaId={worker?.avatarMediaId}
+              variant="display"
+              fallbackText={firstName}
+              style={styles.avatar}
+              textStyle={styles.avatarText}
+            />
+          </View>
 
           <Text style={styles.name}>{worker.name}</Text>
           <Text style={styles.headline}>
@@ -575,17 +581,29 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     height: 118,
   },
+  // 144 = 136 photo + 4px ring on each side; ring outer radius 72, inner
+  // edge radius 68 matches the photo radius exactly — concentric circles,
+  // constant ring width on every device.
+  avatarRing: {
+    width: 144,
+    height: 144,
+    borderRadius: 72,
+    borderWidth: 4,
+    borderColor: colors.white,
+    backgroundColor: colors.mist,
+    marginTop: -72,
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
   avatar: {
     width: 136,
     height: 136,
     borderRadius: 68,
-    borderWidth: 4,
-    borderColor: colors.white,
     backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -68,
-    marginBottom: 12,
     overflow: "hidden",
   },
   avatarText: {

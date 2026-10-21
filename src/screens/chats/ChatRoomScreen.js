@@ -948,8 +948,8 @@ export default function ChatRoomScreen({ route, navigation }) {
                     ? "This conversation is closed."
                     : limitReached
                       ? isEmployer
-                        ? `Exchange limit reached (${limits.exchangesUsed} of ${limits.maxExchanges}). Unlock to keep chatting.`
-                        : "The employer's free exchange allowance is used up."
+                        ? `Message limit reached (${limits.exchangesUsed} of ${limits.maxExchanges}). Unlock to keep chatting.`
+                        : "The employer's free message allowance is used up."
                       : expired
                         ? isEmployer
                           ? "The paid window ended. Renew to keep chatting."
@@ -1029,7 +1029,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         ) : canSend && exchangesLeft !== null ? (
           <View style={styles.limitChipRow}>
             <Text style={styles.limitChip}>
-              Exchanges left: {exchangesLeft} of {limits.maxExchanges} · {charLimit} chars max
+              Messages left: {exchangesLeft} of {limits.maxExchanges} · {charLimit} chars max
             </Text>
           </View>
         ) : null}

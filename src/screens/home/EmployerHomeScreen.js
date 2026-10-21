@@ -683,18 +683,23 @@ export default function EmployerHomeScreen() {
           </>
         )}
 
-        {/* ---------- Featured promo: boost a job ---------- */}
+        {/* ---------- Featured promo: boost a job ----------
+            Same dark premium "ad" surface as the maid-side Featured card,
+            so paid placement is instantly recognizable on both sides. */}
         <Pressable
           accessibilityRole="button"
-          android_ripple={{ color: withAlpha(colors.gold, 0.12) }}
+          android_ripple={{ color: withAlpha(colors.gold, 0.14) }}
           style={({ pressed }) => [
             styles.boostStrip,
             pressed && styles.pressedDim,
           ]}
           onPress={() => navigation.navigate("MyJobsTab")}
         >
+          <View pointerEvents="none" style={styles.boostGhost}>
+            <TabBarIcon name="zap" color={withAlpha(colors.gold, 0.13)} size={88} />
+          </View>
           <View style={styles.boostBadge}>
-            <TabBarIcon name="zap" color={colors.goldDark} size={19} />
+            <TabBarIcon name="zap" color={colors.gold} size={19} />
           </View>
           <View style={styles.boostBody}>
             <Text style={styles.boostEyebrow}>Featured</Text>
@@ -704,7 +709,7 @@ export default function EmployerHomeScreen() {
               Jobs.
             </Text>
           </View>
-          <TabBarIcon name="chevron-right" color={colors.goldDark} size={16} />
+          <TabBarIcon name="chevron-right" color={colors.gold} size={16} />
         </Pressable>
 
         {/* ---------- How it works ---------- */}
@@ -1183,30 +1188,36 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ---- Featured promo: boost a job ---- */
+  /* ---- Featured promo: boost a job — dark premium ad surface ---- */
   boostStrip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: withAlpha(colors.gold, 0.1),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.gold, 0.35),
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingLeft: 14,
-    paddingRight: 10,
+    backgroundColor: colors.ink,
+    borderRadius: 22,
+    paddingVertical: 16,
+    paddingLeft: 16,
+    paddingRight: 12,
     gap: 12,
     marginBottom: 16,
+    overflow: "hidden",
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  boostGhost: {
+    position: "absolute",
+    top: -22,
+    right: -14,
   },
   boostBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.gold, 0.2),
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.gold, 0.18),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.32),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1214,24 +1225,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   boostEyebrow: {
-    color: colors.goldDark,
+    color: colors.gold,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
-    marginBottom: 1,
+    marginBottom: 2,
   },
   boostTitle: {
-    color: colors.ink,
-    fontSize: 16,
+    color: colors.white,
+    fontSize: 16.5,
     fontWeight: "800",
+    letterSpacing: -0.2,
   },
   boostCopy: {
-    color: colors.textMuted,
+    color: withAlpha(colors.cream, 0.66),
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 17,
     fontWeight: "600",
-    marginTop: 3,
+    marginTop: 4,
   },
 
   /* ---- How it works ---- */
