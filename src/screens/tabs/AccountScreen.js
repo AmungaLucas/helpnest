@@ -7,6 +7,7 @@ import {
   ScrollView,
   Share,
   StatusBar,
+  Switch,
   StyleSheet,
   Text,
   TextInput,
@@ -60,6 +61,10 @@ export default function AccountScreen() {
   const [refundReason, setRefundReason] = useState("");
   const [refundBusy, setRefundBusy] = useState(false);
   const [unread, setUnread] = useState(0);
+  // §17.2 — email fan-out preference. Server default is on; undefined on
+  // stale sessions behaves the same (opt-out is an explicit flip).
+  const [emailUpdates, setEmailUpdates] = useState(user?.notifyEmail !== false);
+  const [emailPrefBusy, setEmailPrefBusy] = useState(false);
 
   // Referral programme summary — invite code, reward rules, earnings.
   // Silent failure: the card just doesn't render if the API hiccups.
@@ -100,6 +105,24 @@ export default function AccountScreen() {
       loadUnread();
     }, [loadUnread])
   );
+
+  // §17.2 — toggle gated notification emails. Security/transactional mail
+  // (payments, account status, KYC outcomes) is always sent regardless.
+  async function toggleEmailUpdates(next) {
+    if (emailPrefBusy) return;
+    setEmailPrefBusy(true);
+    const prev = emailUpdates;
+    setEmailUpdates(next); // optimistic
+    try {
+      await updateMe({ notifyEmail: next });
+      updateUser({ notifyEmail: next });
+    } catch (error) {
+      setEmailUpdates(prev); // revert on failure
+      Alert.alert("Could not update", error?.message || "Please try again in a moment.");
+    } finally {
+      setEmailPrefBusy(false);
+    }
+  }
 
   async function submitRefundRequest() {
     if (!refundFor || refundReason.trim().length < 10) return;
@@ -373,6 +396,32 @@ export default function AccountScreen() {
             <Text style={styles.menuChevron}>›</Text>
           </View>
         </Pressable>
+
+        {/* §17.2 — email preference. Only meaningful with an email on file. */}
+        {user?.email ? (
+          <View style={[styles.card, CARD_SHADOW]}>
+            <View style={styles.notifRow}>
+              <View style={styles.menuIcon}>
+                <TabBarIcon name="mail" color={colors.brand} size={20} />
+              </View>
+              <View style={styles.menuMain}>
+                <Text style={styles.menuTitle}>Email updates</Text>
+                <Text style={styles.menuNote} numberOfLines={2}>
+                  Application, job and promotion emails. Security notices
+                  always come through.
+                </Text>
+              </View>
+              <Switch
+                value={emailUpdates}
+                onValueChange={toggleEmailUpdates}
+                disabled={emailPrefBusy}
+                trackColor={{ false: colors.mist, true: colors.brand }}
+                thumbColor={colors.white}
+                ios_backgroundColor={colors.mist}
+              />
+            </View>
+          </View>
+        ) : null}
 
         <View style={[styles.card, CARD_SHADOW]}>
           <View style={styles.headRow}>
