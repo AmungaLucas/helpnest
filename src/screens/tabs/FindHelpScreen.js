@@ -4,6 +4,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -18,7 +19,6 @@ import { listWorkers } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
 import SignedImage from "../../components/media/SignedImage";
 import TabBarIcon from "../../components/ui/TabBarIcon";
-import EmptyState from "../../components/ui/EmptyState";
 import { formatDistance } from "../../utils/geo";
 import {
   SERVICE_OPTIONS,
@@ -168,7 +168,11 @@ export default function FindHelpScreen() {
           />
         </View>
 
-        <View style={styles.chipsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsRow}
+        >
           {hasCoords ? (
             <Chip
               label="Near me"
@@ -189,7 +193,7 @@ export default function FindHelpScreen() {
               onPress={() => setService(option.value)}
             />
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {loading ? (
@@ -198,21 +202,22 @@ export default function FindHelpScreen() {
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <EmptyState
-            icon="alert-triangle"
-            tone="danger"
-            title="Something went wrong"
-            body={error}
-          />
+          <View style={styles.emptyBadge}>
+            <TabBarIcon name="alert-triangle" color={colors.brand} size={24} />
+          </View>
+          <Text style={styles.emptyTitle}>Something went wrong</Text>
+          <Text style={styles.emptyText}>{error}</Text>
         </View>
       ) : workers.length === 0 ? (
         <View style={styles.center}>
-          <EmptyState
-            icon="users"
-            tone="brand"
-            title="No workers yet"
-            body="Worker profiles will appear here as domestic workers complete them. Try clearing your search."
-          />
+          <View style={styles.emptyBadge}>
+            <TabBarIcon name="users" color={colors.brand} size={24} />
+          </View>
+          <Text style={styles.emptyTitle}>No workers yet</Text>
+          <Text style={styles.emptyText}>
+            Worker profiles will appear here as domestic workers complete them.
+            Try clearing your search.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -345,7 +350,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 23,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   subtitle: {
     color: colors.textMuted,
@@ -359,27 +364,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.mist,
     borderRadius: 16,
-    minHeight: 50,
+    minHeight: 48,
     paddingHorizontal: 14,
     gap: 9,
     marginBottom: 12,
   },
   search: {
     flex: 1,
-    minHeight: 50,
+    minHeight: 48,
     fontSize: 14.5,
     color: colors.ink,
     paddingVertical: 0,
   },
   chipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
-    paddingBottom: 4,
+    paddingRight: 20,
   },
   list: {
     padding: 20,
-    paddingTop: 10,
+    paddingTop: 8,
   },
   card: {
     flexDirection: "row",
@@ -391,13 +393,13 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     shadowColor: colors.ink,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
     elevation: 1,
   },
   cardPressed: {
-    opacity: 0.88,
+    backgroundColor: colors.mist,
   },
   avatar: {
     width: 48,
@@ -483,8 +485,8 @@ const styles = StyleSheet.create({
   rateBox: {
     alignItems: "center",
     backgroundColor: withAlpha(colors.brand, 0.1),
-    borderRadius: 999,
-    paddingHorizontal: 11,
+    borderRadius: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
   },
   rateValue: {
@@ -502,9 +504,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    padding: 32,
   },
   footerSpinner: {
     paddingVertical: 18,
+  },
+  emptyBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: withAlpha(colors.brand, 0.12),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 13.5,
+    lineHeight: 20,
+    textAlign: "center",
   },
 });

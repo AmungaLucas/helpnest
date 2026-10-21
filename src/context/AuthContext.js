@@ -9,7 +9,11 @@ import React, {
 } from "react";
 import * as SecureStore from "expo-secure-store";
 
-import { setAuthToken, setAuthEventHandler } from "../config/api";
+import {
+  setAuthToken,
+  setAuthEventHandler,
+  setAccountBlockedHandler,
+} from "../config/api";
 import { refreshSession, fetchMe } from "../services/authService";
 import { syncLocationOnAuth } from "../utils/location";
 
@@ -29,6 +33,12 @@ export function AuthProvider({ children }) {
   const [initializing, setInitializing] = useState(true);
   // True once any session has existed on this device (survives sign-out).
   const [hasAccount, setHasAccount] = useState(false);
+  // PRD §3.2/§15.6 — set when the gateway answers 403 { banned|suspended }.
+  // While set, RootNavigator swaps the whole app for AccountStatusScreen
+  // (banned: read-only + sign out; suspended: + the appeal form the gateway
+  // deliberately keeps reachable for suspended accounts). Cleared when a
+  // fresh session is applied or when the user acknowledges the screen.
+  const [accountBlocked, setAccountBlocked] = useState(null);
   const refreshInFlight = useRef(null);
 
   // Merge a profile patch (e.g. location) into the session + cache.
@@ -56,6 +66,9 @@ export function AuthProvider({ children }) {
     ({ tokens, userData }) => {
       setAuthToken(tokens.access);
       setUser(userData);
+      // A successful fresh login means the account is usable again —
+      // drop any stale blocked state from a previous session.
+      setAccountBlocked(null);
 
       SecureStore.setItemAsync(ACCESS_KEY, tokens.access);
       SecureStore.setItemAsync(REFRESH_KEY, tokens.refresh);
@@ -125,11 +138,17 @@ export function AuthProvider({ children }) {
     return refreshInFlight.current;
   }, [clearSession]);
 
-  // Wire the API client's 401 handler to the rotation logic above.
+  // Wire the API client's 401 handler to the rotation logic above, and its
+  // 403 banned/suspended handler to the blocked-state swap.
   useEffect(() => {
     setAuthEventHandler(rotateSession);
     return () => setAuthEventHandler(null);
   }, [rotateSession]);
+
+  useEffect(() => {
+    setAccountBlockedHandler((payload) => setAccountBlocked(payload));
+    return () => setAccountBlockedHandler(null);
+  }, []);
 
   // On app launch: rotate the stored refresh token and restore the user,
   // so returning users land straight on Home — never back in onboarding.
@@ -192,11 +211,20 @@ export function AuthProvider({ children }) {
     })();
   }, [clearSession]);
 
+  // Acknowledge the blocked screen (sign out / back to login). Does NOT
+  // run through clearSession because rotation can call that too — a banned
+  // user's screen must survive unrelated session teardown.
+  const acknowledgeBlocked = useCallback(() => {
+    setAccountBlocked(null);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       initializing,
       hasAccount,
+      accountBlocked,
+      acknowledgeBlocked,
       applySession,
       clearSession,
       updateUser,
@@ -206,6 +234,8 @@ export function AuthProvider({ children }) {
       user,
       initializing,
       hasAccount,
+      accountBlocked,
+      acknowledgeBlocked,
       applySession,
       clearSession,
       updateUser,

@@ -93,14 +93,14 @@ const DOC_STATUS_LABELS = {
 
 const ROLE_COPY = {
   maid: {
-    screenTitle: "ID verification",
+    screenTitle: "Account & verification",
     intro:
       "A verified badge makes employers trust your profile instantly — verified workers get messaged first.",
     verifiedBlurb:
       "Your badge is now live on your profile. Employers see it everywhere your name appears.",
   },
   employer: {
-    screenTitle: "Account verification",
+    screenTitle: "Account & verification",
     intro:
       "Verified households get faster responses — workers know a real, checked family is behind the request.",
     verifiedBlurb:
@@ -460,6 +460,64 @@ export default function VerificationScreen() {
               body={loadError}
             />
           ) : null}
+
+          {/* Account & verification — phone/email status sits next to the ID
+              flow here. (Moved from the profile overview's Trust & safety
+              card; email verification opens the VerifyEmail flow.) */}
+          <View style={[styles.statusCard, styles.contactCard]}>
+            <View style={styles.statusHead}>
+              <TabBarIcon name="check-circle" color={colors.brand} size={22} />
+              <Text style={[styles.statusTitle, styles.contactTitle]}>
+                Contact details
+              </Text>
+            </View>
+
+            <View style={styles.contactRow}>
+              <View
+                style={[
+                  styles.contactDot,
+                  user?.phoneVerified
+                    ? styles.contactDotOk
+                    : styles.contactDotIdle,
+                ]}
+              />
+              <Text style={styles.contactText}>
+                {user?.phoneVerified
+                  ? "Phone verified"
+                  : "Phone not verified yet"}
+              </Text>
+            </View>
+
+            {user?.email ? (
+              user?.emailVerified ? (
+                <View style={styles.contactRow}>
+                  <View style={[styles.contactDot, styles.contactDotOk]} />
+                  <Text style={styles.contactText}>Email verified</Text>
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() =>
+                    navigation.navigate("VerifyEmail", { email: user.email })
+                  }
+                  hitSlop={6}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  <View style={styles.contactRow}>
+                    <View style={[styles.contactDot, styles.contactDotIdle]} />
+                    <Text style={[styles.contactText, styles.contactActionText]}>
+                      Email not verified — tap to verify
+                    </Text>
+                  </View>
+                </Pressable>
+              )
+            ) : (
+              <View style={styles.contactRow}>
+                <View style={[styles.contactDot, styles.contactDotIdle]} />
+                <Text style={styles.contactText}>No email on file</Text>
+              </View>
+            )}
+          </View>
 
           <View style={[styles.statusCard, { backgroundColor: theme.bg, borderColor: theme.border }]}>
             <View style={styles.statusHead}>
@@ -1024,6 +1082,42 @@ const styles = StyleSheet.create({
   statusBody: {
     fontSize: 14,
     lineHeight: 21,
+  },
+  contactCard: {
+    backgroundColor: colors.white,
+    borderColor: colors.mist,
+  },
+  contactTitle: {
+    color: colors.ink,
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 40,
+    paddingVertical: 6,
+  },
+  contactDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  contactDotOk: {
+    backgroundColor: colors.brandSoft,
+  },
+  contactDotIdle: {
+    backgroundColor: colors.gold,
+  },
+  contactText: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
+  },
+  contactActionText: {
+    color: colors.brand,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   docsCard: {
     backgroundColor: colors.white,

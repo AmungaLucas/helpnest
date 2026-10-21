@@ -1,12 +1,15 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,11 +17,9 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 
 import { useAuth } from "../../context/AuthContext";
 import { getWorker } from "../../services/workersService";
+import { fileReport, REPORT_CATEGORIES } from "../../services/reportsService";
 import Chip from "../../components/ui/Chip";
 import TabBarIcon from "../../components/ui/TabBarIcon";
-import ScreenHeader from "../../components/ui/ScreenHeader";
-import EmptyState from "../../components/ui/EmptyState";
-import GradientBanner from "../../components/ui/GradientBanner";
 import SignedImage from "../../components/media/SignedImage";
 import { colors, withAlpha } from "../../theme/colors";
 import {
@@ -28,11 +29,9 @@ import {
 import { formatDistance } from "../../utils/geo";
 
 // ---------------------------------------------------------------------------
-// Worker profile — Modern v3: brand gradient hero band (GradientBanner) with
-// a white-ringed portrait, verified/pending tinted pills, white stat cards,
-// gold eyebrow section labels, the monetized contact card (dashed border
-// while locked) and the gated "Chat with {name}" CTA pinned as a sticky
-// bottom bar.
+// Worker profile — large photo header (136px ringed portrait on a tinted
+// backdrop), verified chip, white stat cards, tinted status pills and the
+// monetized "Chat with {name}" CTA pinned as a sticky bottom bar.
 //
 // Chat gate (BUILD 2026-10-20.14): tapping Chat jumps straight into ChatRoom,
 // which owns the §13.3 flow end-to-end — it creates/opens the conversation,
@@ -50,6 +49,12 @@ export default function WorkerProfileScreen() {
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Report sheet (PRD §10.2) — flag this profile for human moderation.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState(null);
+  const [reportNote, setReportNote] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
 
   // Refetch whenever the screen regains focus — after an M-Pesa unlock or
   // chat purchase succeeds and the user comes back, contacts + chat
@@ -95,6 +100,34 @@ export default function WorkerProfileScreen() {
     openChat();
   }, [openChat]);
 
+  const submitReport = useCallback(async () => {
+    if (reportBusy || !reportCategory || reportNote.trim().length < 10) return;
+    setReportBusy(true);
+    try {
+      const res = await fileReport({
+        targetUserId: worker.id,
+        category: reportCategory,
+        note: reportNote.trim(),
+      });
+      setReportOpen(false);
+      setReportCategory(null);
+      setReportNote("");
+      Alert.alert(
+        "Report received",
+        res?.message ||
+          "A human reviews every report, and we'll notify you once it's handled.",
+        [{ text: "OK" }]
+      );
+    } catch (err) {
+      Alert.alert(
+        "Could not send report",
+        err?.message || "Please try again in a moment."
+      );
+    } finally {
+      setReportBusy(false);
+    }
+  }, [reportBusy, reportCategory, reportNote, worker]);
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.safeArea, styles.center]}>
@@ -108,14 +141,17 @@ export default function WorkerProfileScreen() {
     return (
       <SafeAreaView style={[styles.safeArea, styles.center]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
-        <EmptyState
-          icon="alert-triangle"
-          tone="danger"
-          title="Profile unavailable"
-          body={error || "Worker not found."}
-          actionLabel="Go back"
-          onAction={() => navigation.goBack()}
-        />
+        <View style={styles.emptyBadge}>
+          <TabBarIcon name="alert-triangle" color={colors.danger} size={20} />
+        </View>
+        <Text style={styles.emptyTitle}>Profile unavailable</Text>
+        <Text style={styles.emptyText}>{error || "Worker not found."}</Text>
+        <Pressable
+          style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.linkText}>Go back</Text>
+        </Pressable>
       </SafeAreaView>
     );
   }
@@ -127,7 +163,19 @@ export default function WorkerProfileScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <ScreenHeader title="Worker profile" />
+      <View style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          onPress={() => navigation.goBack()}
+          hitSlop={10}
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+        >
+          <TabBarIcon name="chevron-left" color={colors.ink} size={22} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -135,7 +183,7 @@ export default function WorkerProfileScreen() {
       >
         {/* ---- Photo header ---- */}
         <View style={[styles.heroCard, styles.cardShadow]}>
-          <GradientBanner style={styles.heroBand} />
+          <View style={styles.heroBackdrop} />
 
           <SignedImage
             url={worker?.avatarDisplayUrl || worker?.avatarUrl}
@@ -185,13 +233,13 @@ export default function WorkerProfileScreen() {
 
         {/* ---- Stats ---- */}
         <View style={styles.statsRow}>
-          <View style={[styles.statBox, styles.cardShadow]}>
+          <View style={styles.statBox}>
             <Text style={styles.statValue}>
               {worker.hourlyRate !== null ? `KES ${worker.hourlyRate}` : "—"}
             </Text>
             <Text style={styles.statLabel}>per hour</Text>
           </View>
-          <View style={[styles.statBox, styles.cardShadow]}>
+          <View style={styles.statBox}>
             <Text style={styles.statValue}>
               {worker.experienceYears !== null
                 ? `${worker.experienceYears} yr${worker.experienceYears === 1 ? "" : "s"}`
@@ -199,7 +247,7 @@ export default function WorkerProfileScreen() {
             </Text>
             <Text style={styles.statLabel}>experience</Text>
           </View>
-          <View style={[styles.statBox, styles.cardShadow]}>
+          <View style={styles.statBox}>
             <Text style={styles.statValue}>
               {worker.availability ? availabilityLabel(worker.availability) : "—"}
             </Text>
@@ -208,14 +256,14 @@ export default function WorkerProfileScreen() {
         </View>
 
         {worker.bio ? (
-          <View style={[styles.sectionCard, styles.cardShadow]}>
+          <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>About</Text>
             <Text style={styles.bioText}>{worker.bio}</Text>
           </View>
         ) : null}
 
         {worker.services.length > 0 ? (
-          <View style={[styles.sectionCard, styles.cardShadow]}>
+          <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Services</Text>
             <View style={styles.chipsWrap}>
               {worker.services.map((value) => (
@@ -327,6 +375,19 @@ export default function WorkerProfileScreen() {
             </>
           )}
         </View>
+
+        {/* ---- Report (PRD §10.2) ---- */}
+        {user && worker.id !== user.id ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Report this profile"
+            style={({ pressed }) => [styles.reportRow, pressed && styles.pressed]}
+            onPress={() => setReportOpen(true)}
+          >
+            <TabBarIcon name="flag" color={colors.textFaint} size={14} />
+            <Text style={styles.reportRowText}>Report this profile</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       {/* ---- Sticky gated chat CTA (employers only) ---- */}
@@ -348,6 +409,77 @@ export default function WorkerProfileScreen() {
           </Pressable>
         </View>
       ) : null}
+
+      {/* ---- Report sheet (PRD §10.2) ---- */}
+      <Modal
+        transparent
+        visible={reportOpen}
+        animationType="slide"
+        onRequestClose={() => setReportOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable style={styles.sheetBackdropTouch} onPress={() => setReportOpen(false)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetGrabber} />
+            <Text style={styles.sheetTitle}>Report {firstName}'s profile</Text>
+            <Text style={styles.sheetSub}>
+              Tell us what's wrong. Reports go to a human moderation queue and
+              stay anonymous.
+            </Text>
+
+            <View style={styles.reportChips}>
+              {REPORT_CATEGORIES.map((c) => (
+                <Chip
+                  key={c.value}
+                  label={c.label}
+                  selected={reportCategory === c.value}
+                  onPress={() => setReportCategory(c.value)}
+                />
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.reportInput}
+              value={reportNote}
+              onChangeText={(t) => setReportNote(t.slice(0, 1000))}
+              multiline
+              placeholder="Describe what happened (at least 10 characters)…"
+              placeholderTextColor={colors.textFaint}
+            />
+
+            <View style={styles.sheetButtons}>
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.sheetCancel,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => setReportOpen(false)}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                android_ripple={{ color: withAlpha(colors.white, 0.18) }}
+                disabled={reportBusy || !reportCategory || reportNote.trim().length < 10}
+                style={({ pressed }) => [
+                  styles.sheetSubmit,
+                  (reportBusy || !reportCategory || reportNote.trim().length < 10) &&
+                    styles.sheetSubmitDisabled,
+                  pressed && styles.pressed,
+                ]}
+                onPress={submitReport}
+              >
+                {reportBusy ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Text style={styles.sheetSubmitText}>Send report</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -385,24 +517,52 @@ const styles = StyleSheet.create({
   center: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    padding: 32,
   },
   pressed: {
     opacity: 0.88,
   },
-  cardShadow: {
-    shadowColor: colors.ink,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+
+  /* ---- Header ---- */
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  headerSpacer: {
+    width: 42,
   },
 
   /* ---- Scroll ---- */
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 32,
+  },
+  cardShadow: {
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
 
   /* ---- Photo header ---- */
@@ -412,24 +572,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 22,
-    paddingTop: 38,
+    paddingTop: 30,
     alignItems: "center",
     overflow: "hidden",
   },
-  heroBand: {
+  heroBackdrop: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 118,
+    height: 96,
+    backgroundColor: withAlpha(colors.brand, 0.06),
   },
   avatar: {
     width: 136,
     height: 136,
     borderRadius: 68,
     borderWidth: 3,
-    borderColor: colors.white,
-    backgroundColor: colors.mist,
+    borderColor: withAlpha(colors.brand, 0.18),
+    backgroundColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -442,14 +603,13 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.ink,
-    fontSize: 23,
+    fontSize: 22,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   headline: {
     color: colors.textMuted,
     fontSize: 14,
-    lineHeight: 21,
     fontWeight: "500",
     marginTop: 3,
   },
@@ -513,7 +673,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     color: colors.ink,
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: "800",
     textAlign: "center",
   },
@@ -536,7 +696,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.goldDark,
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -567,9 +727,9 @@ const styles = StyleSheet.create({
     borderColor: colors.mistDark,
   },
   contactBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
@@ -596,13 +756,17 @@ const styles = StyleSheet.create({
   unlockButton: {
     backgroundColor: colors.brand,
     borderRadius: 16,
-    minHeight: 54,
+    minHeight: 52,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 22,
     marginTop: 16,
     alignSelf: "stretch",
-    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   unlockText: {
     color: colors.white,
@@ -619,14 +783,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 48,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.brand,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: colors.white,
-    overflow: "hidden",
   },
   contactButtonPrimary: {
     backgroundColor: colors.brand,
@@ -659,12 +821,150 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   chatButtonText: {
     color: colors.white,
     fontSize: 15,
     fontWeight: "800",
     flexShrink: 1,
+  },
+
+  /* ---- Empty / error ---- */
+  emptyBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: withAlpha(colors.danger, 0.08),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 13.5,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  linkButton: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  linkText: {
+    color: colors.brand,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  /* ---- Report (PRD §10.2) ---- */
+  reportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    marginTop: 2,
+  },
+  reportRowText: {
+    color: colors.textFaint,
+    fontSize: 12.5,
+    fontWeight: "600",
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: withAlpha(colors.ink, 0.45),
+    justifyContent: "flex-end",
+  },
+  sheetBackdropTouch: { flex: 1 },
+  sheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
+  sheetGrabber: {
+    alignSelf: "center",
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.mistDark,
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  sheetSub: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  reportChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 4,
+  },
+  reportInput: {
+    borderWidth: 1.5,
+    borderColor: colors.mist,
+    borderRadius: 14,
+    backgroundColor: colors.cream,
+    padding: 12,
+    minHeight: 88,
+    textAlignVertical: "top",
+    fontSize: 14,
+    color: colors.ink,
+    marginTop: 8,
+  },
+  sheetButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  sheetCancel: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetCancelText: {
+    color: colors.textMuted,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  sheetSubmit: {
+    flex: 2,
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  sheetSubmitDisabled: { opacity: 0.45 },
+  sheetSubmitText: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: 14,
   },
 });

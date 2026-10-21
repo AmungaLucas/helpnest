@@ -18,7 +18,7 @@ import MyWorkScreen from "../tabs/MyWorkScreen";
 import PaymentHubScreen from "./PaymentHubScreen";
 import HouseholdScreen from "./HouseholdScreen";
 import VerificationScreen from "./VerificationScreen";
-import ReferralsScreen from "./ReferralsScreen";
+import ReferralScreen from "./ReferralScreen";
 import ComingSoonScreen from "../../components/ui/ComingSoonScreen";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import SignedImage from "../../components/media/SignedImage";
@@ -51,9 +51,6 @@ function DrawerItem({ icon, label, active, onPress }) {
       <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>
         {label}
       </Text>
-      {active ? (
-        <TabBarIcon name="chevron-right" color={colors.textFaint} size={15} />
-      ) : null}
     </Pressable>
   );
 }
@@ -113,7 +110,8 @@ function DrawerContent({ state, descriptors, navigation }) {
   );
 }
 
-// --- Maid: Overview / Skills & experience / ID verification / Reviews ---
+// --- Maid: Overview / Skills & experience / Account & verification /
+//     My reviews / Subscription & payments / Refer & earn ---
 function MaidProfileNavigator() {
   return (
     <Drawer.Navigator
@@ -121,8 +119,8 @@ function MaidProfileNavigator() {
       screenOptions={{
         headerShown: false,
         drawerType: "front",
-        drawerStyle: { backgroundColor: colors.white, width: 312 },
-        overlayStyle: { backgroundColor: withAlpha(colors.ink, 0.45) },
+        drawerStyle: { backgroundColor: colors.white, width: 300 },
+        overlayColor: withAlpha(colors.ink, 0.45),
         swipeEdgeWidth: 48,
       }}
     >
@@ -146,16 +144,8 @@ function MaidProfileNavigator() {
         name="Kyc"
         component={VerificationScreen}
         options={{
-          title: "ID verification",
+          title: "Account & verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
-        }}
-      />
-      <Drawer.Screen
-        name="Referrals"
-        component={ReferralsScreen}
-        options={{
-          title: "Invite friends",
-          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
         }}
       />
       <Drawer.Screen
@@ -166,11 +156,30 @@ function MaidProfileNavigator() {
           drawerIcon: ({ color }) => <TabBarIcon name="star" color={color} />,
         }}
       />
+      <Drawer.Screen
+        name="Billing"
+        component={PaymentHubScreen}
+        options={{
+          title: "Subscription & payments",
+          drawerIcon: ({ color }) => (
+            <TabBarIcon name="credit-card" color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Referrals"
+        component={ReferralScreen}
+        options={{
+          title: "Refer & earn",
+          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+        }}
+      />
     </Drawer.Navigator>
   );
 }
 
-// --- Employer: Overview / Verification / Subscription & payments / History ---
+// --- Employer: Overview / Household / Account & verification /
+//     Subscription & payments / Refer & earn ---
 function EmployerProfileNavigator() {
   return (
     <Drawer.Navigator
@@ -178,8 +187,8 @@ function EmployerProfileNavigator() {
       screenOptions={{
         headerShown: false,
         drawerType: "front",
-        drawerStyle: { backgroundColor: colors.white, width: 312 },
-        overlayStyle: { backgroundColor: withAlpha(colors.ink, 0.45) },
+        drawerStyle: { backgroundColor: colors.white, width: 300 },
+        overlayColor: withAlpha(colors.ink, 0.45),
         swipeEdgeWidth: 48,
       }}
     >
@@ -203,16 +212,8 @@ function EmployerProfileNavigator() {
         name="Verification"
         component={VerificationScreen}
         options={{
-          title: "Account verification",
+          title: "Account & verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
-        }}
-      />
-      <Drawer.Screen
-        name="Referrals"
-        component={ReferralsScreen}
-        options={{
-          title: "Invite friends",
-          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
         }}
       />
       <Drawer.Screen
@@ -226,13 +227,11 @@ function EmployerProfileNavigator() {
         }}
       />
       <Drawer.Screen
-        name="History"
-        component={HistoryPlaceholder}
+        name="Referrals"
+        component={ReferralScreen}
         options={{
-          title: "Payment history",
-          drawerIcon: ({ color }) => (
-            <TabBarIcon name="file-text" color={color} />
-          ),
+          title: "Refer & earn",
+          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
         }}
       />
     </Drawer.Navigator>
@@ -246,17 +245,6 @@ function ReviewsPlaceholder() {
       icon="star"
       title="Reviews are coming soon"
       blurb="After every completed job, households rate your work. Great reviews push you higher in employer search results."
-    />
-  );
-}
-
-function HistoryPlaceholder() {
-  return (
-    <ComingSoonScreen
-      withMenu
-      icon="file-text"
-      title="Payment history is coming soon"
-      blurb="Every M-Pesa transaction — contact unlocks and future subscriptions — will be listed here with receipts you can tap into."
     />
   );
 }
@@ -280,16 +268,16 @@ const styles = StyleSheet.create({
   },
   drawerScroll: {
     flexGrow: 1,
-    paddingTop: 12,
+    paddingTop: 8,
   },
   drawerHeader: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.mist,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   drawerAvatar: {
     width: 56,
@@ -333,10 +321,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minHeight: 56,
-    marginHorizontal: 14,
+    marginHorizontal: 12,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    borderRadius: 14,
     overflow: "hidden",
   },
   itemActive: {
@@ -348,7 +336,7 @@ const styles = StyleSheet.create({
   itemIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 13,
+    borderRadius: 12,
     backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
@@ -358,10 +346,9 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     color: colors.textMuted,
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: "700",
     marginLeft: 13,
-    flex: 1,
   },
   itemLabelActive: {
     color: colors.brand,
@@ -372,10 +359,6 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 8,
-    marginHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.mist,
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
 });

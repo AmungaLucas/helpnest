@@ -41,6 +41,7 @@ const authState =
   (globalThis[AUTH_STATE_KEY] = globalThis[AUTH_STATE_KEY] || {
     token: null,
     eventHandler: null,
+    blockedHandler: null,
   });
 
 export function setAuthToken(token) {
@@ -52,6 +53,15 @@ export function setAuthToken(token) {
 // retry once with the fresh access token.
 export function setAuthEventHandler(handler) {
   authState.eventHandler = typeof handler === "function" ? handler : null;
+}
+
+// Set by AuthContext: called when a request comes back 403 with the
+// gateway's banned/suspended body (PRD §3.2, §15.6 — fail-closed accounts).
+// The context swaps the entire app for the account-status screen, so a
+// blocked user sees ONE clear state instead of per-screen errors. Fired
+// best-effort: the original error still throws for the local caller.
+export function setAccountBlockedHandler(handler) {
+  authState.blockedHandler = typeof handler === "function" ? handler : null;
 }
 
 function apiError(message, { status, isNetwork, body } = {}) {
@@ -141,6 +151,22 @@ export async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok) {
+    // Banned/suspended enforcement (PRD §3.2/§15.6): the gateway answers
+    // 403 with { banned: true } or { suspended: true } and a plain message.
+    // Surface it app-wide once through the shared handler; the error still
+    // throws below so the screen that made the request can no-op quietly.
+    if (
+      response.status === 403 &&
+      data &&
+      (data.banned || data.suspended) &&
+      authState.blockedHandler
+    ) {
+      authState.blockedHandler({
+        status: data.banned ? "banned" : "suspended",
+        message: data.message || "",
+      });
+    }
+
     // Access token expired (12h) — rotate the refresh token once and retry
     // the original request transparently. skipAuthRetry breaks any loop.
     if (response.status === 401 && __DEV__) {

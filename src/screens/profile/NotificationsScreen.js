@@ -38,6 +38,8 @@ const KIND_ICONS = {
   "application.accepted": "check-circle",
   "application.rejected": "x",
   "job.published": "work",
+  "job.closed": "x-circle",
+  "credits.granted": "gift",
   "promotion.active": "zap",
   "chat.limit": "message-circle",
   "appeal.decided": "shield",

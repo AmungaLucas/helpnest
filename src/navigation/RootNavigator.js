@@ -20,6 +20,7 @@ import KYCCameraScreen from "../screens/profile/KYCCameraScreen";
 import ImageReviewScreen from "../screens/profile/ImageReviewScreen";
 import VerifyEmailScreen from "../screens/profile/VerifyEmailScreen";
 import NotificationsScreen from "../screens/profile/NotificationsScreen";
+import AccountStatusScreen from "../screens/profile/AccountStatusScreen";
 import { HelpNestLogoMark } from "../components/Logo";
 import { colors } from "../theme/colors";
 
@@ -189,7 +190,7 @@ const bootStyles = {
 };
 
 export default function RootNavigator() {
-  const { user, initializing, hasAccount } = useAuth();
+  const { user, initializing, hasAccount, accountBlocked } = useAuth();
 
   // Canonical React Navigation auth pattern: swap between two SEPARATE
   // navigators when the session state flips, instead of remounting a single
@@ -214,6 +215,14 @@ export default function RootNavigator() {
 
   if (initializing) {
     return <BootSplash />;
+  }
+
+  // PRD §3.2/§15.6 — a banned/suspended account gets ONE full-app state
+  // instead of the navigator (every API call 403s anyway). Rendered above
+  // both stacks, so it also covers the banned-at-login case where no
+  // session exists. Signed out from here clears both blocked + session.
+  if (accountBlocked) {
+    return <AccountStatusScreen />;
   }
 
   if (user) {
