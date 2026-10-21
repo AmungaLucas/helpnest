@@ -18,6 +18,7 @@ import MyWorkScreen from "../tabs/MyWorkScreen";
 import PaymentHubScreen from "./PaymentHubScreen";
 import HouseholdScreen from "./HouseholdScreen";
 import VerificationScreen from "./VerificationScreen";
+import ReferralScreen from "./ReferralScreen";
 import ComingSoonScreen from "../../components/ui/ComingSoonScreen";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import SignedImage from "../../components/media/SignedImage";
@@ -109,7 +110,8 @@ function DrawerContent({ state, descriptors, navigation }) {
   );
 }
 
-// --- Maid: Overview / Skills & experience / ID verification / Reviews ---
+// --- Maid: Overview / Skills & experience / Account & verification /
+//     My reviews / Subscription & payments / Refer & earn ---
 function MaidProfileNavigator() {
   return (
     <Drawer.Navigator
@@ -142,7 +144,7 @@ function MaidProfileNavigator() {
         name="Kyc"
         component={VerificationScreen}
         options={{
-          title: "ID verification",
+          title: "Account & verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
         }}
       />
@@ -154,11 +156,30 @@ function MaidProfileNavigator() {
           drawerIcon: ({ color }) => <TabBarIcon name="star" color={color} />,
         }}
       />
+      <Drawer.Screen
+        name="Billing"
+        component={PaymentHubScreen}
+        options={{
+          title: "Subscription & payments",
+          drawerIcon: ({ color }) => (
+            <TabBarIcon name="credit-card" color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Referrals"
+        component={ReferralScreen}
+        options={{
+          title: "Refer & earn",
+          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+        }}
+      />
     </Drawer.Navigator>
   );
 }
 
-// --- Employer: Overview / Verification / Subscription & payments / History ---
+// --- Employer: Overview / Household / Account & verification /
+//     Subscription & payments / Refer & earn ---
 function EmployerProfileNavigator() {
   return (
     <Drawer.Navigator
@@ -191,7 +212,7 @@ function EmployerProfileNavigator() {
         name="Verification"
         component={VerificationScreen}
         options={{
-          title: "Account verification",
+          title: "Account & verification",
           drawerIcon: ({ color }) => <TabBarIcon name="shield" color={color} />,
         }}
       />
@@ -206,13 +227,11 @@ function EmployerProfileNavigator() {
         }}
       />
       <Drawer.Screen
-        name="History"
-        component={HistoryPlaceholder}
+        name="Referrals"
+        component={ReferralScreen}
         options={{
-          title: "Payment history",
-          drawerIcon: ({ color }) => (
-            <TabBarIcon name="file-text" color={color} />
-          ),
+          title: "Refer & earn",
+          drawerIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
         }}
       />
     </Drawer.Navigator>
@@ -226,17 +245,6 @@ function ReviewsPlaceholder() {
       icon="star"
       title="Reviews are coming soon"
       blurb="After every completed job, households rate your work. Great reviews push you higher in employer search results."
-    />
-  );
-}
-
-function HistoryPlaceholder() {
-  return (
-    <ComingSoonScreen
-      withMenu
-      icon="file-text"
-      title="Payment history is coming soon"
-      blurb="Every M-Pesa transaction — contact unlocks and future subscriptions — will be listed here with receipts you can tap into."
     />
   );
 }

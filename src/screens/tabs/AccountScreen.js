@@ -1,16 +1,13 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
-  Share,
   StatusBar,
   Switch,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,8 +18,6 @@ import { useAuth } from "../../context/AuthContext";
 import { logout } from "../../services/authService";
 import { updateMe } from "../../services/usersService";
 import { uploadMedia } from "../../services/mediaService";
-import { getMyReferrals } from "../../services/referralsService";
-import { fetchHistory, requestRefund } from "../../services/paymentsService";
 import { fetchNotifications } from "../../services/notificationsService";
 import SignedImage from "../../components/media/SignedImage";
 import {
@@ -54,43 +49,11 @@ export default function AccountScreen() {
   const [locating, setLocating] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [referral, setReferral] = useState(null);
-  const [referralLoading, setReferralLoading] = useState(true);
-  const [history, setHistory] = useState(null);
-  const [refundFor, setRefundFor] = useState(null); // txn row awaiting a reason
-  const [refundReason, setRefundReason] = useState("");
-  const [refundBusy, setRefundBusy] = useState(false);
   const [unread, setUnread] = useState(0);
   // §17.2 — email fan-out preference. Server default is on; undefined on
   // stale sessions behaves the same (opt-out is an explicit flip).
   const [emailUpdates, setEmailUpdates] = useState(user?.notifyEmail !== false);
   const [emailPrefBusy, setEmailPrefBusy] = useState(false);
-
-  // Referral programme summary — invite code, reward rules, earnings.
-  // Silent failure: the card just doesn't render if the API hiccups.
-  const loadReferral = useCallback(() => {
-    setReferralLoading(true);
-    getMyReferrals()
-      .then(setReferral)
-      .catch(() => setReferral(null))
-      .finally(() => setReferralLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadReferral();
-  }, [loadReferral]);
-
-  // Purchase history (PRD §14.7) + refund request action (§14.3 manual
-  // flow). Silent failure: the card just stays minimal if the API hiccups.
-  const loadHistory = useCallback(() => {
-    fetchHistory()
-      .then((d) => setHistory(d.history || []))
-      .catch(() => setHistory(null));
-  }, []);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
 
   // Unread notifications count (§17) — re-checked every time the tab
   // regains focus so returning from the feed clears the badge.
@@ -121,35 +84,6 @@ export default function AccountScreen() {
       Alert.alert("Could not update", error?.message || "Please try again in a moment.");
     } finally {
       setEmailPrefBusy(false);
-    }
-  }
-
-  async function submitRefundRequest() {
-    if (!refundFor || refundReason.trim().length < 10) return;
-    setRefundBusy(true);
-    try {
-      const d = await requestRefund(refundFor.id, refundReason.trim());
-      Alert.alert("Request sent", d.message || "Our team will contact you.");
-      setRefundFor(null);
-      setRefundReason("");
-      loadHistory();
-    } catch (e) {
-      Alert.alert("Could not send", e.message || "Try again in a minute.");
-    } finally {
-      setRefundBusy(false);
-    }
-  }
-
-  async function shareInvite() {
-    if (!referral?.code) return;
-    try {
-      await Share.share({
-        message:
-          referral.shareText ||
-          `Join me on HelpNest — use my code ${referral.code} when you sign up!`,
-      });
-    } catch (error) {
-      // User dismissed the share sheet — nothing to do.
     }
   }
 
@@ -308,14 +242,16 @@ export default function AccountScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
+      {/* Sticky header — the drawer toggle stays reachable while the
+          profile content scrolls beneath it. */}
+      <View style={styles.menuRow}>
+        <HamburgerButton />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.menuRow}>
-          <HamburgerButton />
-        </View>
-
         {/* Identity header — avatar squircle, name, role + verified pills. */}
         <View style={styles.profileRow}>
           <Pressable
@@ -422,52 +358,6 @@ export default function AccountScreen() {
             </View>
           </View>
         ) : null}
-
-        <View style={[styles.card, CARD_SHADOW]}>
-          <View style={styles.headRow}>
-            <View style={styles.headIcon}>
-              <TabBarIcon name="shield" color={colors.brand} size={20} />
-            </View>
-            <View style={styles.headMain}>
-              <Text style={styles.eyebrow}>Trust & safety</Text>
-              <Text style={styles.cardTitle}>Verification</Text>
-            </View>
-          </View>
-
-          <StatusRow
-            ok={user?.phoneVerified}
-            okText="Phone verified"
-            pendingText="Phone not verified yet"
-          />
-          <StatusRow
-            ok={user?.emailVerified}
-            okText="Email verified"
-            pendingText={
-              user?.email
-                ? "Email not verified — tap to verify"
-                : "Email verification coming soon"
-            }
-            action={
-              user?.email && !user?.emailVerified
-                ? () => navigation.navigate("VerifyEmail", { email: user.email })
-                : undefined
-            }
-          />
-          <StatusRow
-            ok={user?.kycStatus === "verified"}
-            okText="ID verification complete"
-            pendingText={`KYC: ${user?.kycStatus || "unverified"}`}
-          />
-        </View>
-
-        <PurchasesCard
-          history={history}
-          onRefresh={loadHistory}
-          onRequestRefund={(txn) => {
-            setRefundFor(txn);
-            setRefundReason("");
-          }}
-        />
 
         <View style={[styles.card, CARD_SHADOW]}>
           <View style={styles.headRow}>
@@ -592,62 +482,6 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {/* Referral programme — earn cash when friends you invite pay. */}
-        {!referralLoading && referral?.code ? (
-          <View style={[styles.card, CARD_SHADOW]}>
-            <View style={styles.headRow}>
-              <View style={styles.headIcon}>
-                <TabBarIcon name="users" color={colors.brand} size={20} />
-              </View>
-              <View style={styles.headMain}>
-                <Text style={styles.eyebrow}>Invite friends</Text>
-                <Text style={styles.cardTitle}>Earn with referrals</Text>
-              </View>
-            </View>
-            <Text style={styles.locationNote}>{referral.rewardText}</Text>
-
-            <View style={styles.referralCodeRow}>
-              <Text style={styles.referralCode}>{referral.code}</Text>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.shareButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={shareInvite}
-              >
-                <Text style={styles.shareButtonText}>Share code</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.referralStatsRow}>
-              <ReferralStat
-                value={referral.stats?.invited || 0}
-                label="invited"
-              />
-              <View style={styles.referralStatDivider} />
-              <ReferralStat
-                value={referral.stats?.qualified || 0}
-                label="paid"
-              />
-              <View style={styles.referralStatDivider} />
-              <ReferralStat
-                value={`KES ${Number(referral.stats?.earnedKes || 0).toLocaleString("en-KE")}`}
-                label="earned"
-                strong
-              />
-            </View>
-
-            {Number(referral.stats?.pendingKes || 0) > 0 && (
-              <Text style={styles.referralPending}>
-                KES {Number(referral.stats.pendingKes).toLocaleString("en-KE")} on
-                the way — payouts go out to M-Pesa once your balance reaches
-                KES {Number(referral.minPayoutKes || 0).toLocaleString("en-KE")}.
-              </Text>
-            )}
-          </View>
-        ) : null}
-
         <Text style={styles.versionText}>HelpNest v1.0.0</Text>
       </ScrollView>
 
@@ -670,193 +504,7 @@ export default function AccountScreen() {
         </Pressable>
       </View>
 
-      {/* Refund request (PRD §14.7 "Get help") — a short reason is all the
-          manual refund workflow needs from the user. */}
-      <Modal
-        visible={Boolean(refundFor)}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setRefundFor(null)}
-      >
-        <View style={styles.refundSheetWrap}>
-          <Pressable style={styles.refundSheetBackdrop} onPress={() => setRefundFor(null)} />
-          <View style={styles.refundSheet}>
-            <View style={styles.refundGrabber} />
-            <Text style={styles.refundSheetTitle}>Request a refund</Text>
-            {refundFor ? (
-              <Text style={styles.refundSheetSub}>
-                {refundFor.planLabel || refundFor.plan} · KES {refundFor.amountKes}
-              </Text>
-            ) : null}
-            <Text style={styles.refundSheetHint}>
-              Tell us what went wrong (at least 10 characters). Our team
-              reviews within 72 hours and refunds are sent to M-Pesa manually.
-            </Text>
-            <TextInput
-              style={styles.refundSheetInput}
-              value={refundReason}
-              onChangeText={setRefundReason}
-              multiline
-              numberOfLines={3}
-              maxLength={500}
-              placeholder="e.g. I paid for the job post but it was never published"
-              placeholderTextColor={colors.textFaint}
-            />
-            <View style={styles.refundSheetActions}>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.refundSheetBtn,
-                  styles.refundSheetBtnGhost,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setRefundFor(null)}
-                disabled={refundBusy}
-              >
-                <Text style={styles.refundSheetBtnGhostText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                style={[
-                  styles.refundSheetBtn,
-                  (refundBusy || refundReason.trim().length < 10) &&
-                    styles.btnDisabled,
-                ]}
-                onPress={submitRefundRequest}
-                disabled={refundBusy || refundReason.trim().length < 10}
-              >
-                {refundBusy ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Text style={styles.refundSheetBtnText}>Send request</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
-  );
-}
-
-function StatusRow({ ok, okText, pendingText, action }) {
-  const content = (
-    <View style={styles.statusRow}>
-      <View style={[styles.dot, ok ? styles.dotOk : styles.dotIdle]} />
-      <Text
-        style={[styles.statusText, action && !ok && styles.statusActionText]}
-      >
-        {ok ? okText : pendingText}
-      </Text>
-      {action && !ok ? <Text style={styles.statusActionArrow}>›</Text> : null}
-    </View>
-  );
-
-  if (action && !ok) {
-    return (
-      <Pressable
-        accessibilityRole="button"
-        onPress={action}
-        hitSlop={6}
-        style={({ pressed }) => pressed && styles.pressed}
-      >
-        {content}
-      </Pressable>
-    );
-  }
-
-  return content;
-}
-
-const REFUND_LABEL = {
-  none: null,
-  requested: "refund requested",
-  approved: "refund approved",
-  completed: "refunded",
-  rejected: "refund declined",
-};
-
-// Purchases & refunds (PRD §14.7): recent payments with their outcome plus
-// the per-transaction "Get help" action. Money moves stay manual on our
-// side — this card only files and tracks the request.
-function PurchasesCard({ history, onRefresh, onRequestRefund }) {
-  if (!history || history.length === 0) return null;
-
-  return (
-    <View style={[styles.card, CARD_SHADOW]}>
-      <View style={styles.headRow}>
-        <View style={styles.headIcon}>
-          <TabBarIcon name="file-text" color={colors.brand} size={20} />
-        </View>
-        <View style={styles.headMain}>
-          <Text style={styles.eyebrow}>Billing</Text>
-          <Text style={styles.cardTitle}>Purchases & refunds</Text>
-        </View>
-        <Pressable
-          onPress={onRefresh}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.refreshBtn,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.refundRefresh}>Refresh</Text>
-        </Pressable>
-      </View>
-
-      {history.slice(0, 8).map((t) => {
-        const refundLabel = REFUND_LABEL[t.refundStatus || "none"];
-        return (
-          <View key={t.id} style={styles.purchaseRow}>
-            <View style={styles.purchaseMain}>
-              <Text style={styles.purchaseTitle} numberOfLines={1}>
-                {t.planLabel || t.plan} · KES {t.amountKes}
-              </Text>
-              <Text style={styles.purchaseSub} numberOfLines={1}>
-                {t.status === "success"
-                  ? `Paid · ${t.unitsGranted > 0 ? `${t.unitsGranted} credit${t.unitsGranted === 1 ? "" : "s"}` : "recorded"}`
-                  : t.status === "pending"
-                    ? "Awaiting payment"
-                    : t.status === "timeout"
-                      ? "Outcome unknown"
-                      : "Payment failed"}
-                {refundLabel ? ` · ${refundLabel}` : ""}
-              </Text>
-            </View>
-            {t.status === "success" &&
-              (t.refundStatus || "none") === "none" ? (
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.refundBtn,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => onRequestRefund(t)}
-                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
-              >
-                <Text style={styles.refundBtnText}>Get help</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function ReferralStat({ value, label, strong }) {
-  return (
-    <View style={styles.referralStat}>
-      <Text
-        style={[
-          styles.referralStatValue,
-          strong && styles.referralStatValueStrong,
-        ]}
-      >
-        {value}
-      </Text>
-      <Text style={styles.referralStatLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -874,7 +522,10 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
   menuRow: {
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 10,
+    backgroundColor: colors.cream,
   },
   profileRow: {
     flexDirection: "row",
@@ -1040,168 +691,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
   },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 40,
-    paddingVertical: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 10,
-  },
-  dotOk: {
-    backgroundColor: colors.brandSoft,
-  },
-  dotIdle: {
-    backgroundColor: colors.gold,
-  },
-  statusText: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: "600",
-    flex: 1,
-  },
-  statusActionText: {
-    color: colors.brand,
-    fontWeight: "700",
-    textDecorationLine: "underline",
-  },
-  statusActionArrow: {
-    color: colors.textFaint,
-    fontSize: 20,
-    fontWeight: "700",
-    marginLeft: 8,
-  },
-  refreshBtn: {
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    overflow: "hidden",
-  },
-  refundRefresh: {
-    color: colors.brand,
-    fontSize: 11.5,
-    fontWeight: "800",
-  },
-  purchaseRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: 56,
-    paddingVertical: 9,
-  },
-  purchaseMain: {
-    flex: 1,
-    marginRight: 10,
-  },
-  purchaseTitle: {
-    color: colors.ink,
-    fontSize: 13.5,
-    fontWeight: "700",
-  },
-  purchaseSub: {
-    color: colors.textMuted,
-    fontSize: 11.5,
-    marginTop: 3,
-  },
-  refundBtn: {
-    backgroundColor: withAlpha(colors.gold, 0.16),
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    overflow: "hidden",
-  },
-  refundBtnText: {
-    color: colors.goldDark,
-    fontSize: 11.5,
-    fontWeight: "800",
-  },
-  refundSheetWrap: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  refundSheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: withAlpha(colors.ink, 0.45),
-  },
-  refundSheet: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 22,
-    paddingBottom: 34,
-  },
-  refundGrabber: {
-    alignSelf: "center",
-    width: 44,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: colors.cloud,
-    marginBottom: 16,
-  },
-  refundSheetTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  refundSheetSub: {
-    color: colors.brand,
-    fontSize: 13.5,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  refundSheetHint: {
-    color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  refundSheetInput: {
-    borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 14,
-    backgroundColor: colors.cream,
-    padding: 14,
-    minHeight: 90,
-    textAlignVertical: "top",
-    color: colors.ink,
-    fontSize: 14,
-  },
-  refundSheetActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 14,
-  },
-  refundSheetBtn: {
-    backgroundColor: colors.brand,
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 13,
-    minWidth: 110,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  refundSheetBtnText: {
-    color: colors.white,
-    fontWeight: "800",
-    fontSize: 14,
-  },
-  refundSheetBtnGhost: {
-    backgroundColor: colors.mist,
-  },
-  refundSheetBtnGhostText: {
-    color: colors.ink,
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  btnDisabled: {
-    opacity: 0.45,
-  },
   locationLine: {
     color: colors.ink,
     fontSize: 13.5,
@@ -1257,77 +746,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     marginTop: 2,
-  },
-  referralCodeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.brand, 0.25),
-    padding: 14,
-    marginBottom: 14,
-  },
-  referralCode: {
-    color: colors.brand,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: 2.5,
-  },
-  shareButton: {
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareButtonText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  referralStatsRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    backgroundColor: colors.cream,
-    borderRadius: 14,
-    paddingVertical: 12,
-    marginBottom: 4,
-  },
-  referralStat: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  referralStatDivider: {
-    width: 1,
-    backgroundColor: colors.mistDark,
-  },
-  referralStatValue: {
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-  },
-  referralStatValueStrong: {
-    color: colors.brand,
-  },
-  referralStatLabel: {
-    color: colors.textFaint,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginTop: 3,
-  },
-  referralPending: {
-    color: colors.goldDark,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "600",
-    marginTop: 10,
   },
 });
