@@ -235,42 +235,39 @@ export default function MaidHomeScreen() {
         </View>
 
         {/* ---------- Featured / boost promo (moved from Account) ----------
-            INITIAL layout restored: 42px badge | text column with eyebrow /
-            title / copy + full-price CTA — rendered on the fixed surfaces
-            (elevation lives on the opaque promoShadow wrapper; the alpha
-            fill + 1px alpha border stay on the elevation-free inner, so no
-            dark silhouette and the border renders at its true 1px). */}
+            Gold "ad" card matching the Subscription-plan border family:
+            elevation lives on the OPAQUE promoShadow wrapper, while the
+            alpha-tinted fill + 1px alpha border sit on an elevation-free
+            inner (Android draws elevation through translucent fills as a
+            dark silhouette, which used to read as a black overlay). */}
         <View style={styles.promoShadow}>
           <View style={styles.promoCard}>
             <View style={styles.promoBadge}>
-              <TabBarIcon name="zap" color={colors.goldDark} size={20} />
+              <TabBarIcon name="zap" color={colors.goldDark} size={19} />
             </View>
-            <View style={styles.promoMain}>
+            <View style={styles.promoBody}>
               <Text style={styles.promoEyebrow}>Featured</Text>
               <Text style={styles.promoTitle}>Boost your profile</Text>
-              <Text style={styles.promoCopy}>
-                Get a labeled “Featured” placement at the top of employer
-                searches for 7 days.
+              <Text style={styles.promoCopy} numberOfLines={2}>
+                Top of employer searches · 7 days · KES 100.
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                android_ripple={{ color: withAlpha(colors.white, 0.16) }}
-                style={({ pressed }) => [
-                  styles.promoCta,
-                  pressed && styles.tilePressed,
-                ]}
-                onPress={() =>
-                  navigation.navigate("MpesaCheckout", {
-                    plan: "profile_boost",
-                    label: "Profile boost — 7 days featured",
-                  })
-                }
-              >
-                <Text style={styles.promoCtaText}>
-                  Boost — KES 100 / 7 days
-                </Text>
-              </Pressable>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              android_ripple={{ color: withAlpha(colors.ink, 0.12) }}
+              style={({ pressed }) => [
+                styles.promoCta,
+                pressed && styles.tilePressed,
+              ]}
+              onPress={() =>
+                navigation.navigate("MpesaCheckout", {
+                  plan: "profile_boost",
+                  label: "Profile boost — 7 days featured",
+                })
+              }
+            >
+              <Text style={styles.promoCtaText}>Boost now</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -741,11 +738,10 @@ const styles = StyleSheet.create({
     color: withAlpha(colors.cream, 0.82),
   },
 
-  /* ---- Featured / boost promo — initial layout, fixed rendering ----
-     promoShadow carries elevation on an OPAQUE fill; promoCard keeps the
-     translucent gold fill + 1px alpha border elevation-free (true 1px
-     border, no dark silhouette). Inner layout = the original 47-a card:
-     badge | eyebrow / title / copy + full-price CTA. */
+  /* ---- Featured / boost promo — gold alpha-border card ----
+     promoShadow carries the elevation on an OPAQUE fill; promoCard keeps
+     the translucent gold fill + 1px alpha border elevation-free so the
+     border renders at its true 1px and no dark silhouette shows through. */
   promoShadow: {
     borderRadius: 20,
     marginBottom: 14,
@@ -758,6 +754,8 @@ const styles = StyleSheet.create({
   },
   promoCard: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: withAlpha(colors.gold, 0.1),
     borderWidth: 1,
     borderColor: withAlpha(colors.gold, 0.35),
@@ -765,49 +763,49 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   promoBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.gold, 0.2),
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.32),
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  promoMain: {
+  promoBody: {
     flex: 1,
   },
   promoEyebrow: {
     color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   promoTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: "800",
+    letterSpacing: -0.2,
   },
   promoCopy: {
     color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 11.5,
+    lineHeight: 16,
     fontWeight: "600",
-    marginTop: 4,
+    marginTop: 3,
   },
   promoCta: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    minHeight: 40,
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
   },
   promoCtaText: {
-    color: colors.white,
+    color: colors.ink,
     fontSize: 13,
     fontWeight: "800",
   },

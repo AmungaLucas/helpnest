@@ -684,14 +684,14 @@ export default function EmployerHomeScreen() {
         )}
 
         {/* ---------- Featured promo: boost a job ----------
-            INITIAL layout restored (badge | eyebrow/title/copy + chevron) on
-            the fixed rendering — elevation on the OPAQUE boostShadow
-            wrapper, alpha fill + 1px alpha border on the elevation-free
-            inner (no dark silhouette through the tint). */}
+            Gold "ad" card matching the maid-side Featured promo and the
+            Subscription-plan border family — elevation on the OPAQUE
+            boostShadow wrapper, alpha fill + 1px alpha border on the
+            elevation-free inner (no dark silhouette through the tint). */}
         <View style={styles.boostShadow}>
           <Pressable
             accessibilityRole="button"
-            android_ripple={{ color: withAlpha(colors.gold, 0.12) }}
+            android_ripple={{ color: withAlpha(colors.gold, 0.14) }}
             style={({ pressed }) => [
               styles.boostStrip,
               pressed && styles.pressedDim,
@@ -705,8 +705,7 @@ export default function EmployerHomeScreen() {
               <Text style={styles.boostEyebrow}>Featured</Text>
               <Text style={styles.boostTitle}>Get more applicants</Text>
               <Text style={styles.boostCopy}>
-                Boost any job with Urgent (24h) or Spotlight placement from My
-                Jobs.
+                Urgent (24h) or Spotlight placement from My Jobs.
               </Text>
             </View>
             <TabBarIcon name="chevron-right" color={colors.goldDark} size={16} />
@@ -1189,12 +1188,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ---- Featured promo: boost a job — initial layout, fixed rendering ----
+  /* ---- Featured promo: boost a job — gold alpha-border card ----
      boostShadow carries elevation on an OPAQUE fill; boostStrip keeps the
-     translucent gold fill + 1px alpha border elevation-free (true 1px
-     border, no dark silhouette). Inner metrics = the original 47-a strip. */
+     translucent gold fill + 1px alpha border elevation-free so the border
+     renders true and no dark silhouette bleeds through the tint. */
   boostShadow: {
-    borderRadius: 18,
+    borderRadius: 20,
     marginBottom: 16,
     backgroundColor: colors.white,
     shadowColor: colors.ink,
@@ -1209,17 +1208,19 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.gold, 0.1),
     borderWidth: 1,
     borderColor: withAlpha(colors.gold, 0.35),
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingLeft: 14,
-    paddingRight: 10,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingLeft: 16,
+    paddingRight: 14,
     gap: 12,
   },
   boostBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.gold, 0.2),
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.32),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1230,18 +1231,19 @@ const styles = StyleSheet.create({
     color: colors.goldDark,
     fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
-    marginBottom: 1,
+    marginBottom: 2,
   },
   boostTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: "800",
+    letterSpacing: -0.2,
   },
   boostCopy: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11.5,
     lineHeight: 16,
     fontWeight: "600",
     marginTop: 3,
