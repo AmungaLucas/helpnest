@@ -64,11 +64,16 @@ export default function AccountStatusScreen() {
         <View
           style={[
             styles.badge,
-            { backgroundColor: isBanned ? withAlpha(colors.danger, 0.1) : withAlpha(colors.gold, 0.14) },
+            {
+              backgroundColor: isBanned ? withAlpha(colors.danger, 0.1) : withAlpha(colors.gold, 0.14),
+              borderColor: isBanned ? withAlpha(colors.danger, 0.18) : withAlpha(colors.gold, 0.28),
+            },
           ]}
         >
+          {/* "slash" isn't in the approved TabBarIcon set — "user-x" carries
+              the blocked-account semantics on the sanctioned list. */}
           <TabBarIcon
-            name={isBanned ? "slash" : "clock"}
+            name={isBanned ? "user-x" : "clock"}
             color={isBanned ? colors.danger : colors.goldDark}
             size={30}
           />
@@ -154,7 +159,7 @@ export default function AccountStatusScreen() {
             style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
             onPress={signOut}
           >
-            <TabBarIcon name="log-out" color={colors.textMuted} size={16} />
+            <TabBarIcon name="x" color={colors.textMuted} size={16} />
             <Text style={styles.signOutText}>Sign out of this device</Text>
           </Pressable>
         </View>
@@ -175,17 +180,18 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 22,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
   },
   title: {
-    fontSize: 24,
+    fontSize: 23,
     fontWeight: "800",
     color: colors.ink,
     textAlign: "center",
     marginTop: 16,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   lede: {
     fontSize: 14,
@@ -195,15 +201,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   noteBox: {
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     marginTop: 14,
   },
   noteText: { fontSize: 13, fontWeight: "700", lineHeight: 19 },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 20,
     marginTop: 18,
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
@@ -212,14 +220,15 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   eyebrow: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 1.2,
+    textTransform: "uppercase",
     color: colors.goldDark,
     marginBottom: 6,
   },
   cardTitle: {
-    fontSize: 17,
+    fontSize: 17.5,
     fontWeight: "800",
     color: colors.ink,
     marginBottom: 6,
@@ -233,7 +242,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1.5,
     borderColor: colors.mist,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.cream,
     padding: 12,
     minHeight: 96,
@@ -254,7 +263,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
     marginTop: 12,
   },
@@ -271,7 +280,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    minHeight: 48,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    borderRadius: 14,
+    paddingVertical: 12,
   },
   signOutText: {
     color: colors.textMuted,

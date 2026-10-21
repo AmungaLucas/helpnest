@@ -4,7 +4,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../../context/AuthContext";
 import { listWorkers } from "../../services/workersService";
 import Chip from "../../components/ui/Chip";
+import EmptyState from "../../components/ui/EmptyState";
 import SignedImage from "../../components/media/SignedImage";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { formatDistance } from "../../utils/geo";
@@ -168,11 +168,7 @@ export default function FindHelpScreen() {
           />
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsRow}
-        >
+        <View style={styles.chipsRow}>
           {hasCoords ? (
             <Chip
               label="Near me"
@@ -193,7 +189,7 @@ export default function FindHelpScreen() {
               onPress={() => setService(option.value)}
             />
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       {loading ? (
@@ -202,22 +198,21 @@ export default function FindHelpScreen() {
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <View style={styles.emptyBadge}>
-            <TabBarIcon name="alert-triangle" color={colors.brand} size={24} />
-          </View>
-          <Text style={styles.emptyTitle}>Something went wrong</Text>
-          <Text style={styles.emptyText}>{error}</Text>
+          <EmptyState
+            icon="alert-triangle"
+            tone="danger"
+            title="Something went wrong"
+            body={error}
+          />
         </View>
       ) : workers.length === 0 ? (
         <View style={styles.center}>
-          <View style={styles.emptyBadge}>
-            <TabBarIcon name="users" color={colors.brand} size={24} />
-          </View>
-          <Text style={styles.emptyTitle}>No workers yet</Text>
-          <Text style={styles.emptyText}>
-            Worker profiles will appear here as domestic workers complete them.
-            Try clearing your search.
-          </Text>
+          <EmptyState
+            icon="users"
+            tone="brand"
+            title="No workers yet"
+            body="Worker profiles will appear here as domestic workers complete them. Try clearing your search."
+          />
         </View>
       ) : (
         <FlatList
@@ -350,24 +345,31 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 23,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
     marginTop: 4,
     marginBottom: 14,
   },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.mist,
+    backgroundColor: colors.white,
     borderRadius: 16,
-    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    minHeight: 50,
     paddingHorizontal: 14,
     gap: 9,
     marginBottom: 12,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   search: {
     flex: 1,
@@ -377,7 +379,8 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   chipsRow: {
-    paddingRight: 20,
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   list: {
     padding: 20,
@@ -399,7 +402,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardPressed: {
-    backgroundColor: colors.mist,
+    opacity: 0.88,
   },
   avatar: {
     width: 48,
@@ -485,7 +488,7 @@ const styles = StyleSheet.create({
   rateBox: {
     alignItems: "center",
     backgroundColor: withAlpha(colors.brand, 0.1),
-    borderRadius: 12,
+    borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -508,27 +511,5 @@ const styles = StyleSheet.create({
   },
   footerSpinner: {
     paddingVertical: 18,
-  },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
-    textAlign: "center",
   },
 });

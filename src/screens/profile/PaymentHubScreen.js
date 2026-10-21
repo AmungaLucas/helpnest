@@ -16,7 +16,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { useAuth } from "../../context/AuthContext";
 import { fetchHistory, requestRefund } from "../../services/paymentsService";
-import HamburgerButton from "../../components/ui/HamburgerButton";
+import ScreenHeader from "../../components/ui/ScreenHeader";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -118,16 +118,17 @@ export default function PaymentHubScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <View style={styles.menuRow}>
-        <HamburgerButton />
-      </View>
+      <ScreenHeader
+        leading="hamburger"
+        eyebrow="Billing"
+        title="Subscription & payments"
+        tone="canvas"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.eyebrow}>Billing</Text>
-        <Text style={styles.title}>Subscription & payments</Text>
         <Text style={styles.subtitle}>
           Pay via M-Pesa STK push — the request goes straight to your phone.
         </Text>
@@ -338,47 +339,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  menuRow: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 10,
-    backgroundColor: colors.cream,
-  },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 2,
     paddingBottom: 28,
   },
   pressed: {
     opacity: 0.88,
   },
-  eyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 26,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 6,
-    marginBottom: 22,
+    marginBottom: 20,
   },
   planCard: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 18,
+    padding: 20,
     marginBottom: 16,
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
@@ -395,8 +375,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   planIcon: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 13,
     backgroundColor: withAlpha(colors.brand, 0.1),
     alignItems: "center",
@@ -405,10 +385,12 @@ const styles = StyleSheet.create({
   },
   planIconGold: {
     backgroundColor: withAlpha(colors.gold, 0.18),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.45),
   },
   planLabel: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17.5,
     fontWeight: "800",
     flex: 1,
     marginRight: 10,
@@ -420,8 +402,8 @@ const styles = StyleSheet.create({
   },
   planBlurb: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 21,
     marginBottom: 16,
   },
   planButton: {
@@ -439,7 +421,7 @@ const styles = StyleSheet.create({
   },
   planButtonText: {
     color: colors.brand,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
   },
   planButtonTextPrimary: {
@@ -462,7 +444,7 @@ const styles = StyleSheet.create({
   },
   purchasesTitle: {
     color: colors.ink,
-    fontSize: 16.5,
+    fontSize: 17.5,
     fontWeight: "800",
     letterSpacing: -0.2,
   },
@@ -520,10 +502,10 @@ const styles = StyleSheet.create({
   },
   refundSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 22,
-    paddingBottom: 34,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 24,
+    paddingBottom: 40,
   },
   refundGrabber: {
     alignSelf: "center",
@@ -535,8 +517,9 @@ const styles = StyleSheet.create({
   },
   refundSheetTitle: {
     color: colors.ink,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   refundSheetSub: {
     color: colors.brand,
@@ -554,7 +537,7 @@ const styles = StyleSheet.create({
   refundSheetInput: {
     borderWidth: 1,
     borderColor: colors.mistDark,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.cream,
     padding: 14,
     minHeight: 90,
@@ -571,8 +554,8 @@ const styles = StyleSheet.create({
   refundSheetBtn: {
     backgroundColor: colors.brand,
     borderRadius: 14,
+    minHeight: 48,
     paddingHorizontal: 20,
-    paddingVertical: 13,
     minWidth: 110,
     alignItems: "center",
     justifyContent: "center",
@@ -580,7 +563,7 @@ const styles = StyleSheet.create({
   refundSheetBtnText: {
     color: colors.white,
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 15,
   },
   refundSheetBtnGhost: {
     backgroundColor: colors.mist,

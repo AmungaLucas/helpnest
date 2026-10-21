@@ -338,7 +338,9 @@ export default function AccountScreen() {
           <View style={[styles.card, CARD_SHADOW]}>
             <View style={styles.notifRow}>
               <View style={styles.menuIcon}>
-                <TabBarIcon name="mail" color={colors.brand} size={20} />
+                {/* "mail" isn't in the TabBarIcon set — "send" carries the
+                    email-fanout semantics on the approved icon list. */}
+                <TabBarIcon name="send" color={colors.brand} size={20} />
               </View>
               <View style={styles.menuMain}>
                 <Text style={styles.menuTitle}>Email updates</Text>
@@ -498,6 +500,7 @@ export default function AccountScreen() {
           disabled={signingOut}
           android_ripple={{ color: withAlpha(colors.danger, 0.08) }}
         >
+          <TabBarIcon name="user-x" color={colors.danger} size={16} />
           <Text style={styles.signOutText}>
             {signingOut ? "Signing out…" : "Sign out"}
           </Text>
@@ -599,10 +602,10 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 18,
+    padding: 20,
     marginBottom: 24,
   },
   cardTappable: {
@@ -638,7 +641,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: colors.ink,
-    fontSize: 16.5,
+    fontSize: 17.5,
     fontWeight: "800",
     letterSpacing: -0.2,
   },
@@ -661,13 +664,14 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: "700",
   },
   menuNote: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 12.5,
     lineHeight: 17,
+    fontWeight: "600",
     marginTop: 2,
   },
   menuChevron: {
@@ -706,8 +710,8 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderWidth: 1,
     borderColor: colors.brand,
-    borderRadius: 14,
-    minHeight: 48,
+    borderRadius: 16,
+    minHeight: 50,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
@@ -727,12 +731,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   signOutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     borderWidth: 1,
     borderColor: colors.danger,
     borderRadius: 16,
-    minHeight: 52,
-    alignItems: "center",
-    justifyContent: "center",
+    minHeight: 54,
     overflow: "hidden",
   },
   signOutText: {

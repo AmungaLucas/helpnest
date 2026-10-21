@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 
-import HamburgerButton from "../../components/ui/HamburgerButton";
+import ScreenHeader from "../../components/ui/ScreenHeader";
+import GradientBanner from "../../components/ui/GradientBanner";
+import EmptyState from "../../components/ui/EmptyState";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { getMyReferrals } from "../../services/referralsService";
 import { colors, withAlpha } from "../../theme/colors";
@@ -56,32 +58,27 @@ export default function ReferralScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <View style={styles.menuRow}>
-        <HamburgerButton />
-      </View>
+      {/* v3 drawer-screen bar: hamburger + eyebrow + title (replaces the
+          bespoke hamburger row + in-body title block). */}
+      <ScreenHeader
+        leading="hamburger"
+        eyebrow="Invite friends"
+        title="Earn with referrals"
+        tone="canvas"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleRow}>
-          <View style={styles.titleIcon}>
-            <TabBarIcon name="users" color={colors.brand} size={20} />
-          </View>
-          <View style={styles.titleMain}>
-            <Text style={styles.eyebrow}>Invite friends</Text>
-            <Text style={styles.title}>Earn with referrals</Text>
-          </View>
-        </View>
-
         {loading ? (
           <Text style={styles.note}>Loading your invite code…</Text>
         ) : referral?.code ? (
           <>
-            <Text style={styles.note}>{referral.rewardText}</Text>
-
-            <View style={styles.codeRow}>
-              <Text style={styles.code}>{referral.code}</Text>
+            {/* The screen's one GradientBanner — invite-code hero. */}
+            <GradientBanner style={styles.hero}>
+              <Text style={styles.heroEyebrow}>Your invite code</Text>
+              <Text style={styles.heroCode}>{referral.code}</Text>
               <Pressable
                 accessibilityRole="button"
                 style={({ pressed }) => [
@@ -89,11 +86,15 @@ export default function ReferralScreen() {
                   pressed && styles.pressed,
                 ]}
                 onPress={shareInvite}
+                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
               >
                 <Text style={styles.shareButtonText}>Share code</Text>
               </Pressable>
-            </View>
+            </GradientBanner>
 
+            <Text style={styles.note}>{referral.rewardText}</Text>
+
+            {/* Cream stats strip with hairline dividers. */}
             <View style={styles.statsRow}>
               <Stat value={referral.stats?.invited || 0} label="invited" />
               <View style={styles.statDivider} />
@@ -107,12 +108,34 @@ export default function ReferralScreen() {
             </View>
 
             {pendingKes > 0 && (
-              <Text style={styles.pendingNote}>
-                KES {pendingKes.toLocaleString("en-KE")} on the way — payouts
-                go out to M-Pesa once your balance reaches KES{" "}
-                {Number(referral.minPayoutKes || 0).toLocaleString("en-KE")}.
-              </Text>
+              <View style={styles.pendingPanel}>
+                <TabBarIcon name="clock" color={colors.goldDark} size={16} />
+                <Text style={styles.pendingNote}>
+                  KES {pendingKes.toLocaleString("en-KE")} on the way — payouts
+                  go out to M-Pesa once your balance reaches KES{" "}
+                  {Number(referral.minPayoutKes || 0).toLocaleString("en-KE")}.
+                </Text>
+              </View>
             )}
+
+            <View style={styles.howCard}>
+              <Text style={styles.eyebrow}>How it works</Text>
+              <HowStep
+                n="1"
+                title="Share your code"
+                body="Send it to friends who need help around the house — or who are looking for work."
+              />
+              <HowStep
+                n="2"
+                title="They sign up"
+                body="They enter your code when creating their HelpNest account."
+              />
+              <HowStep
+                n="3"
+                title="You earn"
+                body="Your reward lands here once they complete their first paid action."
+              />
+            </View>
 
             <Text style={styles.footnote}>
               Rewards are credited when someone you invited completes their
@@ -120,11 +143,12 @@ export default function ReferralScreen() {
             </Text>
           </>
         ) : (
-          <Text style={styles.note}>
-            Your invite code isn't ready yet. Pull the screen again in a
-            moment — if it stays empty, contact support and we'll sort it
-            out.
-          </Text>
+          <EmptyState
+            icon="users"
+            tone="gold"
+            title="No invite code yet"
+            body={"Your invite code isn't ready yet. Pull the screen again in a moment — if it stays empty, contact support and we'll sort it out."}
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -142,15 +166,32 @@ function Stat({ value, label, strong }) {
   );
 }
 
+function HowStep({ n, title, body }) {
+  return (
+    <View style={styles.stepRow}>
+      <View style={styles.stepNumWrap}>
+        <Text style={styles.stepNum}>{n}</Text>
+      </View>
+      <View style={styles.stepMain}>
+        <Text style={styles.stepTitle}>{title}</Text>
+        <Text style={styles.stepBody}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+// Soft card lift shared by the white surfaces on the cream canvas.
+const CARD_SHADOW = {
+  shadowColor: colors.ink,
+  shadowOpacity: 0.05,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 1,
+};
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.cream,
-  },
-  menuRow: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 10,
     backgroundColor: colors.cream,
   },
   scroll: {
@@ -161,92 +202,56 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.88,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  titleIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: withAlpha(colors.brand, 0.1),
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  titleMain: {
-    flex: 1,
-  },
-  eyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: -0.4,
-  },
   note: {
     color: colors.textMuted,
     fontSize: 13.5,
     lineHeight: 20,
     marginBottom: 18,
   },
-  codeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.brand, 0.25),
-    padding: 14,
+  hero: {
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 16,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
   },
-  code: {
-    color: colors.brand,
-    fontSize: 22,
+  heroEyebrow: {
+    color: withAlpha(colors.white, 0.72),
+    fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 2.5,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  heroCode: {
+    color: colors.white,
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: 5,
+    marginBottom: 14,
   },
   shareButton: {
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    minHeight: 44,
-    paddingHorizontal: 16,
+    alignSelf: "flex-start",
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    minHeight: 48,
+    paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   shareButtonText: {
-    color: colors.white,
-    fontSize: 13,
+    color: colors.brand,
+    fontSize: 14,
     fontWeight: "800",
   },
   statsRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    backgroundColor: colors.white,
-    borderRadius: 16,
+    backgroundColor: colors.cream,
     borderWidth: 1,
-    borderColor: colors.mist,
-    paddingVertical: 14,
-    marginBottom: 12,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
+    borderColor: colors.linen,
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginBottom: 14,
   },
   stat: {
     flex: 1,
@@ -275,12 +280,72 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 3,
   },
+  pendingPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: withAlpha(colors.gold, 0.12),
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
   pendingNote: {
+    flex: 1,
     color: colors.goldDark,
     fontSize: 12.5,
     lineHeight: 19,
     fontWeight: "600",
-    marginBottom: 14,
+  },
+  howCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 20,
+    marginBottom: 16,
+    ...CARD_SHADOW,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 14,
+  },
+  stepNumWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: colors.cloud,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  stepNum: {
+    color: colors.ink,
+    fontSize: 12.5,
+    fontWeight: "800",
+  },
+  stepMain: {
+    flex: 1,
+  },
+  stepTitle: {
+    color: colors.ink,
+    fontSize: 14.5,
+    fontWeight: "700",
+  },
+  stepBody: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 2,
   },
   footnote: {
     color: colors.textFaint,
