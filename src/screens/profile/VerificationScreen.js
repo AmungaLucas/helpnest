@@ -465,7 +465,7 @@ export default function VerificationScreen() {
               body={loadError}
             />
           ) : null}
-
+{/* ---------- Household verification Banner---------- */} 
           {/* Account & verification — phone/email status sits next to the ID
               flow here. (Moved from the profile overview's Trust & safety
               card; email verification opens the VerifyEmail flow.) */}
