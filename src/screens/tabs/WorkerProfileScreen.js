@@ -1,12 +1,15 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +17,7 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 
 import { useAuth } from "../../context/AuthContext";
 import { getWorker } from "../../services/workersService";
+import { fileReport, REPORT_CATEGORIES } from "../../services/reportsService";
 import Chip from "../../components/ui/Chip";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import SignedImage from "../../components/media/SignedImage";
@@ -45,6 +49,12 @@ export default function WorkerProfileScreen() {
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Report sheet (PRD §10.2) — flag this profile for human moderation.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState(null);
+  const [reportNote, setReportNote] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
 
   // Refetch whenever the screen regains focus — after an M-Pesa unlock or
   // chat purchase succeeds and the user comes back, contacts + chat
@@ -89,6 +99,34 @@ export default function WorkerProfileScreen() {
   const handleChatPress = useCallback(() => {
     openChat();
   }, [openChat]);
+
+  const submitReport = useCallback(async () => {
+    if (reportBusy || !reportCategory || reportNote.trim().length < 10) return;
+    setReportBusy(true);
+    try {
+      const res = await fileReport({
+        targetUserId: worker.id,
+        category: reportCategory,
+        note: reportNote.trim(),
+      });
+      setReportOpen(false);
+      setReportCategory(null);
+      setReportNote("");
+      Alert.alert(
+        "Report received",
+        res?.message ||
+          "A human reviews every report, and we'll notify you once it's handled.",
+        [{ text: "OK" }]
+      );
+    } catch (err) {
+      Alert.alert(
+        "Could not send report",
+        err?.message || "Please try again in a moment."
+      );
+    } finally {
+      setReportBusy(false);
+    }
+  }, [reportBusy, reportCategory, reportNote, worker]);
 
   if (loading) {
     return (
@@ -337,6 +375,19 @@ export default function WorkerProfileScreen() {
             </>
           )}
         </View>
+
+        {/* ---- Report (PRD §10.2) ---- */}
+        {user && worker.id !== user.id ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Report this profile"
+            style={({ pressed }) => [styles.reportRow, pressed && styles.pressed]}
+            onPress={() => setReportOpen(true)}
+          >
+            <TabBarIcon name="flag" color={colors.textFaint} size={14} />
+            <Text style={styles.reportRowText}>Report this profile</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       {/* ---- Sticky gated chat CTA (employers only) ---- */}
@@ -358,6 +409,77 @@ export default function WorkerProfileScreen() {
           </Pressable>
         </View>
       ) : null}
+
+      {/* ---- Report sheet (PRD §10.2) ---- */}
+      <Modal
+        transparent
+        visible={reportOpen}
+        animationType="slide"
+        onRequestClose={() => setReportOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable style={styles.sheetBackdropTouch} onPress={() => setReportOpen(false)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetGrabber} />
+            <Text style={styles.sheetTitle}>Report {firstName}'s profile</Text>
+            <Text style={styles.sheetSub}>
+              Tell us what's wrong. Reports go to a human moderation queue and
+              stay anonymous.
+            </Text>
+
+            <View style={styles.reportChips}>
+              {REPORT_CATEGORIES.map((c) => (
+                <Chip
+                  key={c.value}
+                  label={c.label}
+                  selected={reportCategory === c.value}
+                  onPress={() => setReportCategory(c.value)}
+                />
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.reportInput}
+              value={reportNote}
+              onChangeText={(t) => setReportNote(t.slice(0, 1000))}
+              multiline
+              placeholder="Describe what happened (at least 10 characters)…"
+              placeholderTextColor={colors.textFaint}
+            />
+
+            <View style={styles.sheetButtons}>
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.sheetCancel,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => setReportOpen(false)}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                android_ripple={{ color: withAlpha(colors.white, 0.18) }}
+                disabled={reportBusy || !reportCategory || reportNote.trim().length < 10}
+                style={({ pressed }) => [
+                  styles.sheetSubmit,
+                  (reportBusy || !reportCategory || reportNote.trim().length < 10) &&
+                    styles.sheetSubmitDisabled,
+                  pressed && styles.pressed,
+                ]}
+                onPress={submitReport}
+              >
+                {reportBusy ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <Text style={styles.sheetSubmitText}>Send report</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -744,5 +866,105 @@ const styles = StyleSheet.create({
     color: colors.brand,
     fontSize: 14,
     fontWeight: "800",
+  },
+
+  /* ---- Report (PRD §10.2) ---- */
+  reportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    marginTop: 2,
+  },
+  reportRowText: {
+    color: colors.textFaint,
+    fontSize: 12.5,
+    fontWeight: "600",
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: withAlpha(colors.ink, 0.45),
+    justifyContent: "flex-end",
+  },
+  sheetBackdropTouch: { flex: 1 },
+  sheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
+  sheetGrabber: {
+    alignSelf: "center",
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.mistDark,
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  sheetSub: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  reportChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 4,
+  },
+  reportInput: {
+    borderWidth: 1.5,
+    borderColor: colors.mist,
+    borderRadius: 14,
+    backgroundColor: colors.cream,
+    padding: 12,
+    minHeight: 88,
+    textAlignVertical: "top",
+    fontSize: 14,
+    color: colors.ink,
+    marginTop: 8,
+  },
+  sheetButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  sheetCancel: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetCancelText: {
+    color: colors.textMuted,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  sheetSubmit: {
+    flex: 2,
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  sheetSubmitDisabled: { opacity: 0.45 },
+  sheetSubmitText: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: 14,
   },
 });

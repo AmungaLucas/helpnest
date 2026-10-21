@@ -16,8 +16,53 @@ function walk(dir, out = []) {
 
 const bare = new Set();
 
+// Comment stripper that respects string/template literals, so prose like
+// `throws "Creating blobs from 'ArrayBuffer'..."` in a comment can never be
+// mistaken for a bare import (regex-literal edge cases are accepted; the
+// esbuild syntax gate in ci_gate.mjs covers real parse errors).
+function stripJsComments(src) {
+  let out = "";
+  let i = 0;
+  let mode = "code";
+  let quote = null;
+  while (i < src.length) {
+    const c = src[i];
+    const n = src[i + 1];
+    if (mode === "code") {
+      if (c === '"' || c === "'" || c === "`") {
+        quote = c;
+        out += c;
+        i += 1;
+        mode = "str";
+        continue;
+      }
+      if (c === "/" && n === "/") { mode = "line"; i += 2; continue; }
+      if (c === "/" && n === "*") { mode = "block"; i += 2; continue; }
+      out += c;
+      i += 1;
+      continue;
+    }
+    if (mode === "str") {
+      if (c === "\\") { out += src.slice(i, i + 2); i += 2; continue; }
+      if (c === quote) { mode = "code"; quote = null; }
+      out += c;
+      i += 1;
+      continue;
+    }
+    if (mode === "line") {
+      if (c === "\n") { mode = "code"; out += c; }
+      i += 1;
+      continue;
+    }
+    if (c === "*" && n === "/") { mode = "code"; out += " "; i += 2; continue; }
+    if (c === "\n") out += "\n";
+    i += 1;
+  }
+  return out;
+}
+
 for (const f of walk(SRC).concat([path.join(APP, "App.js"), path.join(APP, "index.js")])) {
-  const src = fs.readFileSync(f, "utf8");
+  const src = stripJsComments(fs.readFileSync(f, "utf8"));
   for (const m of src.matchAll(/(?:from\s*|require\()\s*["']([^"']+)["']/g)) {
     const spec = m[1];
     if (!spec.startsWith(".") && !spec.startsWith("/")) bare.add(spec);
