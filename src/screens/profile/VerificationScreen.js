@@ -524,37 +524,48 @@ export default function VerificationScreen() {
             )}
           </View>
 
-          <View style={[styles.statusCard, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-            <View style={styles.statusHead}>
-              <TabBarIcon
-                name={kycStatus === "verified" ? "shield" : kycStatus === "pending" ? "clock" : "user"}
-                color={theme.text}
-                size={22}
-              />
-              <Text style={[styles.statusTitle, { color: theme.text }]}>
-                {kycStatus === "verified" && "You're verified"}
-                {kycStatus === "pending" && "Under review"}
-                {kycStatus === "rejected" && "More info needed"}
-                {kycStatus === "unverified" && "Not verified yet"}
-                {kycStatus === "suspended" && "Account suspended"}
+          {/* Elevation lives on the OPAQUE statusShadow wrapper — Android
+              paints the elevation silhouette through translucent fills, so
+              the alpha theme.bg fill + alpha border stay on the elevation-
+              free inner card (same fix family as the Task 49 promo cards). */}
+          <View style={styles.statusShadow}>
+            <View
+              style={[
+                styles.statusCard,
+                { backgroundColor: theme.bg, borderColor: theme.border },
+              ]}
+            >
+              <View style={styles.statusHead}>
+                <TabBarIcon
+                  name={kycStatus === "verified" ? "shield" : kycStatus === "pending" ? "clock" : "user"}
+                  color={theme.text}
+                  size={22}
+                />
+                <Text style={[styles.statusTitle, { color: theme.text }]}>
+                  {kycStatus === "verified" && "You're verified"}
+                  {kycStatus === "pending" && "Under review"}
+                  {kycStatus === "rejected" && "More info needed"}
+                  {kycStatus === "unverified" && "Not verified yet"}
+                  {kycStatus === "suspended" && "Account suspended"}
+                </Text>
+              </View>
+
+              <Text style={[styles.statusBody, { color: theme.text }]}>
+                {kycStatus === "verified" && roleCopy.verifiedBlurb}
+                {kycStatus === "pending" &&
+                  "Our team is reviewing your documents right now. This usually takes less than 24 hours — this screen updates by itself the moment a decision is made."
+                }
+                {kycStatus === "rejected" &&
+                  "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Tap a flagged document to retake it, then resubmit."
+                }
+                {kycStatus === "unverified" &&
+                  "Upload your national ID (both sides) and a clear selfie. We review every submission within 24 hours, and your documents stay private — only HelpNest reviewers can see them."
+                }
+                {kycStatus === "suspended" &&
+                  "Your account is currently suspended. Contact support to resolve this."
+                }
               </Text>
             </View>
-
-            <Text style={[styles.statusBody, { color: theme.text }]}>
-              {kycStatus === "verified" && roleCopy.verifiedBlurb}
-              {kycStatus === "pending" &&
-                "Our team is reviewing your documents right now. This usually takes less than 24 hours — this screen updates by itself the moment a decision is made."
-              }
-              {kycStatus === "rejected" &&
-                "One or more of your documents could not be accepted — the reviewer's reason is shown next to each document below. Tap a flagged document to retake it, then resubmit."
-              }
-              {kycStatus === "unverified" &&
-                "Upload your national ID (both sides) and a clear selfie. We review every submission within 24 hours, and your documents stay private — only HelpNest reviewers can see them."
-              }
-              {kycStatus === "suspended" &&
-                "Your account is currently suspended. Contact support to resolve this."
-              }
-            </Text>
           </View>
 
           {/* Fast-track (PRD §4.8) — optional 6-hour priority review, offered
@@ -1062,16 +1073,25 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginBottom: 18,
   },
-  statusCard: {
+  /* ---- Status card ("You're verified" / "Under review" / ...) ----
+     statusShadow owns the elevation on an OPAQUE white fill; statusCard
+     keeps the translucent theme.bg + alpha border elevation-free so the
+     border renders at its true 1px and no dark silhouette bleeds through
+     the tint (Android draws elevation through translucent fills). */
+  statusShadow: {
     borderRadius: 20,
-    borderWidth: 1,
-    padding: 20,
     marginBottom: 16,
+    backgroundColor: colors.white,
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 1,
+  },
+  statusCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
   },
   statusHead: {
     flexDirection: "row",
