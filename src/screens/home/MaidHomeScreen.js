@@ -19,6 +19,27 @@ import TabBarIcon from "../../components/ui/TabBarIcon";
 import GradientBanner from "../../components/ui/GradientBanner";
 import { colors, withAlpha } from "../../theme/colors";
 
+// Maid-side catalog (PRD v1.1 §5.1; amounts looked up server-side at push
+// time). Basic/Gold are fixed 7-day periods (§8.1); a single application
+// stays KES 50. Tile rendering mirrors the employer Subscription plans.
+const MAID_PLAN_TILES = [
+  {
+    id: "maid_basic",
+    name: "Basic",
+    price: 199,
+    per: "3 applications · 7 days",
+    label: "Basic — 3 applications",
+  },
+  {
+    id: "maid_gold",
+    name: "Gold",
+    price: 349,
+    per: "10 applications · 7 days",
+    label: "Gold — 10 applications",
+    best: true,
+  },
+];
+
 // Maid home (PRD §5.2): get the worker search-ready and into work fast.
 export default function MaidHomeScreen() {
   const navigation = useNavigation();
@@ -150,12 +171,95 @@ export default function MaidHomeScreen() {
               navigation.navigate("ProfileTab", { screen: "Skills" })
             }
           >
+<<<<<<< HEAD
             <View style={styles.readinessHeader}>
               <View style={styles.readinessHeaderLeft}>
                 <Text style={styles.eyebrow}>SEARCH READINESS</Text>
                 <Text style={styles.readinessTitle}>
                   Complete your profile
                 </Text>
+=======
+            <View style={[styles.actionIcon, styles.actionIconOnBrand]}>
+              <TabBarIcon name="search" color={colors.white} size={18} />
+            </View>
+            <Text style={[styles.actionTitle, styles.actionTitleLight]}>
+              Find jobs
+            </Text>
+            <Text style={[styles.actionText, styles.actionTextLight]}>
+              Browse openings near you
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+            style={({ pressed }) => [
+              styles.actionCard,
+              pressed && styles.cardPressed,
+            ]}
+            onPress={() => navigation.navigate("ApplicationsTab")}
+          >
+            <View style={styles.actionIcon}>
+              <TabBarIcon name="file-text" color={colors.brand} size={18} />
+            </View>
+            <Text style={styles.actionTitle}>My applications</Text>
+            <Text style={styles.actionText}>
+              Track what you've applied to
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* ---------- Featured / boost promo (moved from Account) ----------
+            Gold "ad" card matching the Subscription-plan border family:
+            elevation lives on the OPAQUE promoShadow wrapper, while the
+            alpha-tinted fill + 1px alpha border sit on an elevation-free
+            inner (Android draws elevation through translucent fills as a
+            dark silhouette, which used to read as a black overlay). */}
+        <View style={styles.promoShadow}>
+          <View style={styles.promoCard}>
+            <View style={styles.promoBadge}>
+              <TabBarIcon name="zap" color={colors.goldDark} size={19} />
+            </View>
+            <View style={styles.promoBody}>
+              <Text style={styles.promoEyebrow}>Featured</Text>
+              <Text style={styles.promoTitle}>Boost your profile</Text>
+              <Text style={styles.promoCopy} numberOfLines={2}>
+                Top of employer searches · 7 days · KES 100.
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              android_ripple={{ color: withAlpha(colors.ink, 0.12) }}
+              style={({ pressed }) => [
+                styles.promoCta,
+                pressed && styles.tilePressed,
+              ]}
+              onPress={() =>
+                navigation.navigate("MpesaCheckout", {
+                  plan: "profile_boost",
+                  label: "Profile boost — 7 days featured",
+                })
+              }
+            >
+              <Text style={styles.promoCtaText}>Boost now</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <LocationPromptCard />
+
+        {/* ---------- Application plans (PRD §5.1 maid products) ----------
+            Layout mirrored 1:1 from the employer Subscription plans card
+            (PRD §5.2): single-title head with the Active pill, centered
+            plan tiles with the floating solid-gold "Best value" badge, and
+            a centered footnote. Catalog/copy stays maid-side (§5.1). */}
+        <View style={styles.planCard}>
+          <View style={styles.planHead}>
+            <Text style={styles.planTitle}>Get more applications</Text>
+            {ent?.subscription ? (
+              <View style={styles.planActivePill}>
+                <Text style={styles.planActiveText}>Active</Text>
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
               </View>
               <View style={styles.readinessPct}>
                 <Text style={styles.readinessPctText}>{progress}%</Text>
@@ -203,6 +307,7 @@ export default function MaidHomeScreen() {
                 ? "All set — keep your profile fresh. Tap to review."
                 : "Tap to finish the missing bits"}
             </Text>
+<<<<<<< HEAD
           </Pressable>
 
           {/* ---------- Quick actions ---------- */}
@@ -219,6 +324,43 @@ export default function MaidHomeScreen() {
             >
               <View style={[styles.shortcutIcon, styles.shortcutIconOnBrand]}>
                 <TabBarIcon name="search" color={colors.white} size={20} />
+=======
+          ) : (
+            <>
+              <Text style={styles.planCopy}>
+                {ent?.credits?.apply > 0
+                  ? `${ent.credits.apply} application${ent.credits.apply === 1 ? "" : "s"} ready — or grab a weekly bundle:`
+                  : "Your first application is free. After that, bundles keep the search going:"}
+              </Text>
+              <View style={styles.planRow}>
+                {MAID_PLAN_TILES.map((plan) => (
+                  <Pressable
+                    key={plan.id}
+                    accessibilityRole="button"
+                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                    style={({ pressed }) => [
+                      styles.planTile,
+                      plan.best && styles.planTileBest,
+                      pressed && styles.tilePressed,
+                    ]}
+                    onPress={() =>
+                      navigation.navigate("MpesaCheckout", {
+                        plan: plan.id,
+                        label: plan.label,
+                      })
+                    }
+                  >
+                    {plan.best ? (
+                      <View style={styles.planBest}>
+                        <Text style={styles.planBestText}>Best value</Text>
+                      </View>
+                    ) : null}
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    <Text style={styles.planPrice}>KES {plan.price}</Text>
+                    <Text style={styles.planPer}>{plan.per}</Text>
+                  </Pressable>
+                ))}
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
               </View>
               <Text style={[styles.shortcutTitle, styles.shortcutTitleLight]}>
                 Find jobs
@@ -417,6 +559,7 @@ export default function MaidHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
   /* ---- Shell ---- */
   safeArea: {
     flex: 1,
@@ -770,6 +913,12 @@ const styles = StyleSheet.create({
   },
 
   /* ---- Weekly plans (original design) ---- */
+=======
+  /* ---- Application plans — layout mirrored from the employer
+     Subscription plans card (PRD §5.2): centered tiles, floating solid-gold
+     "Best value" badge, muted plan name over a large ink price, centered
+     footnote. planCard keeps marginBottom (tipsCard has marginTop: 0). */
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
   planCard: {
     backgroundColor: colors.white,
     borderRadius: 20,
@@ -786,11 +935,7 @@ const styles = StyleSheet.create({
   planHead: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  planHeadLeft: {
-    flex: 1,
+    gap: 8,
   },
   planEyebrow: {
     color: colors.goldDark,
@@ -802,34 +947,33 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: "800",
+    flex: 1,
   },
   planActivePill: {
-    backgroundColor: withAlpha(colors.brand, 0.12),
+    backgroundColor: withAlpha(colors.brand, 0.14),
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   planActiveText: {
     color: colors.brand,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
   },
   planActiveCopy: {
     color: colors.textMuted,
     fontSize: 12.5,
     lineHeight: 19,
-    fontWeight: "600",
     marginTop: 8,
   },
   planCopy: {
     color: colors.textMuted,
     fontSize: 12.5,
     lineHeight: 19,
-    fontWeight: "600",
-    marginTop: 6,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 14,
   },
   planRow: {
     flexDirection: "row",
@@ -841,50 +985,371 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: "center",
   },
   planTileBest: {
     borderColor: colors.gold,
-    backgroundColor: withAlpha(colors.gold, 0.08),
+    backgroundColor: withAlpha(colors.gold, 0.1),
   },
   planBest: {
-    alignSelf: "flex-start",
-    backgroundColor: withAlpha(colors.gold, 0.16),
+    position: "absolute",
+    top: -9,
+    backgroundColor: colors.gold,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    marginBottom: 6,
   },
   planBestText: {
-    color: colors.goldDark,
-    fontSize: 10,
+    color: colors.white,
+    fontSize: 9.5,
     fontWeight: "800",
   },
   planName: {
-    color: colors.ink,
-    fontSize: 13.5,
+    color: colors.textMuted,
+    fontSize: 12,
     fontWeight: "800",
   },
   planPrice: {
+    color: colors.ink,
+    fontSize: 19,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  planPer: {
+    color: colors.textFaint,
+    fontSize: 10.5,
+    fontWeight: "700",
+    marginTop: 3,
+    textAlign: "center",
+  },
+  planFootnote: {
+    color: colors.textFaint,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 12,
+    textAlign: "center",
+  },
+<<<<<<< HEAD
+=======
+  tilePressed: {
+    opacity: 0.88,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.cream,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: colors.cream,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  brandText: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  headerPill: {
+    backgroundColor: withAlpha(colors.white, 0.16),
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  headerPillText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  bodyScroll: {
+    flex: 1,
+  },
+  body: {
+    padding: 20,
+    paddingBottom: 36,
+  },
+  karibu: {
+    color: colors.ink,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    marginBottom: 6,
+  },
+  lede: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 20,
+  },
+
+  /* ---- Completeness card ---- */
+  progressCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  progressTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  progressTitle: {
+    color: colors.ink,
+    fontSize: 15.5,
+    fontWeight: "800",
+  },
+  progressValue: {
     color: colors.brand,
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  track: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.mist,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  fill: {
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: colors.brand,
+  },
+  /* ---- Completeness chips (2-col grid) ---- */
+  checklist: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  checkChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    width: "48.5%",
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  checkChipDone: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
+  checkChipTodo: {
+    backgroundColor: colors.mist,
+  },
+  checkChipText: {
+    flexShrink: 1,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 15,
+  },
+  checkChipTextDone: {
+    color: colors.ink,
+  },
+  checkChipTextTodo: {
+    color: colors.textMuted,
+  },
+  progressCta: {
+    color: colors.brand,
+    fontSize: 12.5,
     fontWeight: "800",
     marginTop: 2,
   },
-  planPer: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    lineHeight: 15,
-    marginTop: 4,
+
+  /* ---- Search-ready status ---- */
+  readyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    gap: 8,
+    marginBottom: 14,
   },
-  planFootnote: {
+  readyOk: {
+    backgroundColor: withAlpha(colors.brand, 0.1),
+  },
+  readyHidden: {
+    backgroundColor: withAlpha(colors.gold, 0.13),
+  },
+  readyText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+  },
+  readyTextOk: {
+    color: colors.brand,
+  },
+  readyTextHidden: {
+    color: colors.goldDark,
+  },
+
+  /* ---- Quick actions ---- */
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  actionCard: {
+    width: "48.5%",
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    padding: 15,
+    minHeight: 122,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  actionPrimary: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  actionIconOnBrand: {
+    backgroundColor: withAlpha(colors.white, 0.16),
+  },
+  cardPressed: {
+    opacity: 0.88,
+  },
+  actionTitle: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 0,
+  },
+  actionTitleLight: {
+    color: colors.white,
+  },
+  actionText: {
     color: colors.textMuted,
     fontSize: 11.5,
-    lineHeight: 17,
+    lineHeight: 16,
     fontWeight: "600",
-    marginTop: 12,
+    marginTop: 3,
   },
+  actionTextLight: {
+    color: withAlpha(colors.cream, 0.82),
+  },
+
+  /* ---- Featured / boost promo — gold alpha-border card ----
+     promoShadow carries the elevation on an OPAQUE fill; promoCard keeps
+     the translucent gold fill + 1px alpha border elevation-free so the
+     border renders at its true 1px and no dark silhouette shows through. */
+  promoShadow: {
+    borderRadius: 20,
+    marginBottom: 14,
+    backgroundColor: colors.white,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  promoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.35),
+    borderRadius: 20,
+    padding: 16,
+  },
+  promoBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.32),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoBody: {
+    flex: 1,
+  },
+  promoEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  promoTitle: {
+    color: colors.ink,
+    fontSize: 15.5,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  promoCopy: {
+    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+  promoCta: {
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoCtaText: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
 
   /* ---- Tips ---- */
   tipsCard: {

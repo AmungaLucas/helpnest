@@ -727,6 +727,7 @@ export default function EmployerHomeScreen() {
                 removeClippedSubviews
               />
 
+<<<<<<< HEAD
               {verified.length >= 3 ? (
                 <>
                   <View style={styles.sectionHead}>
@@ -769,15 +770,58 @@ export default function EmployerHomeScreen() {
           <Pressable
             accessibilityRole="button"
             android_ripple={{ color: withAlpha(colors.white, 0.1) }}
+=======
+        {/* ---------- Featured promo: boost a job ----------
+            Gold "ad" card matching the maid-side Featured promo and the
+            Subscription-plan border family — elevation on the OPAQUE
+            boostShadow wrapper, alpha fill + 1px alpha border on the
+            elevation-free inner (no dark silhouette through the tint). */}
+        <View style={styles.boostShadow}>
+          <Pressable
+            accessibilityRole="button"
+            android_ripple={{ color: withAlpha(colors.gold, 0.14) }}
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
             style={({ pressed }) => [
               styles.promoCard,
               pressed && styles.pressedDim,
             ]}
             onPress={() => navigation.navigate("MyJobsTab")}
           >
+<<<<<<< HEAD
             <View style={styles.promoTopRow}>
               <View style={styles.promoBadge}>
                 <TabBarIcon name="zap" color={colors.gold} size={17} />
+=======
+            <View style={styles.boostBadge}>
+              <TabBarIcon name="zap" color={colors.goldDark} size={19} />
+            </View>
+            <View style={styles.boostBody}>
+              <Text style={styles.boostEyebrow}>Featured</Text>
+              <Text style={styles.boostTitle}>Get more applicants</Text>
+              <Text style={styles.boostCopy}>
+                Urgent (24h) or Spotlight placement from My Jobs.
+              </Text>
+            </View>
+            <TabBarIcon name="chevron-right" color={colors.goldDark} size={16} />
+          </Pressable>
+        </View>
+
+        {/* ---------- How it works ---------- */}
+        <View style={styles.sectionHead}>
+          <View style={styles.sectionHeadLeft}>
+            <Text style={styles.eyebrow}>Simple process</Text>
+            <Text style={styles.sectionTitle}>How it works</Text>
+          </View>
+        </View>
+        <View style={styles.stepsCard}>
+          {HOW_IT_WORKS.map((step, index) => (
+            <View
+              key={step.title}
+              style={[styles.stepRow, index > 0 && styles.stepDivided]}
+            >
+              <View style={styles.stepNumWrap}>
+                <Text style={styles.stepNum}>{index + 1}</Text>
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
               </View>
               <Text style={styles.promoEyebrow}>FEATURED</Text>
             </View>
@@ -1489,10 +1533,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+<<<<<<< HEAD
   /* ---- Loading ---- */
   loadingBox: {
     paddingVertical: 34,
     alignItems: "center",
+=======
+  /* ---- Featured promo: boost a job — gold alpha-border card ----
+     boostShadow carries elevation on an OPAQUE fill; boostStrip keeps the
+     translucent gold fill + 1px alpha border elevation-free so the border
+     renders true and no dark silhouette bleeds through the tint. */
+  boostShadow: {
+    borderRadius: 20,
+    marginBottom: 16,
+    backgroundColor: colors.white,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
   },
 
   /* ---- Featured promo (dark) ---- */
@@ -1512,6 +1572,7 @@ const styles = StyleSheet.create({
   promoTopRow: {
     flexDirection: "row",
     alignItems: "center",
+<<<<<<< HEAD
     gap: 10,
     marginBottom: 12,
   },
@@ -1520,6 +1581,24 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 12,
     backgroundColor: withAlpha(colors.gold, 0.18),
+=======
+    backgroundColor: withAlpha(colors.gold, 0.1),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.35),
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingLeft: 16,
+    paddingRight: 14,
+    gap: 12,
+  },
+  boostBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.gold, 0.32),
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1527,7 +1606,13 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 10,
     fontWeight: "800",
+<<<<<<< HEAD
     letterSpacing: 1.6,
+=======
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginBottom: 2,
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
   },
   promoTitle: {
     color: colors.white,
@@ -1555,9 +1640,22 @@ const styles = StyleSheet.create({
   },
   promoCtaText: {
     color: colors.ink,
+<<<<<<< HEAD
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.1,
+=======
+    fontSize: 15.5,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  boostCopy: {
+    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: "600",
+    marginTop: 3,
+>>>>>>> d830733d38ef2b743840de3012addd3fe4c1e61c
   },
 
   /* ---- How it works ---- */
