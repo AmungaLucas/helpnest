@@ -51,6 +51,9 @@ function DrawerItem({ icon, label, active, onPress }) {
       <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>
         {label}
       </Text>
+      {active ? (
+        <TabBarIcon name="chevron-right" color={colors.textFaint} size={15} />
+      ) : null}
     </Pressable>
   );
 }
@@ -277,16 +280,16 @@ const styles = StyleSheet.create({
   },
   drawerScroll: {
     flexGrow: 1,
-    paddingTop: 8,
+    paddingTop: 12,
   },
   drawerHeader: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: colors.mist,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   drawerAvatar: {
     width: 56,
@@ -330,10 +333,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minHeight: 56,
-    marginHorizontal: 12,
+    marginHorizontal: 14,
     paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 14,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     overflow: "hidden",
   },
   itemActive: {
@@ -345,7 +348,7 @@ const styles = StyleSheet.create({
   itemIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 13,
     backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
@@ -355,9 +358,10 @@ const styles = StyleSheet.create({
   },
   itemLabel: {
     color: colors.textMuted,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "700",
     marginLeft: 13,
+    flex: 1,
   },
   itemLabelActive: {
     color: colors.brand,
@@ -368,6 +372,10 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: "600",
     textAlign: "center",
-    paddingVertical: 18,
+    marginTop: 8,
+    marginHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
+    paddingVertical: 16,
   },
 });

@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 
-import TabBarIcon from "./TabBarIcon";
+import PrimaryButton from "./PrimaryButton";
 import { useNavigation } from "@react-navigation/native";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -21,6 +21,10 @@ import { colors, withAlpha } from "../../theme/colors";
 //
 // "Continue" hands over to the M-Pesa checkout with the chosen plan; no
 // workerId rides along (none of these plans is worker-scoped).
+//
+// v3: proper bottom sheet — white, 26 top radius, 44x4 grabber, ink
+// backdrop via withAlpha, radio plan cards with pressed/ripple states and
+// a unified PrimaryButton CTA. Logic untouched.
 const PLAN_OPTIONS = [
   {
     id: "job_post",
@@ -82,6 +86,7 @@ export default function JobPostModal({ visible, onClose, jobTitle }) {
       <View style={styles.sheet}>
         <View style={styles.grabber} />
 
+        <Text style={styles.eyebrow}>Payment</Text>
         <Text style={styles.title}>Post this job</Text>
         <Text style={styles.subtitle}>
           One post credit publishes it for 30 days — or pick a plan that also
@@ -101,6 +106,11 @@ export default function JobPostModal({ visible, onClose, jobTitle }) {
                 on && styles.optionOn,
                 pressed && styles.optionPressed,
               ]}
+              android_ripple={{
+                color: withAlpha(colors.brand, 0.08),
+                borderless: false,
+                radius: 16,
+              }}
               onPress={() => setSelected(plan.id)}
             >
               <View style={[styles.radio, on && styles.radioOn]}>
@@ -126,17 +136,7 @@ export default function JobPostModal({ visible, onClose, jobTitle }) {
           );
         })}
 
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.continueButton,
-            pressed && styles.continuePressed,
-          ]}
-          onPress={handleContinue}
-        >
-          <TabBarIcon name="credit-card" color={colors.white} size={16} />
-          <Text style={styles.continueText}>Continue with M-Pesa</Text>
-        </Pressable>
+        <PrimaryButton label="Continue with M-Pesa" onPress={handleContinue} />
 
         <Text style={styles.footnote}>
           Paid via M-Pesa STK push. A standard post publishes this listing for
@@ -150,28 +150,37 @@ export default function JobPostModal({ visible, onClose, jobTitle }) {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: "rgba(38, 49, 43, 0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
   },
   sheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 28,
+    paddingBottom: 30,
   },
   grabber: {
     alignSelf: "center",
     width: 44,
-    height: 5,
-    borderRadius: 3,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: colors.cloud,
     marginBottom: 16,
   },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
   title: {
     color: colors.ink,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
+    letterSpacing: -0.4,
   },
   subtitle: {
     color: colors.textMuted,
@@ -185,17 +194,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.mistDark,
-    borderRadius: 14,
-    padding: 13,
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 10,
     gap: 12,
+    backgroundColor: colors.white,
+    overflow: "hidden",
   },
   optionOn: {
     borderColor: colors.brand,
     backgroundColor: withAlpha(colors.brand, 0.06),
   },
   optionPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
   radio: {
     width: 20,
@@ -248,24 +259,6 @@ const styles = StyleSheet.create({
   optionPrice: {
     color: colors.brand,
     fontSize: 14,
-    fontWeight: "800",
-  },
-  continueButton: {
-    minHeight: 52,
-    borderRadius: 15,
-    backgroundColor: colors.brand,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 6,
-  },
-  continuePressed: {
-    opacity: 0.92,
-  },
-  continueText: {
-    color: colors.white,
-    fontSize: 14.5,
     fontWeight: "800",
   },
   footnote: {

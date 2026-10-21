@@ -17,6 +17,7 @@ import {
   listMyApplications,
   setApplicationStatus,
 } from "../../services/jobsService";
+import EmptyState from "../../components/ui/EmptyState";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { serviceLabel } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
@@ -34,6 +35,9 @@ const STATUS_STYLES = {
 // ---------------------------------------------------------------------------
 // Applications (maid) — every application with its live status (PRD §12).
 // Withdrawal is free but does NOT restore the application credit (§12.2).
+//
+// v3: display-scale header, icon-led meta rows, EmptyState for empty/error,
+// tokenized status pills. Logic untouched.
 // ---------------------------------------------------------------------------
 export default function ApplicationsScreen() {
   const navigation = useNavigation();
@@ -144,6 +148,7 @@ export default function ApplicationsScreen() {
 
       <View style={styles.header}>
         <View style={styles.headerBody}>
+          <Text style={styles.eyebrow}>Job hunt</Text>
           <Text style={styles.title}>My Applications</Text>
           <Text style={styles.subtitle}>
             {applications && applications.length > 0
@@ -154,6 +159,11 @@ export default function ApplicationsScreen() {
         <Pressable
           accessibilityRole="button"
           style={({ pressed }) => [styles.findButton, pressed && styles.pressed]}
+          android_ripple={{
+            color: withAlpha(colors.brand, 0.08),
+            borderless: false,
+            radius: 16,
+          }}
           onPress={() => navigation.navigate("FindJobsTab")}
         >
           <TabBarIcon name="search" color={colors.white} size={14} />
@@ -169,44 +179,54 @@ export default function ApplicationsScreen() {
         <ScrollView
           contentContainerStyle={styles.center}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
           {error ? (
-            <>
-              <Text style={styles.errorTitle}>Something went wrong</Text>
-              <Text style={styles.errorText}>{error}</Text>
-            </>
+            <EmptyState
+              icon="alert-triangle"
+              tone="danger"
+              title="Something went wrong"
+              body={error}
+              actionLabel="Browse jobs"
+              onAction={() => navigation.navigate("FindJobsTab")}
+            />
           ) : (
-            <>
-              <View style={styles.emptyBadge}>
-                <TabBarIcon name="file-text" color={colors.brand} size={26} />
-              </View>
-              <Text style={styles.emptyTitle}>No applications yet</Text>
-              <Text style={styles.emptyText}>
-                Browse open roles and apply — employers see every applicant
-                with a complete, visible profile.
-              </Text>
-            </>
+            <EmptyState
+              icon="file-text"
+              title="No applications yet"
+              body="Browse open roles and apply — employers see every applicant with a complete, visible profile."
+              actionLabel="Browse jobs"
+              onAction={() => navigation.navigate("FindJobsTab")}
+            />
           )}
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
-            onPress={() => navigation.navigate("FindJobsTab")}
-          >
-            <TabBarIcon name="search" color={colors.white} size={15} />
-            <Text style={styles.emptyCtaText}>Browse jobs</Text>
-          </Pressable>
         </ScrollView>
       ) : (
         <ScrollView
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
-          {error ? <Text style={styles.listError}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.listErrorBanner}>
+              <TabBarIcon
+                name="alert-triangle"
+                color={colors.danger}
+                size={14}
+              />
+              <Text style={styles.listErrorText}>{error}</Text>
+            </View>
+          ) : null}
 
           {applications.map((application) => {
             const pill = STATUS_STYLES[application.status] || STATUS_STYLES.submitted;
@@ -243,12 +263,26 @@ export default function ApplicationsScreen() {
                     </View>
                   ) : null}
                   {job.locationLabel ? (
-                    <Text style={styles.metaText} numberOfLines={1}>
-                      · {job.locationLabel}
-                    </Text>
+                    <View style={styles.metaItem}>
+                      <TabBarIcon
+                        name="map-pin"
+                        color={colors.textFaint}
+                        size={12}
+                      />
+                      <Text style={styles.metaText} numberOfLines={1}>
+                        {job.locationLabel}
+                      </Text>
+                    </View>
                   ) : null}
                   {job.rateKes ? (
-                    <Text style={styles.metaText}>· KES {job.rateKes}</Text>
+                    <View style={styles.metaItem}>
+                      <TabBarIcon
+                        name="credit-card"
+                        color={colors.textFaint}
+                        size={12}
+                      />
+                      <Text style={styles.metaText}>KES {job.rateKes}</Text>
+                    </View>
                   ) : null}
                 </View>
 
@@ -268,6 +302,11 @@ export default function ApplicationsScreen() {
                         pressed && styles.pressed,
                         busyId === application.id && styles.busy,
                       ]}
+                      android_ripple={{
+                        color: withAlpha(colors.textMuted, 0.12),
+                        borderless: false,
+                        radius: 14,
+                      }}
                       onPress={() => confirmWithdraw(application)}
                     >
                       {busyId === application.id ? (
@@ -283,7 +322,9 @@ export default function ApplicationsScreen() {
           })}
 
           <View style={styles.hintCard}>
-            <TabBarIcon name="info" color={colors.brand} size={14} />
+            <View style={styles.hintIcon}>
+              <TabBarIcon name="info" color={colors.brand} size={14} />
+            </View>
             <Text style={styles.hintText}>
               Employers are notified when you apply. Shortlisted means they
               want to talk — keep your phone nearby.
@@ -305,32 +346,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 12,
+    paddingBottom: 14,
     gap: 12,
   },
   headerBody: {
     flex: 1,
   },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
   title: {
     color: colors.ink,
-    fontSize: 23,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.6,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
   },
   findButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: colors.brand,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    minHeight: 38,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    minHeight: 40,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+    overflow: "hidden",
   },
   findButtonText: {
     color: colors.white,
@@ -341,63 +397,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32,
   },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 18,
-  },
-  emptyCta: {
+  listErrorBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: colors.brand,
+    gap: 9,
+    backgroundColor: withAlpha(colors.danger, 0.1),
     borderRadius: 14,
-    minHeight: 48,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  emptyCtaText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  errorTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  errorText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 18,
-  },
-  listError: {
+  listErrorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 12.5,
-    marginBottom: 10,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   list: {
     padding: 20,
@@ -453,8 +469,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
     marginTop: 10,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
   },
   categoryChip: {
     backgroundColor: withAlpha(colors.brand, 0.1),
@@ -488,13 +510,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   withdrawButton: {
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.mistDark,
     paddingHorizontal: 12,
     paddingVertical: 7,
     minWidth: 84,
     alignItems: "center",
+    overflow: "hidden",
   },
   busy: {
     opacity: 0.6,
@@ -507,12 +530,27 @@ const styles = StyleSheet.create({
   hintCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 14,
+    gap: 12,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginTop: 6,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  hintIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
   },
   hintText: {
     flex: 1,

@@ -298,7 +298,7 @@ export default function MpesaCheckoutScreen() {
               <View style={styles.amountBadge}>
                 <TabBarIcon
                   name="credit-card"
-                  color={colors.brand}
+                  color={colors.white}
                   size={19}
                 />
               </View>
@@ -483,18 +483,20 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     color: colors.ink,
-    fontSize: 17,
+    fontSize: 17.5,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   headerSpacer: {
     width: 42,
@@ -529,11 +531,11 @@ const styles = StyleSheet.create({
   /* ---- Amount hero ---- */
   amountCard: {
     width: "100%",
-    backgroundColor: colors.white,
+    backgroundColor: colors.brand,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 22,
+    borderColor: withAlpha(colors.white, 0.16),
+    padding: 24,
     alignItems: "center",
     marginBottom: 14,
   },
@@ -541,23 +543,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: withAlpha(colors.brand, 0.1),
+    backgroundColor: withAlpha(colors.white, 0.16),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
   amountLabel: {
-    color: colors.textMuted,
+    color: withAlpha(colors.white, 0.8),
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 6,
     textAlign: "center",
   },
   amountValue: {
-    color: colors.ink,
+    color: colors.white,
     fontSize: 30,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
 
   /* ---- Detail rows ---- */
@@ -687,8 +689,10 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     backgroundColor: withAlpha(colors.danger, 0.08),
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.danger, 0.18),
+    padding: 14,
     marginBottom: 16,
     width: "100%",
   },
@@ -696,7 +700,7 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
-    fontWeight: "600",
+    fontWeight: "700",
     textAlign: "center",
   },
 

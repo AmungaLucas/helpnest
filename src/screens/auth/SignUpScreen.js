@@ -192,7 +192,14 @@ export default function SignUpScreen() {
 
             {formError ? (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{formError}</Text>
+                <View style={styles.errorRow}>
+                  <TabBarIcon
+                    name="alert-triangle"
+                    color={colors.danger}
+                    size={15}
+                  />
+                  <Text style={styles.errorText}>{formError}</Text>
+                </View>
               </View>
             ) : null}
           </View>
@@ -269,14 +276,15 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 1.2,
+    textTransform: "uppercase",
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     marginBottom: 8,
     textAlign: "center",
   },
@@ -290,7 +298,7 @@ const styles = StyleSheet.create({
   /* ---- Card ---- */
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 20,
@@ -311,17 +319,23 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 14,
   },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
   errorText: {
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: "600",
+    flexShrink: 1,
   },
 
   /* ---- CTA ---- */
   ctaBlock: {
     marginTop: "auto",
-    paddingTop: 24,
+    paddingTop: 28,
   },
   termsRow: {
     flexDirection: "row",
@@ -346,6 +360,7 @@ const styles = StyleSheet.create({
   loginLink: {
     color: colors.textMuted,
     fontSize: 13.5,
+    lineHeight: 20,
     textAlign: "center",
   },
   loginLinkBold: {
@@ -355,6 +370,8 @@ const styles = StyleSheet.create({
   changeRoleLink: {
     color: colors.textFaint,
     fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: "600",
     textAlign: "center",
     marginTop: 10,
   },

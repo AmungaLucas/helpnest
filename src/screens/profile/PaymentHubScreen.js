@@ -40,13 +40,16 @@ export default function PaymentHubScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <View style={styles.menuRow}>
+      {/* Drawer header — same anatomy as Referrals. */}
+      <View style={styles.topBar}>
         <HamburgerButton />
+        <View style={styles.topBarMain} pointerEvents="none">
+          <Text style={styles.eyebrow}>Billing</Text>
+          <Text style={styles.title}>Payments</Text>
+        </View>
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.eyebrow}>Billing</Text>
-        <Text style={styles.title}>Payments</Text>
         <Text style={styles.subtitle}>
           Pay via M-Pesa STK push — the request goes straight to your phone.
         </Text>
@@ -114,43 +117,48 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  menuRow: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
-  body: {
+  topBarMain: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 24,
+    marginHorizontal: 10,
   },
   pressed: {
     opacity: 0.88,
   },
   eyebrow: {
     color: colors.goldDark,
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginBottom: 4,
   },
   title: {
     color: colors.ink,
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 6,
-    marginBottom: 22,
+    marginBottom: 20,
   },
   planCard: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
@@ -170,8 +178,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   planIcon: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 13,
     backgroundColor: withAlpha(colors.brand, 0.1),
     alignItems: "center",
@@ -183,8 +191,9 @@ const styles = StyleSheet.create({
   },
   planLabel: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17.5,
     fontWeight: "800",
+    letterSpacing: -0.3,
     flex: 1,
     marginRight: 10,
   },
@@ -195,8 +204,8 @@ const styles = StyleSheet.create({
   },
   planBlurb: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 21,
     marginBottom: 16,
   },
   planButton: {
@@ -214,7 +223,7 @@ const styles = StyleSheet.create({
   },
   planButtonText: {
     color: colors.brand,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
   },
   planButtonTextPrimary: {
@@ -222,7 +231,7 @@ const styles = StyleSheet.create({
   },
   footnote: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "600",
     textAlign: "center",
     marginTop: 10,

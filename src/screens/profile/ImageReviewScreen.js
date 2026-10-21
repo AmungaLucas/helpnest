@@ -47,7 +47,7 @@ export default function ImageReviewScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0B0F0C" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
 
       <View style={styles.topBar}>
         <Pressable
@@ -101,7 +101,7 @@ export default function ImageReviewScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0B0F0C",
+    backgroundColor: colors.ink,
   },
   topBar: {
     flexDirection: "row",
@@ -113,8 +113,8 @@ const styles = StyleSheet.create({
   roundButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: withAlpha("#FFFFFF", 0.12),
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.white, 0.12),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
     fontWeight: "800",
+    letterSpacing: -0.2,
   },
   previewWrap: {
     flex: 1,
@@ -133,10 +134,10 @@ const styles = StyleSheet.create({
     width: "100%",
     flex: 1,
     borderRadius: 18,
-    backgroundColor: "#000000",
+    backgroundColor: colors.ink,
   },
   subtitle: {
-    color: withAlpha("#FFFFFF", 0.72),
+    color: withAlpha(colors.white, 0.72),
     fontSize: 12.5,
     lineHeight: 18,
     textAlign: "center",
@@ -148,18 +149,18 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   hint: {
-    color: withAlpha("#FFFFFF", 0.55),
+    color: withAlpha(colors.white, 0.55),
     fontSize: 12,
     lineHeight: 17,
     textAlign: "center",
     marginBottom: 14,
   },
   ghostButton: {
-    borderRadius: 16,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 12,
-    backgroundColor: withAlpha("#FFFFFF", 0.14),
+    backgroundColor: withAlpha(colors.white, 0.14),
   },
   ghostText: {
     color: colors.white,

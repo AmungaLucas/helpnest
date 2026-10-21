@@ -102,7 +102,7 @@ export default function LoginScreen() {
         >
           {/* ---- Brand moment ---- */}
           <View style={styles.brandBlock}>
-            <HelpNestLogo size={62} style={styles.brandLogo} />
+            <HelpNestLogo size={64} style={styles.brandLogo} />
             <Text style={styles.eyebrow}>WELCOME BACK</Text>
             <Text style={styles.title}>Log in to HelpNest</Text>
             <Text style={styles.subtitle}>
@@ -136,7 +136,14 @@ export default function LoginScreen() {
 
             {formError ? (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{formError}</Text>
+                <View style={styles.errorRow}>
+                  <TabBarIcon
+                    name="alert-triangle"
+                    color={colors.danger}
+                    size={15}
+                  />
+                  <Text style={styles.errorText}>{formError}</Text>
+                </View>
               </View>
             ) : null}
           </View>
@@ -202,7 +209,7 @@ const styles = StyleSheet.create({
   /* ---- Brand moment ---- */
   brandBlock: {
     alignItems: "center",
-    marginBottom: 26,
+    marginBottom: 28,
   },
   brandLogo: {
     marginBottom: 18,
@@ -212,26 +219,29 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 1.2,
+    textTransform: "uppercase",
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 27,
-    lineHeight: 33,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     marginBottom: 8,
+    textAlign: "center",
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
+    textAlign: "center",
   },
 
   /* ---- Card ---- */
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 20,
@@ -252,17 +262,23 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 14,
   },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
   errorText: {
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: "600",
+    flexShrink: 1,
   },
 
   /* ---- CTA ---- */
   ctaBlock: {
     marginTop: "auto",
-    paddingTop: 24,
+    paddingTop: 28,
   },
   trustRow: {
     flexDirection: "row",
@@ -274,6 +290,7 @@ const styles = StyleSheet.create({
   trustText: {
     color: colors.textFaint,
     fontSize: 11.5,
+    lineHeight: 17,
     fontWeight: "600",
   },
 
@@ -284,6 +301,7 @@ const styles = StyleSheet.create({
   signupLink: {
     color: colors.textMuted,
     fontSize: 13.5,
+    lineHeight: 20,
     textAlign: "center",
   },
   signupLinkBold: {
@@ -293,6 +311,8 @@ const styles = StyleSheet.create({
   changeRoleLink: {
     color: colors.textFaint,
     fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: "600",
     textAlign: "center",
     marginTop: 10,
   },

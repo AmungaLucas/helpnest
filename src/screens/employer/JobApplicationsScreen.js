@@ -18,6 +18,8 @@ import {
   setApplicationStatus,
 } from "../../services/jobsService";
 import SignedImage from "../../components/media/SignedImage";
+import EmptyState from "../../components/ui/EmptyState";
+import ScreenHeader from "../../components/ui/ScreenHeader";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { availabilityLabel } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
@@ -37,6 +39,10 @@ const STATUS_STYLES = {
 // Job Applications (employer) — review who applied to one listing (PRD §12).
 // Opening the list marks fresh submissions as viewed; shortlist / hire /
 // decline are one tap each and never consume an entitlement (§12.1).
+//
+// v3: ScreenHeader back bar with the listing title as subtitle, 56px
+// squircle applicant rows, paired Hire (brand filled) vs Decline (danger
+// outline) actions. Logic untouched.
 // ---------------------------------------------------------------------------
 export default function JobApplicationsScreen() {
   const navigation = useNavigation();
@@ -152,22 +158,13 @@ export default function JobApplicationsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-          onPress={() => navigation.goBack()}
-        >
-          <TabBarIcon name="chevron-left" color={colors.ink} size={20} />
-        </Pressable>
-
-        <View style={styles.headerBody}>
-          <Text style={styles.title}>Applicants</Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {job?.title || "Job"}
-          </Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Applicants"
+        subtitle={job?.title || "Job"}
+        eyebrow="Hiring"
+        leading="back"
+        onBack={() => navigation.goBack()}
+      />
 
       {applications === null ? (
         <View style={styles.center}>
@@ -177,25 +174,26 @@ export default function JobApplicationsScreen() {
         <ScrollView
           contentContainerStyle={styles.center}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
           {error ? (
-            <>
-              <Text style={styles.errorTitle}>Something went wrong</Text>
-              <Text style={styles.errorText}>{error}</Text>
-            </>
+            <EmptyState
+              icon="alert-triangle"
+              tone="danger"
+              title="Something went wrong"
+              body={error}
+            />
           ) : (
-            <>
-              <View style={styles.emptyBadge}>
-                <TabBarIcon name="users" color={colors.brand} size={26} />
-              </View>
-              <Text style={styles.emptyTitle}>No applicants yet</Text>
-              <Text style={styles.emptyText}>
-                Maids see this listing in Find Jobs while it's open. Complete
-                listings with a fair rate get more responses.
-              </Text>
-            </>
+            <EmptyState
+              icon="users"
+              title="No applicants yet"
+              body="Maids see this listing in Find Jobs while it's open. Complete listings with a fair rate get more responses."
+            />
           )}
         </ScrollView>
       ) : (
@@ -203,10 +201,23 @@ export default function JobApplicationsScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
-          {error ? <Text style={styles.listError}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.listErrorBanner}>
+              <TabBarIcon
+                name="alert-triangle"
+                color={colors.danger}
+                size={14}
+              />
+              <Text style={styles.listErrorText}>{error}</Text>
+            </View>
+          ) : null}
 
           {applications.map((application) => {
             const pill = STATUS_STYLES[application.status] || STATUS_STYLES.submitted;
@@ -291,6 +302,11 @@ export default function JobApplicationsScreen() {
                           styles.declineButton,
                           pressed && styles.pressed,
                         ]}
+                        android_ripple={{
+                          color: withAlpha(colors.danger, 0.08),
+                          borderless: false,
+                          radius: 14,
+                        }}
                         onPress={() => decide(application, "rejected")}
                       >
                         <Text style={styles.declineText}>Decline</Text>
@@ -303,6 +319,11 @@ export default function JobApplicationsScreen() {
                           styles.hireButton,
                           pressed && styles.pressed,
                         ]}
+                        android_ripple={{
+                          color: withAlpha(colors.brand, 0.08),
+                          borderless: false,
+                          radius: 14,
+                        }}
                         onPress={() => confirmHire(application)}
                       >
                         <Text style={styles.hireText}>Hire</Text>
@@ -325,7 +346,9 @@ export default function JobApplicationsScreen() {
           })}
 
           <View style={styles.hintCard}>
-            <TabBarIcon name="shield" color={colors.brand} size={14} />
+            <View style={styles.hintIcon}>
+              <TabBarIcon name="shield" color={colors.brand} size={14} />
+            </View>
             <Text style={styles.hintText}>
               Keep hiring in the app — chat first, then hire here so the
               history stays protected for both of you.
@@ -342,88 +365,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 12,
-    gap: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerBody: {
-    flex: 1,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 21,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 2,
-  },
   center: {
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32,
   },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
+  listErrorBanner: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
+    gap: 9,
+    backgroundColor: withAlpha(colors.danger, 0.1),
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-  errorTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  errorText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-  listError: {
+  listErrorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 12.5,
-    marginBottom: 10,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   list: {
     padding: 20,
-    paddingTop: 4,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   card: {
@@ -445,13 +411,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 19,
     backgroundColor: withAlpha(colors.brand, 0.12),
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: 21,
     color: colors.brand,
     fontWeight: "800",
   },
@@ -465,7 +431,7 @@ const styles = StyleSheet.create({
   },
   personName: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: "800",
     flexShrink: 1,
   },
@@ -520,16 +486,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    minHeight: 36,
+    minHeight: 38,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   declineButton: {
     borderWidth: 1,
-    borderColor: colors.mistDark,
+    borderColor: withAlpha(colors.danger, 0.35),
+    backgroundColor: colors.white,
   },
   declineText: {
-    color: colors.textMuted,
+    color: colors.danger,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -561,12 +529,27 @@ const styles = StyleSheet.create({
   hintCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 14,
+    gap: 12,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginTop: 6,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  hintIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
   },
   hintText: {
     flex: 1,

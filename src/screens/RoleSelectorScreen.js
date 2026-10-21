@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import HelpNestLogo, { HelpNestLogoMark } from "../components/Logo";
 import TabBarIcon from "../components/ui/TabBarIcon";
+import GradientBanner from "../components/ui/GradientBanner";
 import { colors, withAlpha } from "../theme/colors";
 
 const ROLES = [
@@ -66,7 +67,7 @@ export default function RoleSelectorScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
 
       {/* ================= HERO ================= */}
-      <View style={styles.hero}>
+      <GradientBanner style={styles.hero}>
         <SafeAreaView edges={["top"]} style={styles.heroSafe}>
           <View style={styles.heroRow}>
             <HelpNestLogo size={52} style={styles.heroLogo} />
@@ -86,7 +87,7 @@ export default function RoleSelectorScreen() {
 
         <View style={styles.orbGold} />
         <View style={styles.orbCream} />
-      </View>
+      </GradientBanner>
 
       {/* ================= SHEET ================= */}
       <View style={styles.sheet}>
@@ -216,7 +217,9 @@ export default function RoleSelectorScreen() {
           ) : null}
 
           <View style={styles.footnoteRow}>
-            <TabBarIcon name="shield-check" color={colors.textFaint} size={14} />
+            <View style={styles.footnoteBadge}>
+              <TabBarIcon name="shield-check" color={colors.brand} size={16} />
+            </View>
           </View>
           <Text style={styles.footnote}>
             Everyone is welcome. Verification helps build trust
@@ -260,9 +263,7 @@ const styles = StyleSheet.create({
 
   /* ---------- HERO ---------- */
   hero: {
-    backgroundColor: colors.brand,
     paddingBottom: 34,
-    overflow: "hidden",
   },
   heroSafe: {
     paddingHorizontal: 20,
@@ -355,14 +356,15 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 1.2,
+    textTransform: "uppercase",
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     marginBottom: 20,
   },
 
@@ -399,6 +401,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 18,
     borderWidth: 1,
     borderColor: colors.linen,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   bubbleUser: {
     backgroundColor: colors.brand,
@@ -410,7 +417,7 @@ const styles = StyleSheet.create({
   bubbleText: {
     color: colors.ink,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     marginBottom: 4,
   },
   bubbleTextLast: {
@@ -419,7 +426,7 @@ const styles = StyleSheet.create({
   bubbleTextLight: {
     color: colors.cream,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     fontWeight: "600",
   },
 
@@ -432,7 +439,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
@@ -445,13 +452,15 @@ const styles = StyleSheet.create({
   roleCardSelected: {
     borderColor: colors.brand,
     backgroundColor: colors.white,
+    shadowOpacity: 0.08,
+    elevation: 2,
   },
   pressed: {
     opacity: 0.88,
   },
   roleBadge: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -462,14 +471,15 @@ const styles = StyleSheet.create({
   },
   roleTitle: {
     color: colors.ink,
-    fontSize: 17,
+    fontSize: 17.5,
     fontWeight: "800",
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
   roleDescription: {
     color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 21,
   },
   tags: {
     flexDirection: "row",
@@ -489,9 +499,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   trailing: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
@@ -515,6 +525,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     borderRadius: 16,
     backgroundColor: colors.brand,
+    overflow: "hidden",
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -523,7 +534,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.white,
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: "800",
   },
   buttonArrow: {
@@ -539,14 +550,24 @@ const styles = StyleSheet.create({
   changeText: {
     color: colors.goldDark,
     fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
 
+  /* ---------- FOOTNOTE ---------- */
   footnoteRow: {
     alignItems: "center",
     marginTop: 26,
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  footnoteBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    alignItems: "center",
+    justifyContent: "center",
   },
   footnote: {
     color: colors.textFaint,

@@ -131,9 +131,20 @@ export default function ChatAccessModal({ visible, onClose, workerName, workerId
             pressed && styles.continuePressed,
           ]}
           onPress={handleContinue}
+          android_ripple={{ color: withAlpha(colors.white, 0.16) }}
         >
           <TabBarIcon name="credit-card" color={colors.white} size={16} />
           <Text style={styles.continueText}>Continue with M-Pesa</Text>
+        </Pressable>
+
+        {/* v3 ghost cancel — every paywall sheet gets an explicit way out. */}
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.cancelButton, pressed && styles.cancelPressed]}
+          onPress={onClose}
+          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+        >
+          <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
 
         <Text style={styles.footnote}>
@@ -148,21 +159,21 @@ export default function ChatAccessModal({ visible, onClose, workerName, workerId
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: "rgba(38, 49, 43, 0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
   },
   sheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 28,
+    paddingBottom: 30,
   },
   grabber: {
     alignSelf: "center",
     width: 44,
-    height: 5,
-    borderRadius: 3,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: colors.cloud,
     marginBottom: 16,
   },
@@ -170,6 +181,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 18,
     fontWeight: "800",
+    letterSpacing: -0.2,
   },
   subtitle: {
     color: colors.textMuted,
@@ -182,9 +194,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 14,
-    padding: 13,
+    borderColor: colors.mist,
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 10,
     gap: 12,
   },
@@ -193,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.brand, 0.06),
   },
   optionPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
   radio: {
     width: 20,
@@ -244,32 +256,50 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   optionPrice: {
-    color: colors.ink,
-    fontSize: 14,
+    color: colors.brand,
+    fontSize: 14.5,
     fontWeight: "800",
   },
   continueButton: {
     backgroundColor: colors.brand,
-    borderRadius: 14,
-    minHeight: 50,
+    borderRadius: 16,
+    minHeight: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     marginTop: 6,
+    overflow: "hidden",
   },
   continuePressed: {
-    opacity: 0.92,
+    opacity: 0.88,
   },
   continueText: {
     color: colors.white,
-    fontSize: 14.5,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  cancelButton: {
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    backgroundColor: withAlpha(colors.brand, 0.07),
+    overflow: "hidden",
+  },
+  cancelPressed: {
+    opacity: 0.88,
+  },
+  cancelText: {
+    color: colors.brand,
+    fontSize: 14,
     fontWeight: "800",
   },
   footnote: {
     color: colors.textFaint,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 11.5,
+    lineHeight: 17,
     textAlign: "center",
     marginTop: 12,
   },

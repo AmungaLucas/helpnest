@@ -360,30 +360,34 @@ export default function AccountScreen() {
             </Pressable>
           </View>
 
-          <StatusRow
-            ok={user?.phoneVerified}
-            okText="Phone verified"
-            pendingText="Phone not verified yet"
-          />
-          <StatusRow
-            ok={user?.emailVerified}
-            okText="Email verified"
-            pendingText={
-              user?.email
-                ? "Email not verified — tap to verify"
-                : "Email verification coming soon"
-            }
-            action={
-              user?.email && !user?.emailVerified
-                ? () => navigation.navigate("VerifyEmail", { email: user.email })
-                : undefined
-            }
-          />
-          <StatusRow
-            ok={user?.kycStatus === "verified"}
-            okText="ID verification complete"
-            pendingText={`KYC: ${user?.kycStatus || "unverified"}`}
-          />
+          <View style={styles.statusList}>
+            <StatusRow
+              ok={user?.phoneVerified}
+              okText="Phone verified"
+              pendingText="Phone not verified yet"
+            />
+            <StatusRow
+              divided
+              ok={user?.emailVerified}
+              okText="Email verified"
+              pendingText={
+                user?.email
+                  ? "Email not verified — tap to verify"
+                  : "Email verification coming soon"
+              }
+              action={
+                user?.email && !user?.emailVerified
+                  ? () => navigation.navigate("VerifyEmail", { email: user.email })
+                  : undefined
+              }
+            />
+            <StatusRow
+              divided
+              ok={user?.kycStatus === "verified"}
+              okText="ID verification complete"
+              pendingText={`KYC: ${user?.kycStatus || "unverified"}`}
+            />
+          </View>
         </View>
 
         {/* Subscription & payments (§14) — M-Pesa purchases, refunds and
@@ -412,10 +416,11 @@ export default function AccountScreen() {
           </View>
 
           {history && history.length > 0 ? (
-            history.slice(0, 8).map((t) => (
+            history.slice(0, 8).map((t, tIndex) => (
               <PurchaseRow
                 key={t.id}
                 txn={t}
+                first={tIndex === 0}
                 onRequestRefund={(txn) => {
                   setRefundFor(txn);
                   setRefundReason("");
@@ -558,6 +563,7 @@ export default function AccountScreen() {
           disabled={signingOut}
           android_ripple={{ color: withAlpha(colors.danger, 0.08) }}
         >
+          <TabBarIcon name="user-x" color={colors.danger} size={17} />
           <Text style={styles.signOutText}>
             {signingOut ? "Signing out…" : "Sign out"}
           </Text>
@@ -633,9 +639,9 @@ export default function AccountScreen() {
   );
 }
 
-function StatusRow({ ok, okText, pendingText, action }) {
+function StatusRow({ ok, okText, pendingText, action, divided }) {
   const content = (
-    <View style={styles.statusRow}>
+    <View style={[styles.statusRow, divided && styles.statusRowDivided]}>
       <View style={[styles.dot, ok ? styles.dotOk : styles.dotIdle]} />
       <Text
         style={[styles.statusText, action && !ok && styles.statusActionText]}
@@ -673,11 +679,11 @@ const REFUND_LABEL = {
 // One purchase row (PRD §14.7): outcome line + per-transaction "Get help"
 // while the payment can still be refunded. Money moves stay manual on our
 // side — this row only files and tracks the request.
-function PurchaseRow({ txn, onRequestRefund }) {
+function PurchaseRow({ txn, onRequestRefund, first }) {
   const refundLabel = REFUND_LABEL[txn.refundStatus || "none"];
 
   return (
-    <View style={styles.purchaseRow}>
+    <View style={[styles.purchaseRow, !first && styles.purchaseRowDivided]}>
       <View style={styles.purchaseMain}>
         <Text style={styles.purchaseTitle} numberOfLines={1}>
           {txn.planLabel || txn.plan} · KES {txn.amountKes}
@@ -718,7 +724,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 6,
-    paddingBottom: 28,
+    paddingBottom: 32,
   },
   pressed: {
     opacity: 0.88,
@@ -736,7 +742,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     color: colors.ink,
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "800",
     letterSpacing: -0.4,
   },
@@ -847,11 +853,11 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
-    padding: 18,
-    marginBottom: 24,
+    padding: 20,
+    marginBottom: 22,
   },
   cardTappable: {
     overflow: "hidden",
@@ -859,7 +865,7 @@ const styles = StyleSheet.create({
   headRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   headIcon: {
     width: 42,
@@ -886,21 +892,33 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: colors.ink,
-    fontSize: 16.5,
+    fontSize: 17.5,
     fontWeight: "800",
     letterSpacing: -0.2,
+  },
+  statusList: {
+    backgroundColor: colors.cream,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 40,
+    minHeight: 46,
     paddingVertical: 6,
+  },
+  statusRowDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 10,
+    marginRight: 12,
   },
   dotOk: {
     backgroundColor: colors.brandSoft,
@@ -912,6 +930,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 14,
     fontWeight: "600",
+    lineHeight: 20,
     flex: 1,
   },
   statusActionText: {
@@ -927,21 +946,25 @@ const styles = StyleSheet.create({
   },
   refreshBtn: {
     backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
     overflow: "hidden",
   },
   refundRefresh: {
     color: colors.brand,
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: "800",
   },
   purchaseRow: {
     flexDirection: "row",
     alignItems: "center",
     minHeight: 56,
-    paddingVertical: 9,
+    paddingVertical: 10,
+  },
+  purchaseRowDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
   },
   purchaseMain: {
     flex: 1,
@@ -949,17 +972,18 @@ const styles = StyleSheet.create({
   },
   purchaseTitle: {
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "700",
   },
   purchaseSub: {
     color: colors.textMuted,
-    fontSize: 11.5,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 3,
   },
   refundBtn: {
     backgroundColor: withAlpha(colors.gold, 0.16),
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     overflow: "hidden",
@@ -979,10 +1003,10 @@ const styles = StyleSheet.create({
   },
   refundSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 22,
-    paddingBottom: 34,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 24,
+    paddingBottom: 40,
   },
   refundGrabber: {
     alignSelf: "center",
@@ -990,12 +1014,13 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 999,
     backgroundColor: colors.cloud,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   refundSheetTitle: {
     color: colors.ink,
     fontSize: 18,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   refundSheetSub: {
     color: colors.brand,
@@ -1005,18 +1030,18 @@ const styles = StyleSheet.create({
   },
   refundSheetHint: {
     color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 8,
     marginBottom: 14,
   },
   refundSheetInput: {
     borderWidth: 1,
     borderColor: colors.mistDark,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.cream,
     padding: 14,
-    minHeight: 90,
+    minHeight: 96,
     textAlignVertical: "top",
     color: colors.ink,
     fontSize: 14,
@@ -1032,6 +1057,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 20,
     paddingVertical: 13,
+    minHeight: 48,
     minWidth: 110,
     alignItems: "center",
     justifyContent: "center",
@@ -1054,21 +1080,21 @@ const styles = StyleSheet.create({
   },
   locationLine: {
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "700",
     marginBottom: 6,
   },
   locationNote: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 13.5,
+    lineHeight: 20,
     marginBottom: 14,
   },
   secondaryButton: {
     borderWidth: 1,
     borderColor: colors.brand,
-    borderRadius: 14,
-    minHeight: 48,
+    borderRadius: 16,
+    minHeight: 50,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
@@ -1088,12 +1114,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   signOutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     borderWidth: 1,
     borderColor: colors.danger,
     borderRadius: 16,
-    minHeight: 52,
-    alignItems: "center",
-    justifyContent: "center",
+    minHeight: 54,
     overflow: "hidden",
   },
   signOutText: {

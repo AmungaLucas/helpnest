@@ -14,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import HamburgerButton from "../../components/ui/HamburgerButton";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import EmptyState from "../../components/ui/EmptyState";
 import { colors, withAlpha } from "../../theme/colors";
 import {
   fetchNotifications,
@@ -113,16 +114,18 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
-      <View style={styles.menuRow}>
-        <HamburgerButton />
-      </View>
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Notifications</Text>
-        <Text style={styles.subtitle}>
-          Verification, payments, applications and account updates.
-        </Text>
+      {/* Drawer-style header — same anatomy as Referrals / Payments. */}
+      <View style={styles.topBar}>
+        <HamburgerButton />
+        <View style={styles.topBarMain} pointerEvents="none">
+          <Text style={styles.eyebrow}>Activity</Text>
+          <Text style={styles.title}>Notifications</Text>
+        </View>
       </View>
+      <Text style={styles.subtitle}>
+        Verification, payments, applications and account updates.
+      </Text>
 
       <ScrollView
         style={styles.scroll}
@@ -147,16 +150,11 @@ export default function NotificationsScreen() {
             size="large"
           />
         ) : feed.length === 0 ? (
-          <View style={styles.empty}>
-            <View style={styles.emptyBadge}>
-              <TabBarIcon name="bell" color={colors.brand} size={26} />
-            </View>
-            <Text style={styles.emptyTitle}>Nothing yet</Text>
-            <Text style={styles.emptyBody}>
-              Updates about your verification, payments, applications and
-              account will show up here.
-            </Text>
-          </View>
+          <EmptyState
+            icon="bell"
+            title="Nothing yet"
+            body="Updates about your verification, payments, applications and account will show up here."
+          />
         ) : (
           feed.map((n) => (
             <Pressable
@@ -204,54 +202,55 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
-  menuRow: { paddingHorizontal: 20, paddingTop: 6 },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  topBarMain: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
   title: {
     color: colors.ink,
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "600",
-    marginTop: 4,
+    lineHeight: 19,
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 16,
   },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 20, paddingBottom: 40, gap: 12 },
-  error: { color: colors.danger, fontSize: 13.5, fontWeight: "600" },
-  empty: { alignItems: "center", marginTop: 60, paddingHorizontal: 30 },
-  emptyBadge: {
-    width: 62,
-    height: 62,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  emptyBody: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 6,
+  error: {
+    color: colors.danger,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "700",
+    backgroundColor: withAlpha(colors.danger, 0.08),
+    borderRadius: 14,
+    padding: 14,
   },
   row: {
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
     overflow: "hidden",
     shadowColor: colors.ink,
@@ -267,9 +266,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   rowIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     backgroundColor: colors.mist,
     alignItems: "center",
     justifyContent: "center",
@@ -293,15 +292,20 @@ const styles = StyleSheet.create({
   rowTitle: {
     flex: 1,
     color: colors.ink,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
+    letterSpacing: -0.1,
   },
   rowTitleUnread: { fontWeight: "800" },
-  rowTime: { color: colors.textFaint, fontSize: 11, fontWeight: "600" },
+  rowTime: {
+    color: colors.textFaint,
+    fontSize: 12.5,
+    fontWeight: "600",
+  },
   rowBody: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18.5,
-    marginTop: 8,
+    fontSize: 13.5,
+    lineHeight: 20,
+    marginTop: 10,
   },
 });

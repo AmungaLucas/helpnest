@@ -14,8 +14,9 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import ScreenHeader from "../components/ui/ScreenHeader";
 import { testApiHealth } from "../config/api";
-import { colors } from "../theme/colors";
+import { colors, withAlpha } from "../theme/colors";
 
 export default function ConnectionDiagnosticScreen() {
   const [loading, setLoading] = useState(false);
@@ -46,20 +47,16 @@ export default function ConnectionDiagnosticScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
+      <ScreenHeader
+        leading="none"
+        title="HelpNest"
+        subtitle="Trusted people. Happier homes."
+      />
+
       <ScrollView
         contentContainerStyle={styles.page}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.brandRow}>
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>H</Text>
-          </View>
-          <View>
-            <Text style={styles.brand}>HelpNest</Text>
-            <Text style={styles.tagline}>Trusted people. Happier homes.</Text>
-          </View>
-        </View>
-
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>CONNECTION SETUP</Text>
           <Text style={styles.title}>Let's connect HelpNest</Text>
@@ -127,6 +124,7 @@ export default function ConnectionDiagnosticScreen() {
             accessibilityRole="button"
             onPress={handleTestConnection}
             disabled={loading}
+            android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
             style={({ pressed }) => [
               styles.button,
               pressed && !loading ? styles.buttonPressed : null,
@@ -161,82 +159,56 @@ const styles = StyleSheet.create({
   },
   page: {
     flexGrow: 1,
-    padding: 22,
-    paddingTop: 30,
+    padding: 20,
+    paddingTop: 20,
     paddingBottom: 36,
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 38,
-  },
-  logo: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  logoText: {
-    color: colors.white,
-    fontSize: 27,
-    fontWeight: "800",
-  },
-  brand: {
-    color: colors.brand,
-    fontSize: 23,
-    fontWeight: "800",
-  },
-  tagline: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 2,
   },
   hero: {
     marginBottom: 24,
   },
   eyebrow: {
     color: colors.goldDark,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
   title: {
     color: colors.ink,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: "800",
+    letterSpacing: -0.6,
     marginBottom: 10,
   },
   description: {
     color: colors.textMuted,
-    fontSize: 15,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 21,
   },
   card: {
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 20,
     shadowColor: colors.ink,
     shadowOpacity: 0.05,
-    shadowRadius: 14,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    elevation: 1,
   },
   sectionTitle: {
     color: colors.ink,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 17.5,
+    fontWeight: "800",
+    letterSpacing: -0.2,
     marginBottom: 7,
   },
   apiUrl: {
     color: colors.brand,
     fontSize: 13,
+    fontWeight: "600",
     marginBottom: 19,
   },
   statusRow: {
@@ -251,10 +223,10 @@ const styles = StyleSheet.create({
     marginRight: 9,
   },
   statusDotSuccess: {
-    backgroundColor: "#2E8B57",
+    backgroundColor: colors.brandSoft,
   },
   statusDotError: {
-    backgroundColor: "#C24136",
+    backgroundColor: colors.danger,
   },
   statusDotIdle: {
     backgroundColor: colors.gold,
@@ -277,7 +249,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   successBox: {
-    backgroundColor: "#EAF4EC",
+    backgroundColor: withAlpha(colors.brandSoft, 0.16),
     borderRadius: 12,
     padding: 13,
     marginBottom: 16,
@@ -294,34 +266,35 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   errorBox: {
-    backgroundColor: "#FFF0EE",
+    backgroundColor: withAlpha(colors.danger, 0.08),
     borderRadius: 12,
     padding: 13,
     marginBottom: 16,
   },
   errorTitle: {
-    color: "#A52F25",
+    color: colors.danger,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 5,
   },
   errorText: {
-    color: "#7D2922",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 20,
     marginBottom: 7,
   },
   button: {
-    minHeight: 50,
-    borderRadius: 12,
+    minHeight: 54,
+    borderRadius: 14,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
     marginTop: 4,
+    overflow: "hidden",
   },
   buttonPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -329,7 +302,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.white,
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   note: {
     color: colors.textMuted,

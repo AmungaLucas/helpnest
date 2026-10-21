@@ -339,8 +339,8 @@ const styles = StyleSheet.create({
   },
   heroNote: {
     color: withAlpha(colors.white, 0.85),
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 13.5,
+    lineHeight: 20,
     marginTop: 10,
     marginBottom: 18,
   },
@@ -369,13 +369,11 @@ const styles = StyleSheet.create({
     borderColor: colors.mist,
     paddingVertical: 16,
     marginBottom: 14,
-    ...({
-      shadowColor: colors.ink,
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 5 },
-      elevation: 1,
-    }),
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   stat: {
     flex: 1,
@@ -426,8 +424,8 @@ const styles = StyleSheet.create({
   pendingText: {
     flex: 1,
     color: colors.goldDark,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     fontWeight: "600",
   },
   card: {
@@ -437,13 +435,11 @@ const styles = StyleSheet.create({
     borderColor: colors.mist,
     padding: 18,
     marginBottom: 14,
-    ...({
-      shadowColor: colors.ink,
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 5 },
-      elevation: 1,
-    }),
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   cardEyebrow: {
     color: colors.goldDark,
@@ -476,13 +472,14 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     color: colors.ink,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
+    letterSpacing: -0.1,
   },
   stepBody: {
     color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 2,
   },
   refRow: {
@@ -511,7 +508,7 @@ const styles = StyleSheet.create({
   },
   refName: {
     color: colors.ink,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "700",
   },
   refSub: {
@@ -551,8 +548,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 13.5,
+    lineHeight: 20,
   },
   versionText: {
     color: colors.textFaint,

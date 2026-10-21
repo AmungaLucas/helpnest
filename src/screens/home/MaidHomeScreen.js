@@ -16,6 +16,7 @@ import { getEntitlements } from "../../services/entitlementsService";
 import { HelpNestLogoMark } from "../../components/Logo";
 import LocationPromptCard from "../../components/ui/LocationPromptCard";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import GradientBanner from "../../components/ui/GradientBanner";
 import { colors, withAlpha } from "../../theme/colors";
 
 // Maid home (PRD §5.2): get the worker search-ready and into work fast.
@@ -90,7 +91,7 @@ export default function MaidHomeScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.brand} />
 
       {/* ---------- Brand header ---------- */}
-      <View style={styles.header}>
+      <GradientBanner style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.logoBadge}>
             <HelpNestLogoMark size={22} />
@@ -100,7 +101,7 @@ export default function MaidHomeScreen() {
         <View style={styles.headerPill}>
           <Text style={styles.headerPillText}>Domestic Worker</Text>
         </View>
-      </View>
+      </GradientBanner>
 
       <ScrollView
         style={styles.bodyScroll}
@@ -122,6 +123,7 @@ export default function MaidHomeScreen() {
           ]}
           onPress={() => navigation.navigate("ProfileTab", { screen: "Skills" })}
         >
+          <Text style={styles.eyebrow}>Search readiness</Text>
           <View style={styles.progressTopRow}>
             <Text style={styles.progressTitle}>Complete your profile</Text>
             <Text style={styles.progressValue}>{progress}%</Text>
@@ -191,7 +193,9 @@ export default function MaidHomeScreen() {
             ]}
             onPress={() => navigation.navigate("FindJobsTab")}
           >
-            <TabBarIcon name="search" color={colors.white} size={19} />
+            <View style={[styles.actionIcon, styles.actionIconOnBrand]}>
+              <TabBarIcon name="search" color={colors.white} size={18} />
+            </View>
             <Text style={[styles.actionTitle, styles.actionTitleLight]}>
               Find jobs
             </Text>
@@ -209,7 +213,9 @@ export default function MaidHomeScreen() {
             ]}
             onPress={() => navigation.navigate("ApplicationsTab")}
           >
-            <TabBarIcon name="file-text" color={colors.brand} size={19} />
+            <View style={styles.actionIcon}>
+              <TabBarIcon name="file-text" color={colors.brand} size={18} />
+            </View>
             <Text style={styles.actionTitle}>My applications</Text>
             <Text style={styles.actionText}>
               Track what you've applied to
@@ -299,6 +305,7 @@ export default function MaidHomeScreen() {
 
         {/* ---------- Tips ---------- */}
         <View style={styles.tipsCard}>
+          <Text style={styles.tipsEyebrow}>Good to know</Text>
           <Text style={styles.tipsTitle}>Tips to get hired faster</Text>
           <Text style={styles.tipLine}>
             • Use a clear title like "Experienced childcare helper" — vague
@@ -326,9 +333,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 14,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   planHead: {
@@ -375,18 +382,18 @@ const styles = StyleSheet.create({
   planTile: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 14,
   },
   planTileBest: {
-    borderColor: colors.brand,
-    backgroundColor: withAlpha(colors.brand, 0.05),
+    borderColor: colors.gold,
+    backgroundColor: withAlpha(colors.gold, 0.08),
   },
   planBest: {
     alignSelf: "flex-start",
-    backgroundColor: withAlpha(colors.gold, 0.2),
+    backgroundColor: withAlpha(colors.gold, 0.16),
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -430,7 +437,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   header: {
-    backgroundColor: colors.brand,
     paddingHorizontal: 20,
     paddingVertical: 14,
     flexDirection: "row",
@@ -456,13 +462,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   headerPill: {
-    backgroundColor: withAlpha(colors.cream, 0.16),
+    backgroundColor: withAlpha(colors.white, 0.16),
     borderRadius: 999,
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
   headerPillText: {
-    color: colors.cream,
+    color: colors.white,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.4,
@@ -476,16 +482,16 @@ const styles = StyleSheet.create({
   },
   karibu: {
     color: colors.ink,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     marginBottom: 6,
   },
   lede: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 18,
+    marginBottom: 20,
   },
 
   /* ---- Completeness card ---- */
@@ -497,10 +503,18 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 14,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
+  },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
   progressTopRow: {
     flexDirection: "row",
@@ -606,16 +620,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 15,
-    minHeight: 112,
+    minHeight: 122,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   actionPrimary: {
     backgroundColor: colors.brand,
     borderColor: colors.brand,
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  actionIconOnBrand: {
+    backgroundColor: withAlpha(colors.white, 0.16),
   },
   cardPressed: {
     opacity: 0.88,
@@ -624,7 +650,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 14,
     fontWeight: "800",
-    marginTop: 9,
+    marginTop: 0,
   },
   actionTitleLight: {
     color: colors.white,
@@ -649,10 +675,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 4,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
+  },
+  tipsEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
   },
   tipsTitle: {
     color: colors.ink,

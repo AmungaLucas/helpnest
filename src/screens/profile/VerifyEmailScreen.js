@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
+import ScreenHeader from "../../components/ui/ScreenHeader";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { colors, withAlpha } from "../../theme/colors";
 import {
@@ -98,18 +99,8 @@ export default function VerifyEmailScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          onPress={() => navigation.goBack()}
-        >
-          <TabBarIcon name="chevron-left" color={colors.brand} size={20} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Verify your email</Text>
-        <View style={styles.backSpace} />
-      </View>
+
+      <ScreenHeader title="Verify your email" leading="back" tone="surface" />
 
       <View style={styles.body}>
         <View style={styles.heroBadge}>
@@ -189,59 +180,52 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
   pressed: { opacity: 0.88 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    backgroundColor: colors.mist,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backSpace: { width: 40 },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 17,
-    fontWeight: "800",
-    color: colors.ink,
-  },
-  body: { flex: 1, paddingHorizontal: 20, paddingTop: 14 },
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   heroBadge: {
     width: 64,
     height: 64,
     borderRadius: 20,
     backgroundColor: withAlpha(colors.brand, 0.12),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.brand, 0.14),
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginBottom: 18,
+    marginBottom: 16,
   },
   lede: {
-    fontSize: 15,
+    fontSize: 14.5,
     color: colors.ink,
     lineHeight: 22,
-    marginBottom: 14,
+    textAlign: "center",
+    alignSelf: "center",
+    maxWidth: 320,
+    marginBottom: 18,
   },
   msgBox: {
     backgroundColor: withAlpha(colors.brand, 0.1),
     borderRadius: 14,
-    padding: 12,
+    padding: 14,
     marginBottom: 10,
   },
-  msg: { fontSize: 13, color: colors.brand, fontWeight: "700" },
+  msg: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.brand,
+    fontWeight: "700",
+  },
   errBox: {
     backgroundColor: withAlpha(colors.danger, 0.07),
     borderRadius: 14,
-    padding: 12,
+    padding: 14,
     marginBottom: 10,
   },
-  err: { fontSize: 13, color: colors.danger, fontWeight: "700" },
+  err: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.danger,
+    fontWeight: "700",
+  },
   codeInput: {
     borderWidth: 1.5,
     borderColor: withAlpha(colors.brand, 0.35),
@@ -264,6 +248,11 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingVertical: 15,
     overflow: "hidden",
+    shadowColor: colors.ink,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
   btnDisabled: { opacity: 0.45 },
   primaryBtnText: { color: colors.white, fontWeight: "800", fontSize: 16 },
@@ -271,10 +260,12 @@ const styles = StyleSheet.create({
   resendText: { color: colors.brand, fontWeight: "800", fontSize: 14 },
   resendWait: { color: colors.textMuted, opacity: 0.6 },
   note: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: colors.textMuted,
     lineHeight: 18,
-    marginTop: 6,
+    marginTop: 10,
     textAlign: "center",
+    alignSelf: "center",
+    maxWidth: 320,
   },
 });

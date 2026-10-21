@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import EmptyState from "../../components/ui/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { colors, withAlpha } from "../../theme/colors";
 import {
@@ -100,7 +101,7 @@ export default function RequestsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
@@ -108,9 +109,18 @@ export default function RequestsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+
+      {/* v3 header — eyebrow + display title on the cream canvas. */}
+      <View style={styles.headerBlock}>
+        <Text style={styles.headerEyebrow}>Awaiting your reply</Text>
+        <Text style={styles.headerTitle}>New chats</Text>
+      </View>
 
       <View style={styles.optOutCard}>
+        <View style={styles.optOutIcon}>
+          <TabBarIcon name="bell" color={colors.brand} size={17} />
+        </View>
         <View style={styles.optOutMain}>
           <Text style={styles.optOutTitle}>Stop new chat requests</Text>
           <Text style={styles.optOutBody}>
@@ -193,16 +203,11 @@ export default function RequestsScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <View style={styles.emptyBadge}>
-              <TabBarIcon name="check-circle" color={colors.brand} size={26} />
-            </View>
-            <Text style={styles.emptyTitle}>All caught up</Text>
-            <Text style={styles.emptyBody}>
-              New chats from employers land here first. Replying is always
-              free and both sides stay end-to-end encrypted.
-            </Text>
-          </View>
+          <EmptyState
+            icon="check-circle"
+            title="All caught up"
+            body="New chats from employers land here first. Replying is always free and both sides stay end-to-end encrypted."
+          />
         }
         showsVerticalScrollIndicator={false}
       />
@@ -211,25 +216,52 @@ export default function RequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  // Cream canvas (Modern v3) — white squircle cards float on it.
+  container: { flex: 1, backgroundColor: colors.cream },
   center: { alignItems: "center", justifyContent: "center" },
-  list: { paddingBottom: 20 },
+  list: { paddingHorizontal: 20, paddingBottom: 24 },
+
+  headerBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  headerEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  headerTitle: {
+    color: colors.ink,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
 
   optOutCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     marginHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 6,
-    padding: 16,
+    marginBottom: 12,
+    padding: 14,
     borderRadius: 18,
-    backgroundColor: colors.cream,
-    borderWidth: 1,
-    borderColor: colors.mist,
+    backgroundColor: colors.white,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
+  },
+  optOutIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
   },
   optOutMain: { flex: 1 },
-  optOutTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  optOutTitle: { color: colors.ink, fontSize: 14.5, fontWeight: "800" },
   optOutBody: {
     color: colors.textMuted,
     fontSize: 11.5,
@@ -240,25 +272,30 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
     backgroundColor: colors.white,
+    borderRadius: 18,
+    padding: 14,
     gap: 12,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
-  cardPressed: { backgroundColor: colors.cream },
+  cardPressed: { opacity: 0.88 },
   cardAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: withAlpha(colors.brand, 0.13),
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
   },
-  cardAvatarText: { color: colors.brand, fontSize: 19, fontWeight: "800" },
+  cardAvatarText: { color: colors.brand, fontSize: 20, fontWeight: "800" },
   cardMain: { flex: 1 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   kindChip: {
-    backgroundColor: withAlpha(colors.brand, 0.12),
+    backgroundColor: withAlpha(colors.brand, 0.1),
     borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -282,25 +319,7 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
   },
   unreadText: { color: colors.white, fontSize: 10.5, fontWeight: "800" },
-  cardName: { color: colors.ink, fontSize: 15, fontWeight: "800", marginTop: 4 },
-  cardPreview: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17, marginTop: 2 },
-  separator: { height: 1, backgroundColor: colors.mist, marginLeft: 80 },
-
-  emptyWrap: { alignItems: "center", padding: 36 },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  emptyTitle: { color: colors.ink, fontSize: 17, fontWeight: "800", marginBottom: 6 },
-  emptyBody: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
-    textAlign: "center",
-  },
+  cardName: { color: colors.ink, fontSize: 15, fontWeight: "800", marginTop: 5 },
+  cardPreview: { color: colors.textMuted, fontSize: 13, lineHeight: 17, marginTop: 2 },
+  separator: { height: 10 },
 });

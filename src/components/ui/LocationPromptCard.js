@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { useAuth } from "../../context/AuthContext";
 import { updateMe } from "../../services/usersService";
@@ -7,7 +14,8 @@ import {
   openAppSettings,
   requestAndFetchLocation,
 } from "../../utils/location";
-import { colors } from "../../theme/colors";
+import TabBarIcon from "./TabBarIcon";
+import { colors, withAlpha } from "../../theme/colors";
 
 // Nudges the user to share their general location once (lat/lng only).
 // Renders nothing once coords exist. Used by both role home screens.
@@ -62,22 +70,28 @@ export default function LocationPromptCard() {
 
   return (
     <View style={styles.card}>
-      <View style={styles.textWrap}>
-        <Text style={styles.title}>
-          {user?.role === "maid" ? "Find work near you" : "Find help near you"}
-        </Text>
-        <Text style={styles.body}>
-          Allow location access so we can show{" "}
-          {user?.role === "maid" ? "jobs" : "workers and jobs"} close to you.
-          We store your general area only — never your exact address.
-        </Text>
+      <View style={styles.row}>
+        <View style={styles.icon}>
+          <TabBarIcon name="map-pin" color={colors.brand} size={18} />
+        </View>
+        <View style={styles.textWrap}>
+          <Text style={styles.title}>
+            {user?.role === "maid" ? "Find work near you" : "Find help near you"}
+          </Text>
+          <Text style={styles.body}>
+            Allow location access so we can show{" "}
+            {user?.role === "maid" ? "jobs" : "workers and jobs"} close to you.
+            We store your general area only — never your exact address.
+          </Text>
+        </View>
       </View>
 
       <Pressable
         accessibilityRole="button"
-        style={styles.button}
+        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         onPress={handleAllow}
         disabled={locating}
+        android_ripple={{ color: withAlpha(colors.white, 0.18) }}
       >
         {locating ? (
           <ActivityIndicator color={colors.white} size="small" />
@@ -103,30 +117,49 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 1,
   },
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
   textWrap: {
-    marginBottom: 12,
+    flex: 1,
   },
   title: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: "800",
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
   body: {
     color: colors.textMuted,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 19,
   },
   button: {
     backgroundColor: colors.brand,
     borderRadius: 14,
-    minHeight: 46,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  pressed: {
+    opacity: 0.88,
   },
   buttonText: {
     color: colors.white,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: "800",
   },
 });

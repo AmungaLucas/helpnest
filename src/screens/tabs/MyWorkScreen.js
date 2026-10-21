@@ -17,7 +17,9 @@ import { useFocusEffect } from "@react-navigation/native";
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
 import Chip from "../../components/ui/Chip";
-import HamburgerButton from "../../components/ui/HamburgerButton";
+import ScreenHeader from "../../components/ui/ScreenHeader";
+import EmptyState from "../../components/ui/EmptyState";
+import TabBarIcon from "../../components/ui/TabBarIcon";
 import { getMyWorkerProfile } from "../../services/workersService";
 import { updateMe } from "../../services/usersService";
 import {
@@ -146,6 +148,13 @@ export default function MyWorkScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
+      <ScreenHeader
+        leading="hamburger"
+        eyebrow="Skills & experience"
+        title="My work profile"
+        tone="canvas"
+      />
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior="padding"
@@ -155,23 +164,23 @@ export default function MyWorkScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.menuRow}>
-            <HamburgerButton />
-          </View>
-
-          <Text style={styles.title}>My work profile</Text>
           <Text style={styles.subtitle}>
             This is what employers see in Find Help. Keep it honest and
             specific — it's how you get hired.
           </Text>
 
           {loadError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{loadError}</Text>
-            </View>
+            <EmptyState
+              compact
+              icon="alert-triangle"
+              tone="danger"
+              title="Could not load your profile"
+              body={loadError}
+            />
           ) : null}
 
           <View style={styles.card}>
+            <Text style={styles.cardEyebrow}>Profile</Text>
             <TextField
               label="Professional title"
               placeholder="e.g. Experienced house help"
@@ -188,7 +197,10 @@ export default function MyWorkScreen() {
               value={bio}
               onChangeText={setBio}
             />
+          </View>
 
+          <View style={styles.card}>
+            <Text style={styles.cardEyebrow}>Rates & experience</Text>
             <View style={styles.row}>
               <View style={styles.halfField}>
                 <TextField
@@ -211,7 +223,9 @@ export default function MyWorkScreen() {
                 />
               </View>
             </View>
+          </View>
 
+          <View style={styles.card}>
             <Text style={styles.groupLabel}>Services you offer</Text>
             <View style={styles.chipsWrap}>
               {SERVICE_OPTIONS.map((option) => (
@@ -225,7 +239,7 @@ export default function MyWorkScreen() {
             </View>
 
             <Text style={styles.groupLabel}>Availability</Text>
-            <View style={styles.chipsWrap}>
+            <View style={[styles.chipsWrap, styles.chipsWrapLast]}>
               {AVAILABILITY_OPTIONS.map((option) => (
                 <Chip
                   key={option.value}
@@ -235,7 +249,10 @@ export default function MyWorkScreen() {
                 />
               ))}
             </View>
+          </View>
 
+          <View style={styles.card}>
+            <Text style={styles.cardEyebrow}>Visibility</Text>
             <View style={styles.switchRow}>
               <View style={styles.switchTextWrap}>
                 <Text style={styles.switchLabel}>Appear in Find Help search</Text>
@@ -256,12 +273,18 @@ export default function MyWorkScreen() {
 
             {formError ? (
               <View style={styles.errorBox}>
+                <TabBarIcon
+                  name="alert-triangle"
+                  color={colors.danger}
+                  size={15}
+                />
                 <Text style={styles.errorText}>{formError}</Text>
               </View>
             ) : null}
 
             {saved ? (
               <View style={styles.savedBox}>
+                <TabBarIcon name="check" color={colors.brand} size={14} />
                 <Text style={styles.savedText}>Profile saved</Text>
               </View>
             ) : null}
@@ -291,24 +314,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scroll: {
-    padding: 20,
-    paddingBottom: 60,
-  },
-  menuRow: {
-    marginBottom: 12,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 23,
-    fontWeight: "800",
-    letterSpacing: -0.3,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 48,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 13.5,
     lineHeight: 20,
-    marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 18,
   },
   card: {
     backgroundColor: colors.white,
@@ -316,11 +330,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
+    marginBottom: 14,
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 1,
+  },
+  cardEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 14,
   },
   row: {
     flexDirection: "row",
@@ -331,12 +354,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   groupLabel: {
-    color: colors.textMuted,
-    fontSize: 11.5,
-    fontWeight: "700",
-    letterSpacing: 0.8,
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginTop: 6,
+    marginTop: 2,
     marginBottom: 10,
   },
   chipsWrap: {
@@ -344,10 +367,15 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     marginBottom: 14,
   },
+  chipsWrapLast: {
+    marginBottom: 0,
+  },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.mist,
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.mist,
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
@@ -368,26 +396,33 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
     backgroundColor: withAlpha(colors.danger, 0.1),
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
   },
   errorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
   },
   savedBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
     backgroundColor: withAlpha(colors.brand, 0.12),
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     marginBottom: 14,
   },
   savedText: {
     color: colors.brand,
     fontSize: 13,
     fontWeight: "800",
-    textAlign: "center",
   },
 });

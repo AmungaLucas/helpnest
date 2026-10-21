@@ -1,6 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,8 @@ import { useAuth } from "../../context/AuthContext";
 import { createJob } from "../../services/jobsService";
 import { getSubscriptionStatus } from "../../services/subscriptionsService";
 import JobPostModal from "../../components/ui/JobPostModal";
+import ScreenHeader from "../../components/ui/ScreenHeader";
+import PrimaryButton from "../../components/ui/PrimaryButton";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { SERVICE_OPTIONS } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
@@ -31,6 +32,9 @@ import { colors, withAlpha } from "../../theme/colors";
 // in pendingPayloadRef and the JobPostModal opens (one-time post vs plans).
 // After an M-Pesa purchase the user lands back here, the focus effect
 // retries the held payload, and the job publishes itself.
+//
+// v3: ScreenHeader back bar, grouped form cards, eyebrow field labels and a
+// large pinned submit CTA. Logic untouched.
 // ---------------------------------------------------------------------------
 export default function PostJobScreen() {
   const navigation = useNavigation();
@@ -210,39 +214,37 @@ export default function PostJobScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          onPress={() => navigation.goBack()}
-          hitSlop={10}
-          style={styles.backButton}
-        >
-          <TabBarIcon name="chevron-left" color={colors.ink} size={23} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Post a job</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader
+        title="Post a job"
+        eyebrow="New listing"
+        leading="back"
+        onBack={() => navigation.goBack()}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          style={styles.flex}
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.feeCard}>
-            <TabBarIcon
-              name={canPostJob === true ? "check-circle" : "credit-card"}
-              color={colors.brand}
-              size={15}
-            />
+            <View style={styles.feeIcon}>
+              <TabBarIcon
+                name={canPostJob === true ? "check-circle" : "credit-card"}
+                color={colors.brand}
+                size={15}
+              />
+            </View>
             <Text style={styles.feeText}>{feeHint}</Text>
           </View>
 
-          <View style={styles.formCard}>
+          <View style={[styles.groupCard, styles.groupGap]}>
+            <Text style={styles.groupTitle}>The basics</Text>
+
             <Text style={styles.label}>Job title</Text>
             <TextInput
               style={styles.input}
@@ -268,6 +270,11 @@ export default function PostJobScreen() {
                       on && styles.chipOn,
                       pressed && styles.pressed,
                     ]}
+                    android_ripple={{
+                      color: withAlpha(colors.brand, 0.08),
+                      borderless: false,
+                      radius: 14,
+                    }}
                     onPress={() => setCategory(option.value)}
                   >
                     <Text style={[styles.chipText, on && styles.chipTextOn]}>
@@ -277,10 +284,14 @@ export default function PostJobScreen() {
                 );
               })}
             </View>
+          </View>
+
+          <View style={[styles.groupCard, styles.groupGap]}>
+            <Text style={styles.groupTitle}>The details</Text>
 
             <Text style={styles.label}>Details (optional)</Text>
             <TextInput
-              style={[styles.input, styles.inputMultiline]}
+              style={[styles.input, styles.inputMultiline, styles.inputLast]}
               value={description}
               onChangeText={setDescription}
               placeholder="Duties, days, hours, anything else that matters…"
@@ -288,6 +299,10 @@ export default function PostJobScreen() {
               multiline
               maxLength={2000}
             />
+          </View>
+
+          <View style={[styles.groupCard, styles.groupGap]}>
+            <Text style={styles.groupTitle}>Where & pay</Text>
 
             <Text style={styles.label}>Area</Text>
             <TextInput
@@ -301,7 +316,7 @@ export default function PostJobScreen() {
 
             <Text style={styles.label}>Offered pay (KES, optional)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, styles.inputLast]}
               value={rate}
               onChangeText={setRate}
               placeholder="e.g. 800"
@@ -312,30 +327,24 @@ export default function PostJobScreen() {
           </View>
 
           {formError ? (
-            <Text style={styles.formError}>{formError}</Text>
+            <View style={styles.formErrorCard}>
+              <TabBarIcon
+                name="alert-triangle"
+                color={colors.danger}
+                size={14}
+              />
+              <Text style={styles.formErrorText}>{formError}</Text>
+            </View>
           ) : null}
+        </ScrollView>
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={submitting}
-            style={({ pressed }) => [
-              styles.submitButton,
-              submitting && styles.submitDisabled,
-              pressed && styles.pressed,
-            ]}
+        <View style={styles.submitBar}>
+          <PrimaryButton
+            label={canPostJob === false ? "Continue · from KES 300" : "Post job"}
             onPress={handleSubmit}
-          >
-            {submitting ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <>
-                <TabBarIcon name="file-text" color={colors.white} size={16} />
-                <Text style={styles.submitText}>
-                  {canPostJob === false ? "Continue · from KES 300" : "Post job"}
-                </Text>
-              </>
-            )}
-          </Pressable>
+            loading={submitting}
+            disabled={submitting}
+          />
 
           {canPostJob === false ? (
             <Text style={styles.submitNote}>
@@ -343,7 +352,7 @@ export default function PostJobScreen() {
               job posts right away, otherwise you'll pick how to pay.
             </Text>
           ) : null}
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
 
       <JobPostModal
@@ -363,40 +372,35 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  backButton: {
-    width: 60,
-    alignItems: "flex-start",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  headerSpacer: {
-    width: 60,
-  },
   scroll: {
     padding: 20,
-    paddingTop: 4,
-    paddingBottom: 40,
+    paddingTop: 12,
+    paddingBottom: 28,
   },
   feeCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 16,
+    gap: 12,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 14,
+    marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  feeIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
   },
   feeText: {
     flex: 1,
@@ -405,17 +409,28 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "600",
   },
-  formCard: {
+  groupCard: {
     backgroundColor: colors.white,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     padding: 18,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 1,
+  },
+  groupGap: {
+    marginBottom: 14,
+  },
+  groupTitle: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 14,
   },
   label: {
     color: colors.textMuted,
@@ -432,28 +447,31 @@ const styles = StyleSheet.create({
     borderColor: colors.mist,
     color: colors.ink,
     fontSize: 14,
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 12,
     marginBottom: 16,
   },
   inputMultiline: {
-    minHeight: 96,
+    minHeight: 104,
     textAlignVertical: "top",
+  },
+  inputLast: {
+    marginBottom: 2,
   },
   chipsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 16,
   },
   chip: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.mistDark,
+    borderColor: colors.mist,
     paddingHorizontal: 13,
-    paddingVertical: 8,
-    backgroundColor: colors.white,
+    paddingVertical: 9,
+    backgroundColor: colors.cream,
+    overflow: "hidden",
   },
   chipOn: {
     backgroundColor: colors.brand,
@@ -467,42 +485,38 @@ const styles = StyleSheet.create({
   chipTextOn: {
     color: colors.white,
   },
-  formError: {
+  formErrorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    backgroundColor: withAlpha(colors.danger, 0.1),
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 2,
+  },
+  formErrorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 12.5,
     lineHeight: 18,
-    marginTop: 12,
+    fontWeight: "600",
   },
-  submitButton: {
-    minHeight: 54,
-    borderRadius: 16,
-    backgroundColor: colors.brand,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 18,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1,
-  },
-  submitDisabled: {
-    opacity: 0.7,
-  },
-  submitText: {
-    color: colors.white,
-    fontSize: 14.5,
-    fontWeight: "800",
+  submitBar: {
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 14,
   },
   submitNote: {
     color: colors.textMuted,
     fontSize: 11.5,
-    lineHeight: 17,
+    lineHeight: 16,
     textAlign: "center",
-    marginTop: 10,
-    paddingHorizontal: 12,
+    marginTop: 9,
+    paddingHorizontal: 8,
   },
   pressed: {
     opacity: 0.88,

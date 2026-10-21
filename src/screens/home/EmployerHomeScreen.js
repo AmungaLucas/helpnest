@@ -19,6 +19,7 @@ import { getSubscriptionStatus } from "../../services/subscriptionsService";
 import SignedImage from "../../components/media/SignedImage";
 import LocationPickerModal from "../../components/ui/LocationPickerModal";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import EmptyState from "../../components/ui/EmptyState";
 import {
   SERVICE_OPTIONS,
   serviceLabel,
@@ -27,10 +28,11 @@ import { formatDistance } from "../../utils/geo";
 import { colors, withAlpha } from "../../theme/colors";
 
 // ---------------------------------------------------------------------------
-// Employer home — 2026-10-20 redesign (top -> bottom):
-//   greeting + location chip -> search -> Post a job / Find a maid CTAs ->
-//   category chips -> Maids near you (distance) -> Top rated (+ Near me
-//   filter) -> Verified & background-checked -> How it works -> trust strip.
+// Employer home — Modern v3 redesign (top -> bottom):
+//   greeting display header + supporting caption -> location chip -> search
+//   pill -> Post a job / Find a maid CTAs -> brand-tinted category pills ->
+//   Maids near you (distance) -> Top rated (+ Near me filter) -> Verified &
+//   background-checked -> How it works (numbered block) -> trust strip.
 //
 // "Near you" is now REAL distance: the employer's saved coords go to
 // GET /api/workers?lat=&lng=&sort=near and every worker comes back with
@@ -438,10 +440,13 @@ export default function EmployerHomeScreen() {
           />
         }
       >
-        {/* ---------- Greeting + location chip (new header) ---------- */}
+        {/* ---------- Greeting header zone ---------- */}
         <Text style={styles.karibu}>
           {greetingForHour()}
           {firstName ? `, ${firstName}` : ""} 👋
+        </Text>
+        <Text style={styles.karibuLede}>
+          Trusted help for your home — search, compare and hire safely.
         </Text>
 
         <Pressable
@@ -499,9 +504,14 @@ export default function EmployerHomeScreen() {
         </View>
 
         {/* ---------- Categories ---------- */}
-        <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>
-          What do you need help with?
-        </Text>
+        <View style={styles.sectionHead}>
+          <View style={styles.sectionHeadLeft}>
+            <Text style={styles.eyebrow}>Services</Text>
+            <Text style={styles.sectionTitle}>
+              What do you need help with?
+            </Text>
+          </View>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -534,36 +544,25 @@ export default function EmployerHomeScreen() {
             <ActivityIndicator color={colors.brand} />
           </View>
         ) : workers.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <View style={styles.emptyBadge}>
-              <TabBarIcon
-                name={loadError ? "alert-triangle" : "users"}
-                color={colors.brand}
-                size={24}
-              />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {loadError ? "Connection hiccup" : "No workers yet"}
-            </Text>
-            <Text style={styles.emptyText}>
-              {loadError
+          <EmptyState
+            icon={loadError ? "alert-triangle" : "users"}
+            tone={loadError ? "danger" : "brand"}
+            title={loadError ? "Connection hiccup" : "No workers yet"}
+            body={
+              loadError
                 ? "Couldn't load workers just now. Check your connection and try again."
-                : "No worker profiles yet. They'll appear here as domestic workers complete their profiles."}
-            </Text>
-            {loadError ? (
-              <Pressable
-                accessibilityRole="button"
-                android_ripple={{ color: withAlpha(colors.white, 0.16) }}
-                style={({ pressed }) => [styles.retryButton, pressed && styles.pressedDim]}
-                onPress={() => {
-                  setLoading(true);
-                  fetchWorkers();
-                }}
-              >
-                <Text style={styles.retryText}>Try again</Text>
-              </Pressable>
-            ) : null}
-          </View>
+                : "No worker profiles yet. They'll appear here as domestic workers complete their profiles."
+            }
+            actionLabel={loadError ? "Try again" : undefined}
+            onAction={
+              loadError
+                ? () => {
+                    setLoading(true);
+                    fetchWorkers();
+                  }
+                : undefined
+            }
+          />
         ) : (
           <>
             <View style={styles.sectionHead}>
@@ -573,7 +572,8 @@ export default function EmployerHomeScreen() {
               </View>
               <Pressable
                 accessibilityRole="button"
-                style={({ pressed }) => pressed && styles.pressedDim}
+                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                style={({ pressed }) => [styles.seeAllHit, pressed && styles.pressedDim]}
                 onPress={() => navigation.navigate("MaidsTab")}
               >
                 <Text style={styles.seeAll}>See all</Text>
@@ -627,6 +627,8 @@ export default function EmployerHomeScreen() {
                 ) : null}
                 <Pressable
                   accessibilityRole="button"
+                  android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                  style={({ pressed }) => [styles.seeAllHit, pressed && styles.pressedDim]}
                   onPress={() => navigation.navigate("MaidsTab")}
                 >
                   <Text style={styles.seeAll}>See all</Text>
@@ -657,7 +659,8 @@ export default function EmployerHomeScreen() {
                   </View>
                   <Pressable
                     accessibilityRole="button"
-                    style={({ pressed }) => pressed && styles.pressedDim}
+                    android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+                    style={({ pressed }) => [styles.seeAllHit, pressed && styles.pressedDim]}
                     onPress={() => navigation.navigate("MaidsTab")}
                   >
                     <Text style={styles.seeAll}>See all</Text>
@@ -681,16 +684,21 @@ export default function EmployerHomeScreen() {
         )}
 
         {/* ---------- How it works ---------- */}
-        <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>
-          How it works
-        </Text>
+        <View style={styles.sectionHead}>
+          <View style={styles.sectionHeadLeft}>
+            <Text style={styles.eyebrow}>Simple process</Text>
+            <Text style={styles.sectionTitle}>How it works</Text>
+          </View>
+        </View>
         <View style={styles.stepsCard}>
           {HOW_IT_WORKS.map((step, index) => (
             <View
               key={step.title}
               style={[styles.stepRow, index > 0 && styles.stepDivided]}
             >
-              <Text style={styles.stepNum}>{index + 1}</Text>
+              <View style={styles.stepNumWrap}>
+                <Text style={styles.stepNum}>{index + 1}</Text>
+              </View>
               <View style={styles.stepMain}>
                 <Text style={styles.stepTitle}>{step.title}</Text>
                 <Text style={styles.stepBody}>{step.body}</Text>
@@ -706,7 +714,7 @@ export default function EmployerHomeScreen() {
 
         {/* ---------- Trust strip ---------- */}
         <View style={styles.trustCard}>
-          <TabBarIcon name="shield" color={colors.brand} size={17} />
+          <TabBarIcon name="shield" color={colors.goldDark} size={17} />
           <Text style={styles.trustText}>
             Every contact unlock is paid through M-Pesa and workers keep
             control of who sees their number.
@@ -796,10 +804,16 @@ const styles = StyleSheet.create({
   /* ---- Header: greeting + location chip ---- */
   karibu: {
     color: colors.ink,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.4,
-    marginBottom: 10,
+    letterSpacing: -0.6,
+    marginBottom: 5,
+  },
+  karibuLede: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 14,
   },
   locationChip: {
     alignSelf: "flex-start",
@@ -808,12 +822,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 12,
-    paddingLeft: 12,
+    borderRadius: 999,
+    paddingLeft: 13,
     paddingRight: 8,
     paddingVertical: 7,
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 16,
     maxWidth: "100%",
   },
   locationText: {
@@ -835,10 +849,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.mist,
     borderRadius: 16,
-    minHeight: 52,
+    minHeight: 54,
     paddingHorizontal: 16,
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   searchText: {
     color: colors.textMuted,
@@ -851,15 +865,15 @@ const styles = StyleSheet.create({
   ctaRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 24,
+    marginBottom: 26,
   },
   postJob: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 15,
-    minHeight: 52,
+    borderRadius: 16,
+    minHeight: 54,
     paddingHorizontal: 14,
   },
   ctaPrimary: {
@@ -868,7 +882,7 @@ const styles = StyleSheet.create({
   },
   postJobText: {
     color: colors.white,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
   },
   findMaid: {
@@ -876,23 +890,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 15,
-    minHeight: 52,
+    borderRadius: 16,
+    minHeight: 54,
     paddingHorizontal: 14,
   },
   ctaSecondary: {
     flex: 1,
     backgroundColor: colors.white,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.brand,
   },
   findMaidText: {
     color: colors.brand,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
   },
   tilePressed: {
-    backgroundColor: colors.mist,
+    opacity: 0.88,
   },
   pressedDim: {
     opacity: 0.88,
@@ -913,13 +927,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.ink,
-    fontSize: 17,
+    fontSize: 17.5,
     fontWeight: "800",
-    letterSpacing: -0.2,
-  },
-  sectionTitleGap: {
-    marginTop: 6,
-    marginBottom: 12,
+    letterSpacing: -0.4,
   },
   sectionHead: {
     flexDirection: "row",
@@ -933,6 +943,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingBottom: 1,
+  },
+  seeAllHit: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   seeAll: {
     color: colors.brand,
@@ -963,7 +978,7 @@ const styles = StyleSheet.create({
   },
   chipsRow: {
     paddingRight: 20,
-    marginBottom: 22,
+    marginBottom: 24,
     gap: 8,
   },
 
@@ -972,9 +987,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: withAlpha(colors.brand, 0.07),
-    borderRadius: 12,
-    paddingLeft: 12,
-    paddingRight: 14,
+    borderRadius: 999,
+    paddingLeft: 13,
+    paddingRight: 15,
     paddingVertical: 9,
     gap: 7,
   },
@@ -993,7 +1008,7 @@ const styles = StyleSheet.create({
   /* ---- Rails ---- */
   rail: {
     paddingRight: 20,
-    marginBottom: 22,
+    marginBottom: 24,
     gap: 12,
   },
 
@@ -1001,7 +1016,7 @@ const styles = StyleSheet.create({
   nearCard: {
     width: 204,
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     overflow: "hidden",
@@ -1074,7 +1089,7 @@ const styles = StyleSheet.create({
   miniCard: {
     width: 136,
     backgroundColor: colors.white,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.mist,
     paddingVertical: 14,
@@ -1154,9 +1169,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   stepRow: {
@@ -1168,12 +1183,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.mist,
   },
+  stepNumWrap: {
+    width: 38,
+    alignItems: "flex-start",
+    marginRight: 12,
+  },
   stepNum: {
-    width: 34,
     color: colors.cloud,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
-    marginRight: 14,
   },
   stepMain: {
     flex: 1,
@@ -1191,56 +1209,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ---- Loading / empty ---- */
+  /* ---- Loading ---- */
   loadingBox: {
-    paddingVertical: 28,
+    paddingVertical: 34,
     alignItems: "center",
-  },
-  emptyBox: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.mist,
-    padding: 22,
-    alignItems: "center",
-    marginBottom: 22,
-  },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-  retryButton: {
-    alignSelf: "center",
-    marginTop: 14,
-    backgroundColor: colors.brand,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    minHeight: 42,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  retryText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: "800",
   },
 
   /* ---- Trust ---- */
@@ -1270,9 +1242,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 14,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   planHead: {
@@ -1308,7 +1280,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 19,
     marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   planRow: {
     flexDirection: "row",
@@ -1317,7 +1289,7 @@ const styles = StyleSheet.create({
   planTile: {
     flex: 1,
     backgroundColor: colors.cream,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.mist,
     paddingVertical: 14,
@@ -1367,4 +1339,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-

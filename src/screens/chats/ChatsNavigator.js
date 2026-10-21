@@ -6,7 +6,7 @@ import { createMaterialTopTabNavigator } from "@react-navigation/material-top-ta
 import MessagesScreen from "./MessagesScreen";
 import RequestsScreen from "./RequestsScreen";
 import { useAuth } from "../../context/AuthContext";
-import { colors } from "../../theme/colors";
+import { colors, withAlpha } from "../../theme/colors";
 
 const TopTab = createMaterialTopTabNavigator();
 
@@ -35,6 +35,7 @@ export default function ChatsNavigator() {
         screenOptions={{
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.textMuted,
+          tabBarPressColor: withAlpha(colors.brand, 0.08),
           tabBarIndicatorStyle: {
             backgroundColor: colors.brand,
             height: 3,
@@ -51,6 +52,7 @@ export default function ChatsNavigator() {
           tabBarLabelStyle: {
             fontSize: 13.5,
             fontWeight: "800",
+            letterSpacing: 0.1,
             textTransform: "none",
           },
           swipeEnabled: true,
@@ -65,6 +67,8 @@ export default function ChatsNavigator() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.white },
+  // Cream canvas so the status-bar band matches the list screens below the
+  // white tab bar.
+  safeArea: { flex: 1, backgroundColor: colors.cream },
   single: { flex: 1 },
 });

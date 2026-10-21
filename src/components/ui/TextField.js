@@ -123,10 +123,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   inputError: {
-    borderColor: "#C24136",
+    borderColor: colors.danger,
   },
   error: {
-    color: "#C24136",
+    color: colors.danger,
     fontSize: 12,
     marginTop: 6,
   },

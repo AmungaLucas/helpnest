@@ -18,8 +18,9 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 
 import PrimaryButton from "../../components/ui/PrimaryButton";
-import HamburgerButton from "../../components/ui/HamburgerButton";
+import ScreenHeader from "../../components/ui/ScreenHeader";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import EmptyState from "../../components/ui/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { uploadMedia } from "../../services/mediaService";
 import { getKycStatus, submitKyc } from "../../services/kycService";
@@ -116,7 +117,7 @@ function DocSlot({ label, hint, state, onPick, disabled }) {
         accessibilityRole="button"
         onPress={onPick}
         disabled={disabled}
-        style={styles.slotPress}
+        style={({ pressed }) => [styles.slotPress, pressed && styles.pressed]}
       >
         {state?.uri ? (
           <View>
@@ -145,7 +146,12 @@ function DocSlot({ label, hint, state, onPick, disabled }) {
       </Pressable>
       <View style={styles.slotCopy}>
         <Text style={styles.slotLabel}>{label}</Text>
-        <Text style={styles.slotHint}>
+        <Text
+          style={[
+            styles.slotHint,
+            state?.error ? styles.slotHintError : null,
+          ]}
+        >
           {state?.error ? state.error : hint}
         </Text>
       </View>
@@ -425,6 +431,12 @@ export default function VerificationScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+        <ScreenHeader
+          leading="hamburger"
+          eyebrow="Trust & safety"
+          title={roleCopy.screenTitle}
+          tone="canvas"
+        />
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
@@ -438,23 +450,15 @@ export default function VerificationScreen() {
             />
           }
         >
-          <View style={styles.menuRow}>
-            <HamburgerButton />
-          </View>
-
-          <Text style={styles.title}>{roleCopy.screenTitle}</Text>
           <Text style={styles.subtitle}>{roleCopy.intro}</Text>
 
           {loadError ? (
-            <View style={[styles.statusCard, styles.errorCard]}>
-              <View style={styles.statusHead}>
-                <TabBarIcon name="alert-triangle" color={colors.danger} size={20} />
-                <Text style={[styles.statusTitle, styles.errorTone]}>
-                  Something went wrong
-                </Text>
-              </View>
-              <Text style={[styles.statusBody, styles.errorTone]}>{loadError}</Text>
-            </View>
+            <EmptyState
+              icon="alert-triangle"
+              tone="danger"
+              title="Something went wrong"
+              body={loadError}
+            />
           ) : null}
 
           <View style={[styles.statusCard, { backgroundColor: theme.bg, borderColor: theme.border }]}>
@@ -555,7 +559,7 @@ export default function VerificationScreen() {
               user can see exactly what the reviewer decided per photo. */}
           {hasDocs ? (
             <View style={styles.docsCard}>
-              {SLOTS.map((slot) => {
+              {SLOTS.map((slot, slotIndex) => {
                 const doc = documents[slot.key];
 
                 if (!doc) return null;
@@ -577,6 +581,7 @@ export default function VerificationScreen() {
                         style={[
                           styles.docPill,
                           doc.status === "approved" && styles.docPillOk,
+                          doc.status === "pending" && styles.docPillPending,
                           rejected && styles.docPillBad,
                         ]}
                       >
@@ -584,6 +589,7 @@ export default function VerificationScreen() {
                           style={[
                             styles.docPillText,
                             doc.status === "approved" && styles.docPillTextOk,
+                            doc.status === "pending" && styles.docPillTextPending,
                             rejected && styles.docPillTextBad,
                           ]}
                         >
@@ -602,7 +608,7 @@ export default function VerificationScreen() {
                 return rejected ? (
                   <Pressable
                     key={slot.key}
-                    style={styles.docRow}
+                    style={[styles.docRow, slotIndex > 0 && styles.docRowDivided]}
                     accessibilityRole="button"
                     accessibilityLabel={`Retake ${slot.label}`}
                     onPress={openResubmitForm}
@@ -610,7 +616,12 @@ export default function VerificationScreen() {
                     {rowInner}
                   </Pressable>
                 ) : (
-                  <View key={slot.key} style={styles.docRow}>{rowInner}</View>
+                  <View
+                    key={slot.key}
+                    style={[styles.docRow, slotIndex > 0 && styles.docRowDivided]}
+                  >
+                    {rowInner}
+                  </View>
                 );
               })}
             </View>
@@ -645,15 +656,16 @@ export default function VerificationScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+      <ScreenHeader
+        leading="hamburger"
+        eyebrow="Trust & safety"
+        title="Submit your documents"
+        tone="canvas"
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.menuRow}>
-          <HamburgerButton />
-        </View>
-
-        <Text style={styles.title}>Submit your documents</Text>
         <Text style={styles.subtitle}>
           {resubmitMode
             ? "Only the flagged photos need a retake — the approved ones stay as they are. Tap a box to shoot with the guided camera or pick from your gallery."
@@ -700,6 +712,11 @@ export default function VerificationScreen() {
 
           {formError ? (
             <View style={styles.errorBox}>
+              <TabBarIcon
+                name="alert-triangle"
+                color={colors.danger}
+                size={15}
+              />
               <Text style={styles.errorText}>{formError}</Text>
             </View>
           ) : null}
@@ -831,9 +848,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     overflow: "hidden",
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
@@ -853,13 +870,13 @@ const styles = StyleSheet.create({
   fastTrackMain: { flex: 1, marginRight: 12 },
   fastTrackTitle: {
     color: colors.ink,
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: "800",
   },
   fastTrackText: {
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 12.5,
+    lineHeight: 18,
     marginTop: 3,
   },
   pricePill: {
@@ -879,9 +896,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.mist,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     overflow: "hidden",
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
@@ -910,10 +927,10 @@ const styles = StyleSheet.create({
   },
   appealSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 22,
-    paddingBottom: 34,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 24,
+    paddingBottom: 40,
   },
   appealGrabber: {
     alignSelf: "center",
@@ -927,18 +944,19 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 18,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   appealSheetHint: {
     color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 8,
     marginBottom: 14,
   },
   appealSheetInput: {
     borderWidth: 1,
     borderColor: colors.mistDark,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: colors.cream,
     padding: 14,
     minHeight: 100,
@@ -957,6 +975,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 20,
     paddingVertical: 13,
+    minHeight: 48,
     minWidth: 110,
     alignItems: "center",
     justifyContent: "center",
@@ -971,42 +990,25 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 10,
     paddingBottom: 48,
-  },
-  menuRow: {
-    marginBottom: 16,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 26,
-    fontWeight: "800",
-    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 6,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   statusCard: {
     borderRadius: 20,
     borderWidth: 1,
-    padding: 18,
-    marginBottom: 14,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: colors.ink,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 1,
-  },
-  errorCard: {
-    backgroundColor: withAlpha(colors.danger, 0.07),
-    borderColor: withAlpha(colors.danger, 0.22),
-  },
-  errorTone: {
-    color: colors.danger,
   },
   statusHead: {
     flexDirection: "row",
@@ -1016,6 +1018,7 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 17.5,
     fontWeight: "800",
+    letterSpacing: -0.3,
     marginLeft: 10,
   },
   statusBody: {
@@ -1042,6 +1045,10 @@ const styles = StyleSheet.create({
     minHeight: 56,
     paddingVertical: 13,
     paddingHorizontal: 12,
+  },
+  docRowDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.mist,
   },
   docMain: {
     flex: 1,
@@ -1071,6 +1078,9 @@ const styles = StyleSheet.create({
   docPillOk: {
     backgroundColor: withAlpha(colors.brand, 0.1),
   },
+  docPillPending: {
+    backgroundColor: withAlpha(colors.gold, 0.16),
+  },
   docPillBad: {
     backgroundColor: withAlpha(colors.danger, 0.1),
   },
@@ -1081,6 +1091,9 @@ const styles = StyleSheet.create({
   },
   docPillTextOk: {
     color: colors.brand,
+  },
+  docPillTextPending: {
+    color: colors.goldDark,
   },
   docPillTextBad: {
     color: colors.danger,
@@ -1116,8 +1129,8 @@ const styles = StyleSheet.create({
   trustText: {
     flex: 1,
     color: colors.textMuted,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     marginLeft: 12,
   },
   card: {
@@ -1145,7 +1158,7 @@ const styles = StyleSheet.create({
     height: 84,
   },
   slotLockedThumb: {
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
@@ -1157,13 +1170,13 @@ const styles = StyleSheet.create({
   slotThumb: {
     width: 84,
     height: 84,
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: colors.mist,
   },
   slotEmpty: {
     width: 84,
     height: 84,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.mistDark,
@@ -1207,9 +1220,13 @@ const styles = StyleSheet.create({
   },
   slotHint: {
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 12.5,
+    lineHeight: 18,
     marginTop: 3,
+  },
+  slotHintError: {
+    color: colors.danger,
+    fontWeight: "600",
   },
   consentRow: {
     flexDirection: "row",
@@ -1240,17 +1257,21 @@ const styles = StyleSheet.create({
   consentText: {
     flex: 1,
     color: colors.ink,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 12.5,
+    lineHeight: 18,
     fontWeight: "600",
   },
   errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
     backgroundColor: withAlpha(colors.danger, 0.07),
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
   },
   errorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,

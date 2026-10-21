@@ -168,7 +168,7 @@ export default function KYCCameraScreen({ route, navigation }) {
   if (!permission) {
     return (
       <SafeAreaView style={[styles.safeArea, styles.center]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0B0F0C" />
+        <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
         <ActivityIndicator size="large" color={colors.white} />
       </SafeAreaView>
     );
@@ -177,7 +177,7 @@ export default function KYCCameraScreen({ route, navigation }) {
   if (!permission.granted) {
     return (
       <SafeAreaView style={[styles.safeArea, styles.centerPad]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0B0F0C" />
+        <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
         <View style={styles.permCard}>
           <TabBarIcon name="camera" color={colors.white} size={30} />
           <Text style={styles.permTitle}>Camera access needed</Text>
@@ -216,7 +216,7 @@ export default function KYCCameraScreen({ route, navigation }) {
   // --- capture view --------------------------------------------------------
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0B0F0C" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
 
       <View style={styles.cameraShell}>
         {shot && !busy ? (
@@ -272,7 +272,7 @@ export default function KYCCameraScreen({ route, navigation }) {
                   height: frameH,
                   borderRadius: frameW / 2,
                   borderWidth: 2.5,
-                  borderColor: withAlpha("#FFFFFF", 0.95),
+                  borderColor: withAlpha(colors.white, 0.95),
                 }}
               />
             ) : isProfile ? (
@@ -286,7 +286,7 @@ export default function KYCCameraScreen({ route, navigation }) {
                   height: frameH,
                   borderRadius: frameW / 2,
                   borderWidth: 2.5,
-                  borderColor: withAlpha("#FFFFFF", 0.95),
+                  borderColor: withAlpha(colors.white, 0.95),
                 }}
               />
             ) : (
@@ -301,7 +301,7 @@ export default function KYCCameraScreen({ route, navigation }) {
                     height: frameH,
                     borderWidth: 1.5,
                     borderRadius: 14,
-                    borderColor: withAlpha("#FFFFFF", 0.55),
+                    borderColor: withAlpha(colors.white, 0.55),
                   }}
                 />
                 <View
@@ -377,7 +377,7 @@ export default function KYCCameraScreen({ route, navigation }) {
             >
               <TabBarIcon
                 name="zap"
-                color={torchOn ? "#0B0F0C" : colors.white}
+                color={torchOn ? colors.ink : colors.white}
                 size={20}
               />
             </Pressable>
@@ -466,7 +466,7 @@ export default function KYCCameraScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0B0F0C",
+    backgroundColor: colors.ink,
   },
   center: {
     alignItems: "center",
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   permBody: {
-    color: withAlpha("#FFFFFF", 0.75),
+    color: withAlpha(colors.white, 0.75),
     fontSize: 13.5,
     lineHeight: 20,
     textAlign: "center",
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   settingsLinkText: {
-    color: withAlpha("#FFFFFF", 0.8),
+    color: withAlpha(colors.white, 0.8),
     fontSize: 12.5,
     fontWeight: "700",
     textDecorationLine: "underline",
@@ -511,18 +511,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backLinkText: {
-    color: withAlpha("#FFFFFF", 0.55),
+    color: withAlpha(colors.white, 0.55),
     fontSize: 13,
     fontWeight: "700",
   },
   cameraShell: {
     flex: 1,
     overflow: "hidden",
-    backgroundColor: "#000000",
+    backgroundColor: colors.ink,
   },
   maskPanel: {
     position: "absolute",
-    backgroundColor: withAlpha("#000000", 0.58),
+    backgroundColor: withAlpha(colors.ink, 0.58),
   },
   bracket: {
     position: "absolute",
@@ -534,10 +534,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 22,
     right: 22,
-    backgroundColor: withAlpha("#000000", 0.66),
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: withAlpha(colors.ink, 0.66),
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
   },
   hintText: {
     color: colors.white,
@@ -561,14 +561,14 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 14,
     fontWeight: "800",
-    textShadowColor: withAlpha("#000000", 0.55),
+    textShadowColor: withAlpha(colors.ink, 0.55),
     textShadowRadius: 6,
   },
   roundButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: withAlpha("#000000", 0.45),
+    backgroundColor: withAlpha(colors.ink, 0.45),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   },
   busyOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: withAlpha("#000000", 0.55),
+    backgroundColor: withAlpha(colors.ink, 0.55),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -597,8 +597,8 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   errorPill: {
-    backgroundColor: withAlpha("#B3493E", 0.92),
-    borderRadius: 10,
+    backgroundColor: withAlpha(colors.danger, 0.92),
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 12,
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: withAlpha("#000000", 0.45),
+    backgroundColor: withAlpha(colors.ink, 0.45),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   reviewButtonGhost: {
-    backgroundColor: withAlpha("#FFFFFF", 0.16),
+    backgroundColor: withAlpha(colors.white, 0.16),
   },
   reviewButtonPrimary: {
     backgroundColor: colors.brand,

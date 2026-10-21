@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { listMyJobs, setJobStatus } from "../../services/jobsService";
+import EmptyState from "../../components/ui/EmptyState";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import { serviceLabel } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
@@ -25,6 +26,10 @@ import { colors, withAlpha } from "../../theme/colors";
 // applicant review. The server enforces the posting gate on submit; this
 // screen only displays what exists and lets the employer close or reopen a
 // listing (free within the window, PRD §11.2).
+//
+// v3: display-scale header, icon-led meta rows, data-driven status pills
+// (open/expired/closed), gold Boost pill and a v3 grabber bottom sheet for
+// the urgent/spotlight options. Logic untouched.
 // ---------------------------------------------------------------------------
 export default function MyJobsScreen() {
   const navigation = useNavigation();
@@ -121,6 +126,7 @@ export default function MyJobsScreen() {
 
       <View style={styles.header}>
         <View style={styles.headerBody}>
+          <Text style={styles.eyebrow}>Your listings</Text>
           <Text style={styles.title}>My Jobs</Text>
           <Text style={styles.subtitle}>
             {jobs && jobs.length > 0
@@ -134,6 +140,11 @@ export default function MyJobsScreen() {
             styles.postButton,
             pressed && styles.pressed,
           ]}
+          android_ripple={{
+            color: withAlpha(colors.brand, 0.08),
+            borderless: false,
+            radius: 16,
+          }}
           onPress={() => navigation.navigate("PostJob")}
         >
           <TabBarIcon name="file-text" color={colors.white} size={14} />
@@ -149,47 +160,54 @@ export default function MyJobsScreen() {
         <ScrollView
           contentContainerStyle={styles.center}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
           {error ? (
-            <>
-              <Text style={styles.errorTitle}>Something went wrong</Text>
-              <Text style={styles.errorText}>{error}</Text>
-            </>
+            <EmptyState
+              icon="alert-triangle"
+              tone="danger"
+              title="Something went wrong"
+              body={error}
+              actionLabel="Post your first job"
+              onAction={() => navigation.navigate("PostJob")}
+            />
           ) : (
-            <>
-              <View style={styles.emptyBadge}>
-                <TabBarIcon name="work" color={colors.brand} size={26} />
-              </View>
-              <Text style={styles.emptyTitle}>No jobs yet</Text>
-              <Text style={styles.emptyText}>
-                Post a job and verified maids nearby can respond — you review
-                every applicant before reaching out.
-              </Text>
-            </>
+            <EmptyState
+              icon="work"
+              title="No jobs yet"
+              body="Post a job and verified maids nearby can respond — you review every applicant before reaching out."
+              actionLabel="Post your first job"
+              onAction={() => navigation.navigate("PostJob")}
+            />
           )}
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.emptyCta,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => navigation.navigate("PostJob")}
-          >
-            <TabBarIcon name="file-text" color={colors.white} size={15} />
-            <Text style={styles.emptyCtaText}>Post your first job</Text>
-          </Pressable>
         </ScrollView>
       ) : (
         <ScrollView
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.brand}
+            />
           }
         >
-          {error ? <Text style={styles.listError}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.listErrorBanner}>
+              <TabBarIcon
+                name="alert-triangle"
+                color={colors.danger}
+                size={14}
+              />
+              <Text style={styles.listErrorText}>{error}</Text>
+            </View>
+          ) : null}
 
           {jobs.map((job) => {
             const open = job.status === "open";
@@ -215,6 +233,11 @@ export default function MyJobsScreen() {
                   styles.jobCard,
                   pressed && styles.cardPressed,
                 ]}
+                android_ripple={{
+                  color: withAlpha(colors.brand, 0.08),
+                  borderless: false,
+                  radius: 20,
+                }}
                 onPress={() =>
                   navigation.navigate("JobApplications", { job })
                 }
@@ -226,14 +249,20 @@ export default function MyJobsScreen() {
                   <View
                     style={[
                       styles.statusPill,
-                      open && !expired ? styles.statusOpen : styles.statusClosed,
+                      open
+                        ? expired
+                          ? styles.statusExpired
+                          : styles.statusOpen
+                        : styles.statusClosed,
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusText,
-                        open && !expired
-                          ? styles.statusOpenText
+                        open
+                          ? expired
+                            ? styles.statusExpiredText
+                            : styles.statusOpenText
                           : styles.statusClosedText,
                       ]}
                     >
@@ -249,12 +278,26 @@ export default function MyJobsScreen() {
                     </Text>
                   </View>
                   {job.locationLabel ? (
-                    <Text style={styles.metaText} numberOfLines={1}>
-                      {job.locationLabel}
-                    </Text>
+                    <View style={styles.metaItem}>
+                      <TabBarIcon
+                        name="map-pin"
+                        color={colors.textFaint}
+                        size={12}
+                      />
+                      <Text style={styles.metaText} numberOfLines={1}>
+                        {job.locationLabel}
+                      </Text>
+                    </View>
                   ) : null}
                   {job.rateKes ? (
-                    <Text style={styles.metaText}>· KES {job.rateKes}</Text>
+                    <View style={styles.metaItem}>
+                      <TabBarIcon
+                        name="credit-card"
+                        color={colors.textFaint}
+                        size={12}
+                      />
+                      <Text style={styles.metaText}>KES {job.rateKes}</Text>
+                    </View>
                   ) : null}
                 </View>
 
@@ -287,8 +330,18 @@ export default function MyJobsScreen() {
                         styles.boostBtn,
                         pressed && styles.pressed,
                       ]}
+                      android_ripple={{
+                        color: withAlpha(colors.gold, 0.12),
+                        borderless: false,
+                        radius: 14,
+                      }}
                       onPress={() => setBoostJob(job)}
                     >
+                      <TabBarIcon
+                        name="zap"
+                        color={colors.goldDark}
+                        size={12}
+                      />
                       <Text style={styles.boostBtnText}>Boost</Text>
                     </Pressable>
                   ) : null}
@@ -300,6 +353,11 @@ export default function MyJobsScreen() {
                       pressed && styles.pressed,
                       busyId === job.id && styles.toggleBusy,
                     ]}
+                    android_ripple={{
+                      color: withAlpha(colors.brand, 0.08),
+                      borderless: false,
+                      radius: 14,
+                    }}
                     onPress={() => toggleStatus(job)}
                   >
                     {busyId === job.id ? (
@@ -316,7 +374,9 @@ export default function MyJobsScreen() {
           })}
 
           <View style={styles.hintCard}>
-            <TabBarIcon name="shield" color={colors.brand} size={14} />
+            <View style={styles.hintIcon}>
+              <TabBarIcon name="shield" color={colors.brand} size={14} />
+            </View>
             <Text style={styles.hintText}>
               Keep chats and payments in the app — every contact unlock and
               job post is paid through M-Pesa.
@@ -340,6 +400,8 @@ export default function MyJobsScreen() {
             onPress={() => setBoostJob(null)}
           />
           <View style={styles.boostSheet}>
+            <View style={styles.grabber} />
+
             <Text style={styles.boostSheetTitle}>Boost this job</Text>
             <Text style={styles.boostSheetSub} numberOfLines={1}>
               {boostJob?.title}
@@ -347,7 +409,15 @@ export default function MyJobsScreen() {
 
             <Pressable
               accessibilityRole="button"
-              style={styles.boostOption}
+              style={({ pressed }) => [
+                styles.boostOption,
+                pressed && styles.pressed,
+              ]}
+              android_ripple={{
+                color: withAlpha(colors.brand, 0.08),
+                borderless: false,
+                radius: 16,
+              }}
               onPress={() => {
                 const job = boostJob;
                 setBoostJob(null);
@@ -358,6 +428,9 @@ export default function MyJobsScreen() {
                 });
               }}
             >
+              <View style={styles.boostOptionIcon}>
+                <TabBarIcon name="zap" color={colors.goldDark} size={16} />
+              </View>
               <View style={styles.boostOptionMain}>
                 <Text style={styles.boostOptionTitle}>Urgent boost</Text>
                 <Text style={styles.boostOptionText}>
@@ -370,7 +443,15 @@ export default function MyJobsScreen() {
 
             <Pressable
               accessibilityRole="button"
-              style={styles.boostOption}
+              style={({ pressed }) => [
+                styles.boostOption,
+                pressed && styles.pressed,
+              ]}
+              android_ripple={{
+                color: withAlpha(colors.brand, 0.08),
+                borderless: false,
+                radius: 16,
+              }}
               onPress={() => {
                 const job = boostJob;
                 setBoostJob(null);
@@ -381,6 +462,9 @@ export default function MyJobsScreen() {
                 });
               }}
             >
+              <View style={styles.boostOptionIcon}>
+                <TabBarIcon name="star" color={colors.goldDark} size={16} />
+              </View>
               <View style={styles.boostOptionMain}>
                 <Text style={styles.boostOptionTitle}>Spotlight</Text>
                 <Text style={styles.boostOptionText}>
@@ -412,32 +496,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 12,
+    paddingBottom: 14,
     gap: 12,
   },
   headerBody: {
     flex: 1,
   },
+  eyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
   title: {
     color: colors.ink,
-    fontSize: 23,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.6,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
   },
   postButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: colors.brand,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    minHeight: 38,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    minHeight: 40,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+    overflow: "hidden",
   },
   postButtonText: {
     color: colors.white,
@@ -448,63 +547,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32,
   },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 18,
-  },
-  emptyCta: {
+  listErrorBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: colors.brand,
+    gap: 9,
+    backgroundColor: withAlpha(colors.danger, 0.1),
     borderRadius: 14,
-    minHeight: 48,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  emptyCtaText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  errorTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  errorText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 18,
-  },
-  listError: {
+  listErrorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 12.5,
-    marginBottom: 10,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   list: {
     padding: 20,
@@ -527,25 +586,6 @@ const styles = StyleSheet.create({
   cardPressed: {
     opacity: 0.88,
   },
-  footerInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  appsBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-  },
-  appsBadgeText: {
-    color: colors.brand,
-    fontSize: 11,
-    fontWeight: "800",
-  },
   jobTop: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -566,6 +606,9 @@ const styles = StyleSheet.create({
   statusOpen: {
     backgroundColor: withAlpha(colors.brand, 0.12),
   },
+  statusExpired: {
+    backgroundColor: withAlpha(colors.gold, 0.16),
+  },
   statusClosed: {
     backgroundColor: withAlpha(colors.textMuted, 0.14),
   },
@@ -576,6 +619,9 @@ const styles = StyleSheet.create({
   statusOpenText: {
     color: colors.brand,
   },
+  statusExpiredText: {
+    color: colors.goldDark,
+  },
   statusClosedText: {
     color: colors.textMuted,
   },
@@ -583,8 +629,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
     marginTop: 10,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
   },
   categoryChip: {
     backgroundColor: withAlpha(colors.brand, 0.1),
@@ -617,6 +669,26 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.mist,
+    gap: 8,
+  },
+  footerInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  appsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: withAlpha(colors.brand, 0.08),
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  appsBadgeText: {
+    color: colors.brand,
+    fontSize: 11,
+    fontWeight: "800",
   },
   dateText: {
     color: colors.textMuted,
@@ -624,35 +696,101 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   boostBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     borderWidth: 1,
-    borderColor: colors.mistDark,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderColor: withAlpha(colors.gold, 0.4),
+    borderRadius: 12,
+    paddingHorizontal: 11,
     paddingVertical: 7,
-    backgroundColor: colors.white,
+    backgroundColor: withAlpha(colors.gold, 0.12),
+    overflow: "hidden",
   },
   boostBtnText: {
+    color: colors.goldDark,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  statusToggle: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    minWidth: 96,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  toggleBusy: {
+    opacity: 0.6,
+  },
+  statusToggleText: {
     color: colors.brand,
     fontSize: 12,
     fontWeight: "800",
   },
-  boostSheetWrap: { flex: 1, justifyContent: "flex-end" },
+  hintCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.mist,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 6,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  hintIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: withAlpha(colors.brand, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hintText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 11.5,
+    lineHeight: 17,
+    fontWeight: "600",
+  },
+  grabber: {
+    alignSelf: "center",
+    width: 44,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.cloud,
+    marginBottom: 14,
+  },
+  boostSheetWrap: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
   boostSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: withAlpha(colors.ink, 0.45),
   },
   boostSheet: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     padding: 20,
     paddingBottom: 30,
     gap: 10,
   },
   boostSheetTitle: {
     color: colors.ink,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
+    letterSpacing: -0.3,
   },
   boostSheetSub: {
     color: colors.textMuted,
@@ -664,11 +802,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.mistDark,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     backgroundColor: colors.cream,
+    gap: 12,
+    overflow: "hidden",
   },
-  boostOptionMain: { flex: 1, marginRight: 10 },
+  boostOptionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: withAlpha(colors.gold, 0.16),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  boostOptionMain: {
+    flex: 1,
+  },
   boostOptionTitle: {
     color: colors.ink,
     fontSize: 14,
@@ -690,40 +840,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     textAlign: "center",
-  },
-  statusToggle: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.brand,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    minWidth: 96,
-    alignItems: "center",
-  },
-  toggleBusy: {
-    opacity: 0.6,
-  },
-  statusToggleText: {
-    color: colors.brand,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  hintCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: withAlpha(colors.brand, 0.08),
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 6,
-  },
-  hintText: {
-    flex: 1,
-    color: colors.textMuted,
-    fontSize: 11.5,
-    lineHeight: 17,
-    fontWeight: "600",
   },
   pressed: {
     opacity: 0.88,

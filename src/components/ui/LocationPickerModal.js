@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(38, 49, 43, 0.45)",
+    backgroundColor: withAlpha(colors.ink, 0.45),
   },
   sheet: {
     backgroundColor: colors.white,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   gpsHint: {
-    color: withAlpha("#FFFFFF", 0.75),
+    color: withAlpha(colors.white, 0.75),
     fontSize: 11.5,
     fontWeight: "600",
     marginTop: 2,

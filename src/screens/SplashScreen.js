@@ -175,7 +175,7 @@ export default function SplashScreen({ navigation }) {
               },
             ]}
           >
-            <HelpNestLogoMark size={66} />
+            <HelpNestLogoMark size={70} />
           </Animated.View>
         </View>
 
@@ -229,21 +229,21 @@ const styles = StyleSheet.create({
   /* ---- Ambient orbs ---- */
   orbGold: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: withAlpha(colors.gold, 0.1),
-    top: -90,
-    right: -70,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: withAlpha(colors.gold, 0.12),
+    top: -100,
+    right: -84,
   },
   orbCream: {
     position: "absolute",
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: withAlpha(colors.cream, 0.05),
-    bottom: -50,
-    left: -55,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: withAlpha(colors.cream, 0.06),
+    bottom: -60,
+    left: -64,
   },
 
   content: {
@@ -252,11 +252,11 @@ const styles = StyleSheet.create({
 
   /* ---- Logo stage ---- */
   logoStage: {
-    width: 88,
-    height: 88,
+    width: 92,
+    height: 92,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 26,
+    marginBottom: 28,
   },
   halo: {
     position: "absolute",
@@ -264,14 +264,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 44,
+    borderRadius: 46,
     borderWidth: 2,
     borderColor: withAlpha(colors.gold, 0.5),
   },
   logoBadge: {
-    width: 88,
-    height: 88,
-    borderRadius: 27,
+    width: 92,
+    height: 92,
+    borderRadius: 29,
     backgroundColor: colors.cream,
     alignItems: "center",
     justifyContent: "center",
@@ -285,30 +285,32 @@ const styles = StyleSheet.create({
   /* ---- Text ---- */
   brand: {
     color: colors.white,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: -0.6,
   },
   accentBar: {
-    width: 30,
+    width: 34,
     height: 3,
     borderRadius: 2,
     backgroundColor: colors.gold,
-    marginTop: 14,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 14,
   },
   tagline: {
     color: colors.mist,
-    fontSize: 14.5,
-    fontWeight: "500",
-    letterSpacing: 0.4,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "600",
+    letterSpacing: 0.6,
   },
   footer: {
     position: "absolute",
-    bottom: 32,
+    bottom: 34,
     color: colors.gold,
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
 });

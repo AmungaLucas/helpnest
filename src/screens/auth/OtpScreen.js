@@ -138,7 +138,14 @@ export default function OtpScreen() {
 
             {error ? (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
+                <View style={styles.errorRow}>
+                  <TabBarIcon
+                    name="alert-triangle"
+                    color={colors.danger}
+                    size={15}
+                  />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
               </View>
             ) : null}
           </View>
@@ -215,14 +222,15 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 1.2,
+    textTransform: "uppercase",
     marginBottom: 10,
     textAlign: "center",
   },
   title: {
     color: colors.ink,
-    fontSize: 27,
+    fontSize: 28,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
     marginBottom: 8,
     textAlign: "center",
   },
@@ -246,16 +254,17 @@ const styles = StyleSheet.create({
   },
   devText: {
     color: colors.goldDark,
-    fontSize: 12.5,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
   codeInput: {
     backgroundColor: colors.white,
     borderWidth: 1.5,
     borderColor: colors.mistDark,
-    borderRadius: 16,
-    minHeight: 66,
+    borderRadius: 18,
+    minHeight: 68,
     fontSize: 28,
     fontWeight: "800",
     letterSpacing: 14,
@@ -276,12 +285,19 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 6,
   },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
   errorText: {
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: "600",
     textAlign: "center",
+    flexShrink: 1,
   },
 
   /* ---- Resend ---- */
@@ -295,6 +311,7 @@ const styles = StyleSheet.create({
   resendIdle: {
     color: colors.textFaint,
     fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "600",
   },
   resendLink: {
@@ -305,6 +322,8 @@ const styles = StyleSheet.create({
   backLink: {
     color: colors.textMuted,
     fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: "600",
     textAlign: "center",
     marginTop: 24,
     textDecorationLine: "underline",

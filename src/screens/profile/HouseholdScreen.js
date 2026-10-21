@@ -13,7 +13,8 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import TextField from "../../components/ui/TextField";
 import PrimaryButton from "../../components/ui/PrimaryButton";
-import HamburgerButton from "../../components/ui/HamburgerButton";
+import ScreenHeader from "../../components/ui/ScreenHeader";
+import EmptyState from "../../components/ui/EmptyState";
 import TabBarIcon from "../../components/ui/TabBarIcon";
 import {
   getMyEmployerProfile,
@@ -114,27 +115,32 @@ export default function HouseholdScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
 
+      <ScreenHeader
+        leading="hamburger"
+        eyebrow="Your home"
+        title="Household details"
+        tone="canvas"
+      />
+
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.menuRow}>
-            <HamburgerButton />
-          </View>
-
-          <Text style={styles.eyebrow}>Your home</Text>
-          <Text style={styles.title}>Household details</Text>
           <Text style={styles.subtitle}>
             This helps maids know what to expect in your home before they
             apply. Verified details build trust and better matches.
           </Text>
 
           {loadError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{loadError}</Text>
-            </View>
+            <EmptyState
+              compact
+              icon="alert-triangle"
+              tone="danger"
+              title="Could not load your details"
+              body={loadError}
+            />
           ) : null}
 
           <View style={styles.card}>
@@ -172,6 +178,11 @@ export default function HouseholdScreen() {
 
             {formError ? (
               <View style={styles.errorBox}>
+                <TabBarIcon
+                  name="alert-triangle"
+                  color={colors.danger}
+                  size={15}
+                />
                 <Text style={styles.errorText}>{formError}</Text>
               </View>
             ) : null}
@@ -209,32 +220,14 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 10,
     paddingBottom: 48,
-  },
-  menuRow: {
-    marginBottom: 16,
-  },
-  eyebrow: {
-    color: colors.goldDark,
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 26,
-    fontWeight: "800",
-    letterSpacing: -0.5,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 6,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   card: {
     backgroundColor: colors.white,
@@ -257,12 +250,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
     backgroundColor: withAlpha(colors.danger, 0.07),
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
   },
   errorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 13,
     lineHeight: 19,
@@ -270,11 +267,11 @@ const styles = StyleSheet.create({
   savedBox: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
+    gap: 7,
     backgroundColor: withAlpha(colors.brand, 0.1),
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     marginBottom: 14,
   },
   savedText: {

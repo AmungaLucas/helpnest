@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "./TabBarIcon";
+import HamburgerButton from "./HamburgerButton";
 import { colors, withAlpha } from "../../theme/colors";
 
 /**
@@ -59,6 +60,7 @@ export default function ScreenHeader({
             <TabBarIcon name="chevron-left" color={colors.ink} size={21} />
           </Pressable>
         ) : null}
+        {leading === "hamburger" ? <HamburgerButton /> : null}
       </View>
 
       <View style={styles.titleWrap} pointerEvents="none">

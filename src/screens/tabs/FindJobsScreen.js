@@ -22,6 +22,7 @@ import {
 import { getEntitlements } from "../../services/entitlementsService";
 import ApplyAccessModal from "../../components/ui/ApplyAccessModal";
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import EmptyState from "../../components/ui/EmptyState";
 import { SERVICE_OPTIONS, serviceLabel } from "../../utils/workerMeta";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -233,6 +234,7 @@ export default function FindJobsScreen() {
         </View>
         <Pressable
           accessibilityRole="button"
+          android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
           style={({ pressed }) => [styles.appsButton, pressed && styles.pressed]}
           onPress={() => navigation.navigate("ApplicationsTab")}
         >
@@ -242,33 +244,28 @@ export default function FindJobsScreen() {
       </View>
 
       <View style={styles.chipRow}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRowContent}
-        >
-          {SERVICE_OPTIONS.map((option) => {
-            const on = category === option.value;
+        {SERVICE_OPTIONS.map((option) => {
+          const on = category === option.value;
 
-            return (
-              <Pressable
-                key={option.value}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={({ pressed }) => [
-                  styles.chip,
-                  on && styles.chipOn,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => pickCategory(option.value)}
-              >
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
+              style={({ pressed }) => [
+                styles.chip,
+                on && styles.chipOn,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => pickCategory(option.value)}
+            >
+              <Text style={[styles.chipText, on && styles.chipTextOn]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {jobs === null ? (
@@ -283,32 +280,25 @@ export default function FindJobsScreen() {
           }
         >
           {error ? (
-            <>
-              <Text style={styles.errorTitle}>Couldn't load jobs</Text>
-              <Text style={styles.errorText}>{error}</Text>
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={load}
-              >
-                <Text style={styles.retryText}>Try again</Text>
-              </Pressable>
-            </>
+            <EmptyState
+              icon="alert-triangle"
+              tone="danger"
+              title="Couldn't load jobs"
+              body={error}
+              actionLabel="Try again"
+              onAction={load}
+            />
           ) : (
-            <>
-              <View style={styles.emptyBadge}>
-                <TabBarIcon name="search" color={colors.brand} size={26} />
-              </View>
-              <Text style={styles.emptyTitle}>No open roles yet</Text>
-              <Text style={styles.emptyText}>
-                {category
+            <EmptyState
+              icon="search"
+              tone="brand"
+              title="No open roles yet"
+              body={
+                category
                   ? "Nothing in this service right now — try another category."
-                  : "Employers post new jobs every day. Make sure your profile is complete and visible so they can find you too."}
-              </Text>
-            </>
+                  : "Employers post new jobs every day. Make sure your profile is complete and visible so they can find you too."
+              }
+            />
           )}
         </ScrollView>
       ) : (
@@ -319,7 +309,12 @@ export default function FindJobsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
-          {error ? <Text style={styles.listError}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.listError}>
+              <TabBarIcon name="alert-triangle" color={colors.danger} size={13} />
+              <Text style={styles.listErrorText}>{error}</Text>
+            </View>
+          ) : null}
 
           {jobs.map((job) => {
             const applied = Boolean(appliedIds[job.id]);
@@ -328,6 +323,7 @@ export default function FindJobsScreen() {
               <Pressable
                 key={job.id}
                 accessibilityRole="button"
+                android_ripple={{ color: withAlpha(colors.brand, 0.08) }}
                 style={({ pressed }) => [
                   styles.jobCard,
                   pressed && styles.cardPressed,
@@ -488,6 +484,7 @@ export default function FindJobsScreen() {
                 <Pressable
                   accessibilityRole="button"
                   disabled={applying}
+                  android_ripple={{ color: withAlpha(colors.white, 0.16) }}
                   style={({ pressed }) => [
                     styles.applyButton,
                     pressed && styles.pressed,
@@ -546,13 +543,14 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 23,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 12.5,
+    lineHeight: 17,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
   },
   appsButton: {
     flexDirection: "row",
@@ -560,9 +558,11 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: colors.brand,
-    borderRadius: 12,
+    borderRadius: 13,
     paddingHorizontal: 12,
-    minHeight: 38,
+    minHeight: 40,
+    backgroundColor: colors.white,
+    overflow: "hidden",
   },
   appsButtonText: {
     color: colors.brand,
@@ -570,21 +570,25 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   chipRow: {
-    paddingBottom: 4,
-  },
-  chipRowContent: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
     paddingHorizontal: 20,
-    gap: 8,
+    paddingBottom: 8,
   },
   chip: {
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.mistDark,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: colors.white,
+    overflow: "hidden",
   },
   chipOn: {
-    backgroundColor: colors.brand,
+    backgroundColor: withAlpha(colors.brand, 0.12),
     borderColor: colors.brand,
   },
   chipText: {
@@ -593,71 +597,37 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   chipTextOn: {
-    color: colors.white,
+    color: colors.brand,
+    fontWeight: "800",
   },
   center: {
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32,
-  },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-  errorTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  errorText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 14,
-  },
-  retryButton: {
-    borderRadius: 12,
-    backgroundColor: colors.brand,
-    paddingHorizontal: 18,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  retryText: {
-    color: colors.white,
-    fontSize: 13.5,
-    fontWeight: "800",
+    padding: 24,
   },
   listError: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: withAlpha(colors.danger, 0.08),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.danger, 0.2),
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 12,
+  },
+  listErrorText: {
+    flex: 1,
     color: colors.danger,
     fontSize: 12.5,
-    marginBottom: 10,
+    lineHeight: 17,
+    fontWeight: "600",
   },
   list: {
     padding: 20,
-    paddingTop: 10,
+    paddingTop: 12,
     paddingBottom: 40,
   },
   jobCard: {
@@ -668,9 +638,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     shadowColor: colors.ink,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   cardPressed: {
@@ -829,9 +799,10 @@ const styles = StyleSheet.create({
   },
   detailTitle: {
     color: colors.ink,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "800",
-    lineHeight: 24,
+    lineHeight: 25,
+    letterSpacing: -0.3,
   },
   verifiedPill: {
     backgroundColor: withAlpha(colors.brand, 0.12),
@@ -865,19 +836,20 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   applyButton: {
-    minHeight: 52,
-    borderRadius: 15,
+    minHeight: 54,
+    borderRadius: 16,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 18,
+    overflow: "hidden",
   },
   buttonBusy: {
     opacity: 0.7,
   },
   applyButtonText: {
     color: colors.white,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "800",
   },
   appliedBanner: {

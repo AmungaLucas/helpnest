@@ -1,10 +1,10 @@
 import React from "react";
-import { StatusBar, StyleSheet, Text, View } from "react-native";
+import { StatusBar, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import HamburgerButton from "./HamburgerButton";
-import TabBarIcon from "./TabBarIcon";
-import { colors, withAlpha } from "../../theme/colors";
+import EmptyState from "./EmptyState";
+import { colors } from "../../theme/colors";
 
 // Shared placeholder for features whose backend milestone hasn't landed
 // yet (jobs, applications, KYC, reviews, chat requests…). Renders a calm
@@ -26,12 +26,7 @@ export default function ComingSoonScreen({
       ) : null}
 
       <View style={styles.center}>
-        <View style={styles.badge}>
-          <TabBarIcon name={icon} color={colors.brand} size={26} />
-        </View>
-
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.body}>{blurb}</Text>
+        <EmptyState icon={icon} title={title} body={blurb} />
       </View>
     </SafeAreaView>
   );
@@ -50,28 +45,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 36,
-  },
-  badge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
-  title: {
-    color: colors.ink,
-    fontSize: 19,
-    fontWeight: "800",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  body: {
-    color: colors.textMuted,
-    fontSize: 13.5,
-    lineHeight: 21,
-    textAlign: "center",
   },
 });

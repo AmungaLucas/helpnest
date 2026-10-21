@@ -11,6 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import TabBarIcon from "../../components/ui/TabBarIcon";
+import EmptyState from "../../components/ui/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { colors, withAlpha } from "../../theme/colors";
 import { listConversations, registerChatKey } from "../../services/chatService";
@@ -95,7 +96,7 @@ function ConversationRow({ item, myId, isEmployer, onPress }) {
       accessibilityRole="button"
       onPress={onPress}
       android_ripple={{ color: withAlpha(colors.brand, 0.06) }}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => [styles.row, hasUnread && styles.rowUnread, pressed && styles.rowPressed]}
     >
       <Avatar name={item.peer?.name} verified={item.peer?.verified} />
 
@@ -104,6 +105,10 @@ function ConversationRow({ item, myId, isEmployer, onPress }) {
           <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
             {item.peer?.name || "HelpNest member"}
           </Text>
+
+          {/* Unread = brand border on the row + gold dot beside the time. */}
+          {hasUnread ? <View style={styles.goldDot} /> : null}
+
           <Text style={[styles.time, hasUnread && styles.timeUnread]}>
             {timeLabel(item.lastMessageAt || item.createdAt)}
           </Text>
@@ -216,7 +221,7 @@ export default function MessagesScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
         <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
@@ -224,24 +229,30 @@ export default function MessagesScreen() {
 
   if (conversations.length === 0) {
     return (
-      <View style={styles.emptyWrap}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
-        <View style={styles.emptyBadge}>
-          <TabBarIcon name="message-circle" color={colors.brand} size={26} />
-        </View>
-        <Text style={styles.emptyTitle}>No conversations yet</Text>
-        <Text style={styles.emptyBody}>
-          {user?.role === "employer"
-            ? "Open a worker's profile and tap Chat to start one. Chats are end-to-end encrypted — nobody else can read them."
-            : "When an employer messages you, the conversation shows up here. Replying is always free."}
-        </Text>
+      <View style={[styles.container, styles.center]}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+        <EmptyState
+          icon="message-circle"
+          title="No conversations yet"
+          body={
+            user?.role === "employer"
+              ? "Open a worker's profile and tap Chat to start one. Chats are end-to-end encrypted — nobody else can read them."
+              : "When an employer messages you, the conversation shows up here. Replying is always free."
+          }
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.cream} />
+
+      {/* v3 header — eyebrow + display title on the cream canvas. */}
+      <View style={styles.headerBlock}>
+        <Text style={styles.headerEyebrow}>End-to-end encrypted</Text>
+        <Text style={styles.headerTitle}>Chats</Text>
+      </View>
 
       <FlatList
         data={conversations}
@@ -279,22 +290,48 @@ export default function MessagesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  // Cream canvas (Modern v3) — white squircle cards float on it.
+  container: { flex: 1, backgroundColor: colors.cream },
   center: { alignItems: "center", justifyContent: "center" },
-  list: { paddingBottom: 16 },
+
+  headerBlock: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  headerEyebrow: {
+    color: colors.goldDark,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  headerTitle: {
+    color: colors.ink,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+
+  list: { paddingHorizontal: 20, paddingBottom: 16 },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 13,
     backgroundColor: colors.white,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    // soft ink shadow (iOS) + gentle elevation (Android)
+    shadowColor: colors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1,
   },
-  rowPressed: { backgroundColor: colors.cream },
+  rowUnread: { borderWidth: 1, borderColor: colors.brand },
+  rowPressed: { opacity: 0.88 },
   avatar: {
     width: 52,
     height: 52,
-    borderRadius: 17,
-    backgroundColor: withAlpha(colors.brand, 0.13),
+    borderRadius: 18,
+    backgroundColor: withAlpha(colors.brand, 0.12),
     alignItems: "center",
     justifyContent: "center",
     marginRight: 13,
@@ -318,11 +355,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 6,
   },
+  goldDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold },
   name: { flexShrink: 1, color: colors.ink, fontSize: 15, fontWeight: "700" },
   nameUnread: { fontWeight: "800" },
-  time: { color: colors.textFaint, fontSize: 11.5, fontWeight: "600", marginLeft: 10 },
-  timeUnread: { color: colors.brand },
+  time: { color: colors.textFaint, fontSize: 11.5, fontWeight: "600", marginLeft: 2 },
+  timeUnread: { color: colors.goldDark, fontWeight: "700" },
   rowBottomLine: {
     flexDirection: "row",
     alignItems: "center",
@@ -356,7 +395,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadText: { color: colors.white, fontSize: 11, fontWeight: "800" },
-  separator: { height: 1, backgroundColor: colors.mist, marginLeft: 83 },
+  // Cards carry the separation on the cream canvas — the "separator" is a gap.
+  separator: { height: 10 },
   safetyNoteRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -374,28 +414,4 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     textAlign: "center",
   },
-  emptyWrap: {
-    flex: 1,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 36,
-  },
-  emptyBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: withAlpha(colors.brand, 0.12),
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    color: colors.ink,
-    fontSize: 19,
-    fontWeight: "800",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptyBody: { color: colors.textMuted, fontSize: 13.5, lineHeight: 21, textAlign: "center" },
 });
