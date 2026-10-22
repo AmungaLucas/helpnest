@@ -7,15 +7,26 @@
 // scanner UI, delivered via Play services (~300KB app-size impact, models
 // downloaded on demand).
 //
+// Mechanics (Task 57b — after the Expo Go red-screen report):
+//   The @infinitered wrapper resolves its native module with
+//   requireNativeModule at IMPORT time, which throws wherever the native
+//   module isn't compiled in (Expo Go, iOS builds, a JS bundle running
+//   ahead of the native build). Depending on how Metro schedules the
+//   dynamic import that throw surfaces as an uncaught startup/call error
+//   instead of a clean fallback. So this service bypasses the wrapper's JS
+//   entirely and talks to the native module through expo-modules-core's
+//   requireOptionalNativeModule, which returns null instead of throwing —
+//   no import of the wrapper happens anywhere, there is nothing that can
+//   throw at bundle time. The wrapper stays in package.json purely as the
+//   autolinking vehicle that compiles in the native module + the Play
+//   services gradle dependency.
+//
 // Platform reality (deliberate design, not defensive padding):
 //   - Android only. ML Kit has no iOS document scanner (Google limitation);
 //     iOS keeps the guided camera until a VisionKit wrapper lands.
-//   - The wrapper resolves its native module with requireNativeModule at
-//     IMPORT time, which throws when the module isn't compiled in (Expo Go,
-//     a JS bundle ahead of the native build). So the wrapper is loaded via
-//     a deferred dynamic import() inside the call — the failure is then a
-//     catchable rejection, never a red screen, and the caller falls back to
-//     the guided camera.
+//   - Expo Go / pre-module dev builds: requireOptionalNativeModule returns
+//     null -> { ok: false } -> the caller opens the guided camera. Silent,
+//     by design: the capability just isn't there yet.
 //
 // Result contract:
 //   { ok: false }            scanner can't run here -> caller navigates to
@@ -27,21 +38,22 @@
 
 import { Image, Platform } from "react-native";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { requireOptionalNativeModule } from "expo-modules-core";
+
+// Same string values as the wrapper's ScannerModeOptions / ResultFormatOptions
+// enums — the native module reads the raw strings off the options object.
+const SCANNER_MODE_FULL = "full";
+const RESULT_FORMAT_JPEG = "jpeg";
 
 // Scan a single ID page. Never throws — every failure mode maps onto the
 // result contract above so the UI flow always has a next step.
 export async function scanDocumentPage() {
   if (Platform.OS !== "android") return { ok: false };
 
-  let scanner;
+  // Optional probe: null in Expo Go / iOS / builds without the module.
+  const scanner = requireOptionalNativeModule("RNMLKitDocumentScanner");
 
-  try {
-    // Deferred load: executes the wrapper's requireNativeModule only now —
-    // in Expo Go / iOS this rejects and we fall back instead of crashing.
-    scanner = await import("@infinitered/react-native-mlkit-document-scanner");
-  } catch {
-    return { ok: false };
-  }
+  if (!scanner?.launchDocumentScannerAsync) return { ok: false };
 
   let result;
 
@@ -54,8 +66,8 @@ export async function scanDocumentPage() {
       // FULL adds the ML-enabled cleaning (stains, glare, shadows) on top of
       // crop/rotate/filters — exactly what reviewers asked the hints to
       // promise.
-      scannerMode: scanner.ScannerModeOptions.FULL,
-      resultFormats: scanner.ResultFormatOptions.JPEG,
+      scannerMode: SCANNER_MODE_FULL,
+      resultFormats: RESULT_FORMAT_JPEG,
     });
   } catch {
     // Play services couldn't provide the scanner (module not installed,
@@ -63,7 +75,12 @@ export async function scanDocumentPage() {
     return { ok: false };
   }
 
-  if (!result || result.canceled || !Array.isArray(result.pages) || !result.pages.length) {
+  if (
+    !result ||
+    result.canceled ||
+    !Array.isArray(result.pages) ||
+    !result.pages.length
+  ) {
     return { ok: true, canceled: true };
   }
 
