@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -25,6 +26,7 @@ import { useAuth } from "../../context/AuthContext";
 import { uploadMedia } from "../../services/mediaService";
 import { getKycStatus, submitKyc } from "../../services/kycService";
 import { fileAppeal } from "../../services/appealsService";
+import { scanDocumentPage } from "../../services/documentScannerService";
 import { registerCaptureCallback } from "../../utils/captureCallback";
 import { colors, withAlpha } from "../../theme/colors";
 
@@ -321,13 +323,52 @@ export default function VerificationScreen() {
     });
   }
 
+  // ML Kit document scanner (Task 57): Google's scanner does the edge
+  // detection, auto-capture and glare/shadow cleaning for free on Android.
+  // Every failure mode inside the service maps to a contract result, so the
+  // button never dead-ends: unavailability falls back to the guided camera
+  // (the pre-Task-57 behavior), a cancel stays put.
+  async function scanIdWithMlKit(slotKey, mediaKind) {
+    setFormError("");
+
+    const scan = await scanDocumentPage();
+
+    if (!scan.ok) {
+      navigation.navigate("KYCCamera", {
+        docKind: slotKey,
+        captureId: registerCaptureCallback((uri) =>
+          handleCaptured(slotKey, mediaKind, uri)
+        ),
+      });
+      return;
+    }
+
+    if (scan.canceled || !scan.uri) return;
+
+    handleCaptured(slotKey, mediaKind, scan.uri);
+  }
+
   function chooseSource(slotKey, mediaKind, slotLabel) {
     setFormError("");
 
+    const canAutoScan =
+      Platform.OS === "android" &&
+      (slotKey === "id_front" || slotKey === "id_back");
+
     Alert.alert(
       slotLabel,
-      "Use the guided camera, or pick a photo you already have.",
+      canAutoScan
+        ? "Scan it automatically, use the guided camera, or pick a photo you already have."
+        : "Use the guided camera, or pick a photo you already have.",
       [
+        ...(canAutoScan
+          ? [
+              {
+                text: "Scan ID (auto)",
+                onPress: () => scanIdWithMlKit(slotKey, mediaKind),
+              },
+            ]
+          : []),
         {
           text: "Take photo",
           onPress: () =>
