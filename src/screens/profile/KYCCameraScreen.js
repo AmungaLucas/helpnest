@@ -41,12 +41,33 @@ import { colors, withAlpha } from "../../theme/colors";
 // the gateway ceiling is 8 MB per upload and modern phone sensors produce
 // 12-48 MP frames that blow past it (gallery picks are already compressed by
 // the OS picker; camera shots are not).
+//
+// Auto-crop (2026-10-22): the sensor frame is larger than the preview (the
+// preview cover-fits it), so an uncropped upload carries wide dead margins
+// around the card/face. Since the guide frame's position is known exactly,
+// it is mapped through the cover-fit scaling into photo pixel space and
+// cropped on-device the moment the shutter fires — the review step then
+// shows exactly what the reviewer will get. The oval/circle guides stay
+// visual only; the crop is rectangular with a small context margin, and any
+// geometry miss (rotated file, missing dims, degenerate rect) silently keeps
+// the uncropped frame — the flow degrades to the previous behavior, never
+// worse.
 
 const GUIDE = {
   // ID-1 cards (Kenyan national ID) are 85.6 x 53.98 mm.
   id: { aspect: 85.6 / 54.0 },
   selfie: { ovalAspect: 0.74 }, // oval width as a fraction of screen width
   profile: { circleAspect: 0.68 }, // circular guide, avatar-style
+};
+
+// Context margin kept around the guide when auto-cropping, as a fraction of
+// the frame size per side. Reviewers need the card edges plus a sliver of
+// background; faces need the shoulders the oval already hints at.
+const CROP_PAD = {
+  id_front: 0.06,
+  id_back: 0.06,
+  selfie: 0.1,
+  profile: 0.08,
 };
 
 const HINTS = {
@@ -60,6 +81,54 @@ const HINTS = {
     "Center your face in the circle — head and shoulders, good light. Flip for the back camera.",
 };
 
+// Maps the on-screen guide frame into the captured photo's pixel space and
+// returns an expo-image-manipulator crop rect — or null when the mapping
+// cannot be trusted and the capture should stay uncropped.
+//
+// The preview draws the sensor frame cover-fit (scaled to fill, overhang
+// cropped), so a preview point (vx, vy) corresponds to photo pixels
+// ((vx + ox) / s, (vy + oy) / s) with s = max(viewW/photoW, viewH/photoH)
+// and (ox, oy) the centered cover-fit overhang. The guide is horizontally
+// centered by construction, so the front camera's horizontal mirroring
+// cannot skew the rect. A file stored sideways relative to the preview
+// (rotation metadata lost on some OEMs) is the one fatal case — detected by
+// portrait/landscape mismatch and left uncropped.
+function computeFrameCrop(photo, view, frame, padRatio) {
+  const photoW = photo?.width;
+  const photoH = photo?.height;
+  const viewW = view?.width;
+  const viewH = view?.height;
+
+  if (!photoW || !photoH || !viewW || !viewH) return null;
+
+  const viewPortrait = viewW < viewH;
+  const photoPortrait = photoW < photoH;
+
+  if (viewPortrait !== photoPortrait) return null;
+
+  const scale = Math.max(viewW / photoW, viewH / photoH);
+  const offsetX = (photoW * scale - viewW) / 2;
+  const offsetY = (photoH * scale - viewH) / 2;
+
+  const padX = frame.width * padRatio;
+  const padY = frame.height * padRatio;
+
+  const rawX = (frame.left - padX + offsetX) / scale;
+  const rawY = (frame.top - padY + offsetY) / scale;
+  const rawW = (frame.width + padX * 2) / scale;
+  const rawH = (frame.height + padY * 2) / scale;
+
+  const originX = Math.max(0, Math.round(rawX));
+  const originY = Math.max(0, Math.round(rawY));
+  const width = Math.min(Math.round(rawW), photoW - originX);
+  const height = Math.min(Math.round(rawH), photoH - originY);
+
+  // Degenerate after clamping (frame mostly outside the capture) -> bail.
+  if (width < 10 || height < 10) return null;
+
+  return { originX, originY, width, height };
+}
+
 export default function KYCCameraScreen({ route, navigation }) {
   const docKind = route?.params?.docKind || "id_front";
   // Consumed exactly once on first render (useRef initializer): the callback
@@ -70,6 +139,10 @@ export default function KYCCameraScreen({ route, navigation }) {
   const isId = !isSelfie && !isProfile;
 
   const cameraRef = useRef(null);
+  // Camera-shell layout, read at shutter time (not render time): the
+  // CameraView absolute-fills this shell, so its size IS the preview size
+  // the cover-fit mapping needs. A ref avoids a re-render per rotation.
+  const shellLayoutRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
 
   const [facing, setFacing] = useState(isSelfie || isProfile ? "front" : "back");
@@ -116,7 +189,43 @@ export default function KYCCameraScreen({ route, navigation }) {
 
       if (!photo?.uri) throw new Error("empty capture");
 
-      setShot({ uri: photo.uri, width: photo.width, height: photo.height });
+      let out = { uri: photo.uri, width: photo.width, height: photo.height };
+
+      // Auto-crop the guide region before the review step so the user
+      // confirms exactly what the reviewer will see. Any miss (rotated
+      // file, missing dims, degenerate rect) keeps the uncropped capture.
+      const shell = shellLayoutRef.current;
+      const crop = computeFrameCrop(
+        { width: photo.width, height: photo.height },
+        { width: shell?.width, height: shell?.height },
+        { left: frameLeft, top: frameTop, width: frameW, height: frameH },
+        CROP_PAD[docKind] ?? 0.08
+      );
+
+      if (crop) {
+        try {
+          const context = ImageManipulator.manipulate(photo.uri).crop(crop);
+          const rendered = await context.renderAsync();
+          const saved = await rendered.saveAsync({
+            compress: 0.9,
+            format: SaveFormat.JPEG,
+          });
+
+          try {
+            rendered.release();
+          } catch (releaseErr) {
+            // SharedRef may already be reclaimed — never fatal.
+          }
+
+          if (saved?.uri) {
+            out = { uri: saved.uri, width: crop.width, height: crop.height };
+          }
+        } catch (cropErr) {
+          // Crop is an enhancement, never a gate — keep the full frame.
+        }
+      }
+
+      setShot(out);
     } catch (err) {
       setError("Could not take the photo. Try again.");
     } finally {
@@ -133,6 +242,7 @@ export default function KYCCameraScreen({ route, navigation }) {
     try {
       // Downscale the long edge to <=1600 px, re-encode JPEG q0.8. The new
       // context API (SDK 52+) replaces the deprecated manipulateAsync.
+      // shot.width/height already reflect the auto-crop done at shutter time.
       const long = Math.max(shot.width || 0, shot.height || 0);
       let context = ImageManipulator.manipulate(shot.uri);
 
@@ -223,7 +333,12 @@ export default function KYCCameraScreen({ route, navigation }) {
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.ink} />
 
-      <View style={styles.cameraShell}>
+      <View
+        style={styles.cameraShell}
+        onLayout={(e) => {
+          shellLayoutRef.current = e.nativeEvent.layout;
+        }}
+      >
         {shot && !busy ? (
           <Image
             source={{ uri: shot.uri }}
