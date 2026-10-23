@@ -16,6 +16,7 @@ import {
 } from "../config/api";
 import { refreshSession, fetchMe } from "../services/authService";
 import { syncLocationOnAuth } from "../utils/location";
+import { clearNavState } from "../utils/navState";
 
 const ACCESS_KEY = "hn.accessToken";
 const REFRESH_KEY = "hn.refreshToken";
@@ -92,6 +93,9 @@ export function AuthProvider({ children }) {
   const clearSession = useCallback(() => {
     setAuthToken(null);
     setUser(null);
+    // Drop the persisted navigation stack too — the next sign-in (possibly
+    // a different account on a shared device) must never restore it.
+    clearNavState();
 
     SecureStore.deleteItemAsync(ACCESS_KEY);
     SecureStore.deleteItemAsync(REFRESH_KEY);

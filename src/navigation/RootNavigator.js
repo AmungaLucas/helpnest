@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -209,10 +209,6 @@ export default function RootNavigator() {
   //
   // GuestStack is keyed on the entry route so a change of entry (e.g. the
   // hasAccount flag resolving during boot) remounts the navigator cleanly.
-  useEffect(() => {
-    console.log("[NAV] auth area ->", user ? "authed" : "guest");
-  }, [user]);
-
   if (initializing) {
     return <BootSplash />;
   }
